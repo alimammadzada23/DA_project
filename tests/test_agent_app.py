@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 from insightpilot.agent import Analyst
+from insightpilot.dashboard import Dashboard,Filters
 
 
 def mock_provider(monkeypatch,messages):
@@ -55,6 +56,27 @@ def test_missing_llm_credentials(database,tmp_path,monkeypatch):
     assert Analyst(database).investigate('item_volume')['rows']==[(4,)]
 
 
+def test_live_tool_protocol_respects_the_dashboard_cohort(database,tmp_path,monkeypatch):
+    mock_provider(monkeypatch,[
+        {'role':'assistant','content':None,'tool_calls':[{'id':'scoped1','type':'function','function':{'name':'investigate','arguments':json.dumps({'question_id':'item_volume'})}}]},
+        {'role':'assistant','content':'The selected synthetic cohort has 1 item.'},
+    ])
+    dashboard=Dashboard(database,Filters(categories=('2-way synthetic',)))
+    result=Analyst(database).chat('How many items?',dashboard=dashboard,audit_path=tmp_path/'scoped.json')
+    assert result['evidence'][0]['rows']==[(1,)]
+    assert result['evidence'][0]['parameters']==['2-way synthetic']
+    assert result['evidence'][0]['filters']['categories']==('2-way synthetic',)
+
+
+def test_scoped_live_mode_cannot_switch_to_unfiltered_sql(database,tmp_path,monkeypatch):
+    mock_provider(monkeypatch,[
+        {'role':'assistant','content':None,'tool_calls':[{'id':'wrong','type':'function','function':{'name':'query','arguments':json.dumps({'sql':'SELECT count(*) FROM cases'})}}]},
+        {'role':'assistant','content':'There are 4 items.'},
+    ])
+    with pytest.raises(ValueError,match='Ungrounded'):
+        Analyst(database).chat('How many?',dashboard=Dashboard(database,Filters(categories=('2-way synthetic',))),audit_path=tmp_path/'rejected.json')
+
+
 def test_app_missing_data(monkeypatch,tmp_path):
     monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(tmp_path/'missing.duckdb'))
     app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run()
@@ -68,14 +90,14 @@ def test_app_loaded_data(database,monkeypatch):
     assert not app.exception
     assert any('SYNTHETIC' in w.value for w in app.warning)
     assert len(app.tabs)==5
-    app.button[0].click().run(timeout=20)
+    next(b for b in app.button if b.label=='Discover directly-follows graph with PM4Py').click().run(timeout=30)
     assert not app.exception
 
 
 def test_app_executes_sql_and_preserves_evidence(database,monkeypatch):
     monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(database))
     app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=20)
-    app.text_area[0].set_value('SELECT count(*) AS items FROM cases')
+    app.text_area[0].set_value('SELECT count(*) AS items FROM selected_cases')
     next(b for b in app.button if b.label=='Execute SQL').click().run(timeout=20)
     assert not app.exception
     assert app.session_state['sql_evidence']['rows']==[(4,)]

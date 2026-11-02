@@ -6,7 +6,9 @@
   "cases": 10000,
   "events": 100000,
   "source_bytes": 14547801,
-  "ingest_seconds": 10.702,
-  "peak_process_rss_mib": 208.6,
+  "ingest_seconds": 3.235,
+  "peak_process_rss_mib": 259.7,
+  "uncached_dashboard_overview_seconds": 0.03,
+  "analytical_storage": "Case metrics and transition summaries materialized during import; ordered events remain a view",
   "settings": "batch_size=10000; DuckDB threads=2 and memory_limit=1GB; RSS includes Python/pandas and native libraries"
 }

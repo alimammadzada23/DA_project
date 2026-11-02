@@ -77,7 +77,7 @@ class Analyst:
         result['mode'] = 'deterministic SQL evidence; no LLM used'
         return result
 
-    def chat(self, question, *, audit_path):
+    def chat(self, question, *, audit_path, dashboard=None):
         """Requires explicit use: schema/results are transmitted to the configured provider."""
         key = os.environ.get('INSIGHTPILOT_LLM_API_KEY')
         model = os.environ.get('INSIGHTPILOT_LLM_MODEL')
@@ -95,6 +95,14 @@ class Analyst:
             '\nSchema: '+json.dumps(schema,default=str)}, {'role':'user','content':question}]
         tool = {'type':'function','function':{'name':'query','description':'Execute one read-only SQL SELECT against the local analytical database',
                  'parameters':{'type':'object','properties':{'sql':{'type':'string'}},'required':['sql'],'additionalProperties':False}}}
+        if dashboard is not None:
+            from dataclasses import asdict
+            messages[0]['content'] += ('\nUse the investigate tool to answer within this fixed case cohort. '
+                'All events of selected cases are retained. You cannot change filters or query outside this cohort. '
+                '\nFilters: '+json.dumps(asdict(dashboard.filters),default=str)+
+                '\nInvestigations: '+json.dumps({k:v[0] for k,v in dashboard.catalog.items()}))
+            tool={'type':'function','function':{'name':'investigate','description':'Execute a verified SQL investigation within the active dashboard filters',
+                'parameters':{'type':'object','properties':{'question_id':{'type':'string','enum':list(dashboard.catalog)}},'required':['question_id'],'additionalProperties':False}}}
         evidence = []
         audit_path = Path(audit_path)
         audit_path.parent.mkdir(parents=True,exist_ok=True)
@@ -115,9 +123,12 @@ class Analyst:
                                 'limitations':LIMITATIONS}
                     for call in calls:
                         try:
-                            if call['function']['name']!='query':
-                                raise ValueError('Unknown tool')
-                            result = self.query(json.loads(call['function']['arguments'])['sql'])
+                            arguments=json.loads(call['function']['arguments'])
+                            if dashboard is not None and call['function']['name']=='investigate':
+                                result=dashboard.investigate(arguments['question_id'])
+                            elif dashboard is None and call['function']['name']=='query':
+                                result = self.query(arguments['sql'])
+                            else: raise ValueError('Unknown tool')
                             evidence.append(result)
                         except Exception as exc:
                             result = {'error':type(exc).__name__,'message':str(exc)}

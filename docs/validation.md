@@ -2,7 +2,7 @@
 
 ## Current instance — 2026-11-02
 
-**57 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
+**73 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
 
 | Capability | Evidence / outcome |
 |---|---|
@@ -29,9 +29,9 @@ An initial test revealed that DuckDB's parser normalizes a read-only PRAGMA to S
 
 ## Outstanding prerequisites and limitations
 
-- Official TU/e/DOI/4TU access: current attempts return 403 or upstream 503 connection timeouts; exact manual download/run instructions are in docs/download-and-run.md. Required domains were saved in the environment draft: `research.tue.nl`, `doi.org`, `data.4tu.nl`, `learn.microsoft.com`. Saving a draft does not apply it. Review/save network changes in environment settings and publish when appropriate; follow any additional redirect destinations only after verifying them.
-- No authentic artifact, source license, actual schema, category definitions or published totals have been verified. User-supplied provenance requires validation even if `--synthetic` is absent.
-- Genuine full-volume performance and Apple Silicon operation remain unmeasured. An executed Linux-only synthetic check processed 100,000 events / 10,000 cases in 10.702 seconds with 208.6 MiB peak process RSS; see docs/synthetic-scale-check.json. This is not a genuine-data or Mac benchmark.
+- Official TU/e description and DOI resolver now work. The resolver-confirmed 4TU file-repository landing page returns upstream HTTP 503 connection timeouts; exact download/run instructions are in docs/download-and-run.md. Required domains were saved in the environment draft: `research.tue.nl`, `doi.org`, `data.4tu.nl`, `learn.microsoft.com`. Saving a draft does not apply it. The current genuine-data dependency is the original artifact from the resolver-confirmed 4TU record, not environment publication.
+- No original artifact, source license or actual-file schema has been verified. Attribute names, flow definitions and published totals are now confirmed from the official TU/e description, distinct from observed data findings. User-supplied provenance requires validation even if `--synthetic` is absent.
+- Genuine full-volume performance and Apple Silicon operation remain unmeasured. The latest Linux-only synthetic check imported and prepared 100,000 events / 10,000 cases in 3.235 seconds with 259.7 MiB peak process RSS, then executed an overview in 0.030 seconds without an application-result cache (OS/storage caches were warm after ingestion); see docs/synthetic-scale-check.json. This is not a genuine-data or Mac benchmark.
 - Human-versus-batch users and terminal conditions remain unknown. No universal matching rule is implemented. Recorded repeats and sequence signals do not certify compliance or avoidable work.
 - Missing timestamps can understate observed intervals; missing activity values can understate repeats. Report coverage with these measures.
 - Live LLM requires separately provisioned API credentials/access and explicit consent to send query results. The presence of a successful query does not prove every sentence or number in an LLM narrative; human evidence review remains necessary. Only deterministic catalog answers are directly rendered from query results.
@@ -51,3 +51,11 @@ A new query-provenance check initially failed because DuckDB 1.5.6 get_table_nam
 Current Microsoft authoring documentation is now accessible and was reviewed. It exposed a missing required PBIR version metadata file, now added. The candidate also includes monthly trend/slicer bindings and blank-safe count measures. Windows TMDL/refresh/DAX/rendering acceptance is still incomplete.
 
 This continuation focuses on project functionality; it does not depend on publishing a Codex environment.
+
+## Shared-cohort dashboard validation
+
+The latest suite passes 73 tests. KPIs, category/variant/month/transition queries, process discovery, item timelines and guided answers use one selected-case predicate. Tests assert event/document/item counts, inclusive first-event dates with complete histories, null attributes, repeat/span filters, reset behavior, empty cohorts, missing-data warnings and evidence invalidation after filter changes. SQL tests cover raw-table access, dynamic table functions, qualified-name/CTE scope escapes and parameters. Mocked live tools cannot switch from scoped investigation to database-wide SQL. The offline guided analyst and CLI execute actual SQL without credentials; they are explicitly not an LLM.
+
+A test caught alias rewriting that renamed the monthly chart count column; rewriting now only touches relation positions. Another test caught purchase-order items being routed to document counts; explicit item intents now take precedence. Both regressions were fixed before the final full suite. A separate first-open smoke check clicked the explicit synthetic-demo action from an empty configuration and verified the synthetic banner and four-item dashboard. The updated HTTP service was started and checked separately.
+
+The official source description is recorded in docs/official-source-verification.json. Its metadata confirms matching-flow differences, legitimate multiple receipts/invoices, published counts and the NONE resource marker. The exact landing page returned by the DOI resolver is still unavailable from this instance. No genuine-log findings or license acceptance are implied by successful metadata retrieval.

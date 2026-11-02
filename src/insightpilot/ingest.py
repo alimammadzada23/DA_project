@@ -13,10 +13,25 @@ from defusedxml.ElementTree import iterparse
 
 EXPECTED = {"cases": 251734, "events": 1595923, "purchase_documents": 76349,
             "activities": 42, "users": 627}
-# Explicit candidate mapping based on published log conventions; verify against source documentation.
+# Attribute names confirmed in the official TU/e description; validate the original file on import.
 FIELDS = {"purchase_document": "Purchasing Document", "item": "Item",
           "matching_category": "Item Category", "vendor": "Vendor",
           "spend_classification": "Spend classification text"}
+
+
+def prepare_analytics(con):
+    """Materialize derived outputs once; raw events/cases remain unchanged."""
+    prepared=[]
+    for name in ['case_metrics','transitions','variants','transition_performance','category_performance','sequence_signals']:
+        kind=con.execute('SELECT table_type FROM information_schema.tables WHERE table_schema=\'main\' AND table_name=?',[name]).fetchone()
+        if kind is None: raise ValueError(f'Missing analytical object: {name}')
+        if kind[0]!='VIEW': continue
+        temporary='_prepared_'+name
+        con.execute(f'CREATE TABLE {temporary} AS SELECT * FROM {name}')
+        con.execute(f'DROP VIEW {name}')
+        con.execute(f'ALTER TABLE {temporary} RENAME TO {name}')
+        prepared.append(name)
+    return prepared
 
 
 def tag(element):
@@ -110,6 +125,7 @@ def ingest(source, target, *, synthetic=False, mapping=None, batch_size=10000):
                     a = event_defaults | attributes(event)
                     activity = a.get('concept:name')
                     resource = a.get('org:resource')
+                    if resource and resource.strip().upper()=='NONE': resource=None
                     batch.append((case_id, count, activity if activity and activity.strip() else None, timestamp(a.get('time:timestamp')),
                                   resource if resource and resource.strip() else None, a.get('lifecycle:transition'), json.dumps(a)))
                     count += 1
@@ -123,6 +139,7 @@ def ingest(source, target, *, synthetic=False, mapping=None, batch_size=10000):
         flush_cases()
         if con.execute('SELECT count(*) FROM cases').fetchone()[0] == 0:
             raise ValueError('No traces in source')
+        prepare_analytics(con)
         con.execute('COMMIT')
         con.execute('CHECKPOINT')
         con.close()

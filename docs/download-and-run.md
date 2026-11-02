@@ -2,12 +2,12 @@
 
 ## Actual source-access result
 
-On 2026-11-02 the official TU/e dataset page returned HTTP 403 from this instance. DOI and 4TU root/record/API requests returned HTTP 503 with `upstream connect error ... connection timeout`. No original file or license was downloaded. This is an observed connectivity limitation, not evidence that the dataset is unavailable to your browser. We did not substitute an unofficial mirror or claim that the synthetic demonstration is BPI data.
+On 2026-11-02 the latest retry successfully retrieved the official TU/e description at https://research.tue.nl/p/en/datasets/bpi-challenge-2019 and resolved the DOI through its official Handle API. The resolver identifies **https://data.4tu.nl/articles/_/12715853/1** as the dataset landing page. That exact page and the 4TU API/canonical paths return HTTP 503 with `upstream connect error ... connection timeout` from this instance. Original files/license remain inaccessible here. The successful description confirms the field names and published counts, not our own data findings. See official-source-verification.json. No unofficial mirror or synthetic substitution was used.
 
 ## Download in your browser
 
 1. Open **https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1**. The corresponding publisher reference is **https://research.tue.nl/en/datasets/bpi-challenge-2019/**.
-2. Confirm the title is **BPI Challenge 2019** and the DOI matches exactly. Follow the official download link to 4TU.ResearchData. Read the dataset description, field guide and license/terms before using it; save these alongside the log. The license has not been verified by this project yet, so no license name is asserted here.
+2. Confirm the title is **BPI Challenge 2019** and the DOI matches exactly. The exact resolver-confirmed 4TU page is https://data.4tu.nl/articles/_/12715853/1. Follow its download controls. Read the dataset description, field guide and license/terms before using it; save these alongside the log. The license has not been verified by this project yet, so no license name is asserted here.
 3. Download the original **XES event log**, retaining its original compressed file if one is supplied. Do not download a CSV sample, a challenge submission, or another year's log. If a ZIP is supplied, extract it and retain both ZIP and contained XES. This importer accepts XES or gzip-compressed XES, not ZIP directly.
 4. In your `DA_project` checkout, create `data/raw`. Copy the downloaded `.xes` or `.xes.gz` file there without modifying its contents. Use its actual filename in the commands below. The application intentionally refuses to overwrite an existing analytical database.
 5. Record the exact original filename, source URL, license, version/download date and any publisher-provided checksum in `data/metadata/source-notes.txt`. A SHA-256 is computed by the importer; it proves byte identity for later reconciliation, not official authenticity by itself.
@@ -78,3 +78,7 @@ For this cloud session, use secure secret/environment configuration instead of c
 ## Windows step
 
 Power BI Desktop runs on Windows, not natively on macOS. Open the exported project on a suitable Windows machine and follow `powerbi/README.md`. A JSON-schema pass does not establish that TMDL parses, Parquet refresh works, DAX returns the expected numbers, or visuals render correctly.
+
+## Use the dashboard without credentials
+
+Follow [dashboard-guide.md](dashboard-guide.md) to open the local browser UI, use all filters and run the guided SQL analyst. Live LLM credentials are optional and do not block these features. For existing pre-update databases, `uv run --frozen insightpilot prepare <database>` materializes the existing analytical views without changing raw cases/events. Reimport to apply new normalization/model semantics.

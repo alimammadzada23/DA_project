@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 import duckdb
 from insightpilot.ingest import ingest
+from insightpilot.dashboard import Dashboard
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--cases',type=int,default=10000)
@@ -29,10 +30,16 @@ with tempfile.TemporaryDirectory(prefix='insightpilot-scale-') as temp:
         cases=con.execute('SELECT count(*) FROM cases').fetchone()[0]
         events=con.execute('SELECT count(*) FROM events').fetchone()[0]
     assert cases==args.cases and events==args.cases*10
+    overview_start=time.perf_counter()
+    overview,_=Dashboard(target).overview()
+    overview_elapsed=time.perf_counter()-overview_start
+    assert overview['item_count']==cases and overview['event_count']==events
     result={'scope':'SYNTHETIC SCALE CHECK ONLY; not genuine-data or Mac performance',
             'platform':platform.system()+' '+platform.machine(),'python':platform.python_version(),
             'duckdb':duckdb.__version__,'cases':cases,'events':events,'source_bytes':source.stat().st_size,
             'ingest_seconds':round(elapsed,3),'peak_process_rss_mib':round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024 if platform.system()=='Linux' else 1024**2),1),
+            'uncached_dashboard_overview_seconds':round(overview_elapsed,3),
+            'analytical_storage':'Case metrics and transition summaries materialized during import; ordered events remain a view',
             'settings':'batch_size=10000; DuckDB threads=2 and memory_limit=1GB; RSS includes Python/pandas and native libraries'}
     args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result,indent=2))

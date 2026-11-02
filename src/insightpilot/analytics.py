@@ -25,7 +25,6 @@ QUESTIONS = {
 
 def discover(con):
     """PM4Py DFG discovery using an aggregated, bounded representation."""
-    import pm4py
     if con.execute('SELECT count(*) FROM events WHERE activity IS NULL').fetchone()[0]:
         raise ValueError('Resolve missing activities before process discovery')
     dfg = {(a,b): n for a,b,n in con.execute('SELECT previous_activity,activity,count(*) FROM ordered_events WHERE event_rank>1 GROUP BY ALL').fetchall()}
@@ -33,6 +32,11 @@ def discover(con):
     ends = dict(con.execute('SELECT activity,count(*) FROM (SELECT *,row_number() OVER(PARTITION BY case_id ORDER BY event_rank DESC) r FROM ordered_events) WHERE r=1 GROUP BY activity').fetchall())
     if None in starts or None in ends:
         raise ValueError('Resolve missing activities before process discovery')
+    return petri_summary(dfg,starts,ends)
+
+
+def petri_summary(dfg,starts,ends):
+    import pm4py
     net, initial, final = pm4py.convert_to_petri_net(dfg, starts, ends)
     return {'method': 'PM4Py DFG to Petri net (descriptive, not a normative compliance model)',
             'edges': [{'from':a,'to':b,'count':n} for (a,b),n in sorted(dfg.items())],

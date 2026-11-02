@@ -50,6 +50,7 @@ def reconcile(source, database):
                 name=a.get('concept:name'); resource=a.get('org:resource'); time=a.get('time:timestamp')
                 name=name if name and name.strip() else None
                 resource=resource if resource and resource.strip() else None
+                if resource and resource.strip().upper()=='NONE':resource=None
                 date=datetime.fromisoformat(time.replace('Z','+00:00')) if time else None
                 if date:times.append(date)
                 if name is not None:activities.add(name);names.append(name)

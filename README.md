@@ -2,7 +2,7 @@
 
 Portfolio case study for procurement business analysis using the **BPI Challenge 2019** public anonymized event log. The stakeholder scenario is hypothetical; no consulting engagement, stakeholder interview, approval, saving, or implementation outcome is claimed.
 
-**Status: working software milestone, not a completed real-data case study.** Official source requests currently fail (TU/e HTTP 403; DOI/4TU upstream HTTP 503). Original data and license inspection remain blocked. Tests use explicitly synthetic records. Power BI JSON components are generated for structural validation; Windows Desktop import, visual review and DAX reconciliation remain outstanding. See [validation](docs/validation.md), [exact download and Mac commands](docs/download-and-run.md), and [live AI acceptance](docs/ai-acceptance.md).
+**Status: working software milestone, not a completed real-data case study.** The official TU/e description and DOI resolver are now verified. The original log remains inaccessible because its 4TU landing page returns upstream HTTP 503 connection timeouts; original-file/license inspection and real-data findings remain incomplete. Tests use explicitly synthetic records. Power BI JSON components are generated for structural validation; Windows Desktop import, visual review and DAX reconciliation remain outstanding. Start with the [dashboard opening and usage guide](docs/dashboard-guide.md). See [validation](docs/validation.md), [exact download and Mac commands](docs/download-and-run.md), and [live AI acceptance](docs/ai-acceptance.md).
 
 ## Run locally (Apple Silicon or Linux)
 
@@ -19,7 +19,7 @@ No API credential is needed for ingestion, SQL, process discovery, report export
 ## Obtain the real dataset
 
 1. Open the [official TU/e record](https://research.tue.nl/en/datasets/bpi-challenge-2019/) and [DOI](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1).
-2. Follow the DOI to the official 4TU record. Read its documentation, license, field definitions and download terms before use. Record the exact filename, version and license in your analysis notes. These have **not yet been verified** in this environment; this repository does not redistribute the data.
+2. Follow the DOI to the official 4TU record. Read its documentation, license, field definitions and download terms before use. Record the exact filename, version and license in your analysis notes. The source description and attribute names are verified; the original artifact filename/version and license remain **unverified** in this environment. This repository does not redistribute the data.
 3. Download the official XES artifact to `data/raw/`. The importer accepts `.xes` or `.xes.gz`. Extract an archive locally if the source supplies another archive format. Do not convert to CSV or substitute another dataset.
 4. Run the following with the actual downloaded filename. The filename below is a local naming convention, not a verified source artifact name.
 
@@ -60,3 +60,7 @@ Use the existing checkout in this isolated cloud task. Do not create a worktree 
 ## Latest application additions
 
 The existing app now provides charts, parameterized category investigation, persisted SQL evidence/chat history, data-quality and query downloads, a process-map rendering, and Power BI project ZIP export. An explicitly synthetic `insightpilot demo data/demo` command enables local demonstration without silently substituting data. See the download/run guide for the environment variable selecting it. `validate-source` re-reads the original bytes and independently checks ten quantities; `analyze` creates a source-labeled decision brief and complete SQL evidence bundle.
+
+## Interactive dashboard update
+
+All dashboard KPIs, charts, timelines and curated questions now share parameterized item filters (category, vendor, spend, first-event dates, span and repeats). Source-level integrity counts remain separate. The filtered SQL editor enforces selected_* relations; database-wide mode is an explicit choice. A guided SQL analyst works without credentials and is labeled as a non-LLM tool. Optional live-LLM tools are restricted to the same cohort. The sidebar supports original XES uploads and an explicit synthetic-demo action. New imports materialize derived tables once; older databases can use `insightpilot prepare <database>`. See the dashboard guide for scope semantics and exact browser instructions.

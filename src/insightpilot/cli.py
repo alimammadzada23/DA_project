@@ -1,13 +1,15 @@
 import argparse
 import json
 import hashlib
+from datetime import date
 from pathlib import Path
 import duckdb
-from .ingest import ingest, quality
+from .ingest import ingest, quality, prepare_analytics
 from .agent import Analyst
 from .analytics import QUESTIONS, discover
 from .reporting import reconcile, analysis_report
 from .demo import create_demo
+from .dashboard import Dashboard, Filters
 
 
 def main():
@@ -24,7 +26,27 @@ def main():
     p = sub.add_parser('analyze'); p.add_argument('database'); p.add_argument('directory')
     p = sub.add_parser('chat'); p.add_argument('database'); p.add_argument('question'); p.add_argument('--audit',required=True)
     p = sub.add_parser('demo'); p.add_argument('directory')
+    p = sub.add_parser('prepare'); p.add_argument('database')
+    p = sub.add_parser('guide'); p.add_argument('database'); p.add_argument('question')
+    p.add_argument('--category',action='append',default=[])
+    p.add_argument('--start-date',type=date.fromisoformat);p.add_argument('--end-date',type=date.fromisoformat)
     args = parser.parse_args()
+    if args.command=='prepare':
+        if not Path(args.database).is_file():parser.error('Database does not exist; import an event log first')
+        with duckdb.connect(args.database) as connection:
+            connection.execute("SET TimeZone='UTC'")
+            connection.execute("SET memory_limit='1GB'")
+            connection.execute('SET threads=2')
+            connection.execute('BEGIN TRANSACTION')
+            try:
+                prepared=prepare_analytics(connection)
+                connection.execute('COMMIT')
+            except Exception:
+                connection.execute('ROLLBACK'); raise
+        print(json.dumps({'prepared':prepared,'raw_data':'unchanged'},indent=2)); return
+    if args.command=='guide':
+        filters=Filters(categories=tuple(args.category),start_date=args.start_date,end_date=args.end_date)
+        print(json.dumps(Dashboard(args.database,filters).guided_answer(args.question),default=str,indent=2)); return
     if args.command=='demo':
         print(json.dumps(create_demo(args.directory),indent=2)); return
     if args.command=='validate-source':
