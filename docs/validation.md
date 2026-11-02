@@ -1,0 +1,41 @@
+# Validation ledger
+
+## Current instance — 2026-11-02
+
+**46 tests passed, 0 failed, 0 skipped** in the latest run from the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
+
+| Capability | Evidence / outcome |
+|---|---|
+| Locked installation | `uv sync --frozen --extra test` succeeded in a new repository-local .venv |
+| Streaming ingestion | XES and gzip fixtures; atomic rejection of malformed/empty traces, duplicate IDs and offset-free dates |
+| Quality | Counts, missing values, tied/reversed timestamps, duplicate signatures retained |
+| Analytical references | All 20 catalog questions checked against hand-derived values, distributions or memberships |
+| PM4Py | DFG-to-Petri-net discovery executed on fixture; edge totals checked |
+| SQL restrictions | Mutations, multiple statements, PRAGMA, extension install, ATTACH, external file/network reads rejected |
+| Optional LLM integration | Tool-calling protocol and audit tested with mocked transport; no-query narrative rejected |
+| Streamlit | Missing-data and loaded-fixture AppTest interactions passed; real service started; `/` HTTP 200 and health `ok` |
+| Power BI | 16 JSON files validate offline against 11 retained official schemas; 4 pages / 7 bound table visuals |
+
+An initial test revealed that DuckDB's parser normalizes a read-only PRAGMA to SELECT; a lexical SELECT/WITH gate was added and the regression test now passes. The first service start was blocked by the command sandbox's socket restrictions; approved execution outside that sandbox started normally. No TLS or signature checks were disabled.
+
+## Phase status
+
+1. **Data foundation:** importer, storage, quality, definitions and synthetic tests implemented. Original source/license/fields and scale validation incomplete.
+2. **Process analysis:** descriptive discovery, intervals, variants, repetitions and review signals implemented. Real findings, matching-flow rules, resource classification and completion/censoring rules incomplete.
+3. **Power BI:** generated project candidate and schema checks implemented. TMDL parsing, DAX execution, refresh, executive layout, trends, filters, drill-through and visual acceptance incomplete.
+4. **Agent/application:** deterministic investigations, restricted SQL, mocked provider loop, audit, proposal-export approval and functional app checks implemented. Live API and narrative-grounding benchmark incomplete; no report-write tool.
+5. **BA package:** hypothetical business case, BRD, traceability, backlog, UAT, proposed monitoring loop, interview package and decision brief drafted. A real current-state BPMN and evidence-backed recommendations are incomplete.
+6. **Final validation:** fixture-level software validation executed; end-to-end genuine-data acceptance incomplete.
+
+## Outstanding prerequisites and limitations
+
+- Official TU/e/DOI/4TU access: proxy denied the source requests. Required domains were saved in the environment draft: `research.tue.nl`, `doi.org`, `data.4tu.nl`, `learn.microsoft.com`. Saving a draft does not apply it. Review/save network changes in environment settings and publish when appropriate; follow any additional redirect destinations only after verifying them.
+- No authentic artifact, source license, actual schema, category definitions or published totals have been verified. User-supplied provenance requires validation even if `--synthetic` is absent.
+- Full-volume memory/performance and Apple Silicon operation remain unmeasured. No benchmark numbers are invented.
+- Human-versus-batch users and terminal conditions remain unknown. No universal matching rule is implemented. Recorded repeats and sequence signals do not certify compliance or avoidable work.
+- Missing timestamps can understate observed intervals; missing activity values can understate repeats. Report coverage with these measures.
+- Live LLM requires separately provisioned API credentials/access and explicit consent to send query results. The presence of a successful query does not prove every sentence or number in an LLM narrative; human evidence review remains necessary. Only deterministic catalog answers are directly rendered from query results.
+- Windows Power BI Desktop and current authoring-documentation review are needed for TMDL/DAX/visual acceptance. Linux JSON validation is not a substitute.
+- Automated tests are not stakeholder UAT, and there are no sign-offs, approvals, company findings, savings or implemented operational improvements.
+
+Reusable install and start instructions were saved in the environment draft. The machine is prepared for software development and synthetic validation; this does **not** mean the real-data portfolio project is complete or that an environment snapshot has been published.

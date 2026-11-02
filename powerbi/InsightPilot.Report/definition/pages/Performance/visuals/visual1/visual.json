@@ -1,0 +1,88 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "Performance1",
+  "position": {
+    "x": 32,
+    "y": 360,
+    "z": 1,
+    "height": 280,
+    "width": 1216,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Transitions"
+                    }
+                  },
+                  "Property": "from_activity"
+                }
+              },
+              "queryRef": "Transitions.from_activity"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Transitions"
+                    }
+                  },
+                  "Property": "to_activity"
+                }
+              },
+              "queryRef": "Transitions.to_activity"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Transitions"
+                    }
+                  },
+                  "Property": "occurrences"
+                }
+              },
+              "queryRef": "Transitions.occurrences"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Transitions"
+                    }
+                  },
+                  "Property": "median_wait_hours"
+                }
+              },
+              "queryRef": "Transitions.median_wait_hours"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Transitions"
+                    }
+                  },
+                  "Property": "p90_wait_hours"
+                }
+              },
+              "queryRef": "Transitions.p90_wait_hours"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+table Signals
+
+	column case_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: case_id
+
+	column matching_category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: matching_category
+
+	column classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: classification
+
+	column reason
+		dataType: string
+		summarizeBy: none
+		sourceColumn: reason
+
+	partition Signals = m
+		mode: import
+		source =
+			Parquet.Document(File.Contents(DataFolder & "\sequence_signals.parquet"))

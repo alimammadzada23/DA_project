@@ -1,0 +1,8 @@
+{
+  "Items": "COUNTROWS(Cases)",
+  "Purchase Documents": "COUNTROWS(FILTER(VALUES(Cases[purchase_document]), NOT ISBLANK(Cases[purchase_document])))",
+  "Median Observed Days": "MEDIAN(Cases[observed_span_days])",
+  "P90 Observed Days": "PERCENTILEX.INC(FILTER(Cases, NOT ISBLANK(Cases[observed_span_days])), Cases[observed_span_days], 0.9)",
+  "Repeat Cases": "COUNTROWS(FILTER(Cases, Cases[repeated_event_count] > 0))",
+  "Repeat Rate": "DIVIDE([Repeat Cases], [Items])"
+}
