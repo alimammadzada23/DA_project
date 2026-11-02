@@ -41,5 +41,12 @@
     "http_status": 503,
     "observed_body": "upstream connect error or disconnect/reset before headers. reset reason: connection timeout"
   },
-  "real_log_imported": false
+  "real_log_imported": false,
+  "latest_retry": {
+    "date": "2026-11-02",
+    "file_repository_status": 503,
+    "file_repository_error": "upstream connect error or disconnect/reset before headers. reset reason: connection timeout",
+    "tue_status": 403,
+    "real_log_imported": false
+  }
 }

@@ -2,7 +2,7 @@
 
 ## Current instance — 2026-11-02
 
-**73 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
+**96 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
 
 | Capability | Evidence / outcome |
 |---|---|
@@ -54,8 +54,30 @@ This continuation focuses on project functionality; it does not depend on publis
 
 ## Shared-cohort dashboard validation
 
-The latest suite passes 73 tests. KPIs, category/variant/month/transition queries, process discovery, item timelines and guided answers use one selected-case predicate. Tests assert event/document/item counts, inclusive first-event dates with complete histories, null attributes, repeat/span filters, reset behavior, empty cohorts, missing-data warnings and evidence invalidation after filter changes. SQL tests cover raw-table access, dynamic table functions, qualified-name/CTE scope escapes and parameters. Mocked live tools cannot switch from scoped investigation to database-wide SQL. The offline guided analyst and CLI execute actual SQL without credentials; they are explicitly not an LLM.
+The latest suite passes 96 tests. KPIs, category/variant/month/transition queries, process discovery, item timelines and guided answers use one selected-case predicate. Tests assert event/document/item counts, inclusive first-event dates with complete histories, null attributes, repeat/span filters, reset behavior, empty cohorts, missing-data warnings and evidence invalidation after filter changes. SQL tests cover raw-table access, dynamic table functions, qualified-name/CTE scope escapes and parameters. Mocked live tools cannot switch from scoped investigation to database-wide SQL. The offline guided analyst and CLI execute actual SQL without credentials; they are explicitly not an LLM.
 
 A test caught alias rewriting that renamed the monthly chart count column; rewriting now only touches relation positions. Another test caught purchase-order items being routed to document counts; explicit item intents now take precedence. Both regressions were fixed before the final full suite. A separate first-open smoke check clicked the explicit synthetic-demo action from an empty configuration and verified the synthetic banner and four-item dashboard. The updated HTTP service was started and checked separately.
 
 The official source description is recorded in docs/official-source-verification.json. Its metadata confirms matching-flow differences, legitimate multiple receipts/invoices, published counts and the NONE resource marker. The exact landing page returned by the DOI resolver is still unavailable from this instance. No genuine-log findings or license acceptance are implied by successful metadata retrieval.
+
+## Professional dashboard upgrade
+
+The existing ingestion, SQL security, analytical model, reference tests and Power BI artifacts are retained. The Streamlit presentation is organized into Executive Overview, Process Explorer, Root-Cause Investigation and AI Business Analyst with a tracked dark theme. Technical SQL/DAX/JSON, provenance, diagnostics and approval controls remain in collapsed Advanced / Developer Tools.
+
+New bounded SQL aggregations supply monthly performance, duration bands, activity/repetition charts, group comparisons and evidence-backed investigation cards. Company/activity selection uses the same whole-item cohort as existing filters. No visualization reloads the entire raw event log into Python. Process-link volumes retain untimed edges without inventing waiting intervals. Recommendations apply minimum group volume before ranking and disclose association, censoring and case-mix limits.
+
+A seeded portfolio fixture provides 1,200 explicitly synthetic items, 400 documents and 4,750 events; all timing and organizational patterns are invented. Documents retain a consistent company/vendor across items. The original four-item fixture remains available. The larger fixture independently reconciles ten source/SQL quantities and is not a replacement for the genuine BPI log.
+
+Tests cover the original functionality plus chart-data references, new filters, group-scope drill-downs, all four pages, supported business questions, empty/error states and archived versus current AI answers. A resource-limit failure produces a business-readable error and leaves raw diagnostics in the developer section. A stale group selector found during filtering was fixed; root chart selections carry cohort/dimension identities so old selections cannot drive current details. Native Plotly selection is used for chart drill-down.
+
+Original file acquisition was retried at the authoritative 4TU landing/API endpoints; both still return upstream HTTP 503. This TU/e retry returned HTTP 403. Previously retrieved official metadata remains recorded, but no original-data finding or source-license acceptance is claimed. Native Mac and Windows Power BI acceptance remain unverified; default guided analysis needs no API key.
+
+## Final browser acceptance for the business interface
+
+`scripts/browser_smoke.py` ran against the live Streamlit server in Chromium with the explicitly synthetic portfolio-v2 fixture. HTTP 200, all four pages, rendered Plotly charts, process-type filtering (1,200 to 298 items), reset, native box selection into the corresponding group's cases, item lookup, guided summary, hidden technical output by default and clearing stale answers all passed. No uncaught browser errors were recorded. See `docs/browser-verification.json` and `docs/screenshots/`. These are actual application captures, not generated mockups or a public cloud preview.
+
+The combined browser workflow found a reset bug not reproduced by simple rerun tests: deleting multiselect widget keys could allow a later frontend event to restore old values. Reset now assigns explicit default selections. Chart payloads also carry cohort/dimension identity; older selections cannot drive current details. Browser regression includes reset followed by box selection and an actual item lookup.
+
+The full suite passed **96 tests, 0 failed, 0 skipped** in the final run; `docs/test-results.xml` preserves that run. Original pipeline, security, reference, app and Power BI checks remain. The new resource-error state hides SQL diagnostics under developer tools; programming errors are not silently converted into passing tests.
+
+Optional browser-regression reproduction requires Playwright and Chromium separately from normal app dependencies. Create the default portfolio-v2 fixture and start the dashboard with its path selected; then run the script with the local server URL and, if needed, `--chromium` pointing to a system browser. The script parses the explicitly synthetic source for reference counts and refuses non-fixture input.

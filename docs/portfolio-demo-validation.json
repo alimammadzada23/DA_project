@@ -1,0 +1,63 @@
+{
+  "scope": "SYNTHETIC PORTFOLIO DEMO ONLY",
+  "reconciliation": {
+    "source_sha256": "dea99ab5c4dfeb28eadfe23eb3fdfad6f507c5651f144bf6053c7334b2b26d2f",
+    "method": "Independent streaming Python counters and ordered variants; interpolated percentile",
+    "passed": true,
+    "checks": {
+      "item_volume": {
+        "python_reference": 1200,
+        "sql_actual": 1200,
+        "matches": true
+      },
+      "event_volume": {
+        "python_reference": 4750,
+        "sql_actual": 4750,
+        "matches": true
+      },
+      "document_volume": {
+        "python_reference": 400,
+        "sql_actual": 400,
+        "matches": true
+      },
+      "activity_volume": {
+        "python_reference": 6,
+        "sql_actual": 6,
+        "matches": true
+      },
+      "user_volume": {
+        "python_reference": 12,
+        "sql_actual": 12,
+        "matches": true
+      },
+      "median_span": {
+        "python_reference": 6.640625,
+        "sql_actual": 6.640625,
+        "matches": true
+      },
+      "p90_span": {
+        "python_reference": 17.536458333333353,
+        "sql_actual": 17.536458333333353,
+        "matches": true
+      },
+      "repeat_cases": {
+        "python_reference": 262,
+        "sql_actual": 262,
+        "matches": true
+      },
+      "repeat_events": {
+        "python_reference": 271,
+        "sql_actual": 271,
+        "matches": true
+      },
+      "variant_count": {
+        "python_reference": 21,
+        "sql_actual": 21,
+        "matches": true
+      }
+    },
+    "scope": "Reconciles source bytes to database; does not certify source authenticity or business semantics"
+  },
+  "seed": 2019,
+  "real_bpi_log_imported": false
+}

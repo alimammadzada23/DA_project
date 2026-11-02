@@ -1,0 +1,32 @@
+{
+  "scope": "SYNTHETIC PORTFOLIO UI ONLY; not original BPI findings",
+  "checks": [
+    {
+      "page": "Executive Overview",
+      "http_status": 200,
+      "items": 1200,
+      "visible_json": 0
+    },
+    {
+      "page": "Process Explorer",
+      "filtered_items": 298,
+      "charts_rendered": true
+    },
+    {
+      "page": "Root-Cause Investigation",
+      "filtered_items": 298,
+      "charts_rendered": true
+    },
+    {
+      "reset_then_box_selection": true,
+      "selected_group": null,
+      "item_lookup": "SYN-00000"
+    },
+    {
+      "page": "AI Business Analyst",
+      "guided_answer_rendered": true,
+      "visible_json": 0
+    }
+  ],
+  "uncaught_browser_errors": []
+}

@@ -8,7 +8,7 @@ from .ingest import ingest, quality, prepare_analytics
 from .agent import Analyst
 from .analytics import QUESTIONS, discover
 from .reporting import reconcile, analysis_report
-from .demo import create_demo
+from .demo import create_demo, create_portfolio_demo
 from .dashboard import Dashboard, Filters
 
 
@@ -30,7 +30,10 @@ def main():
     p = sub.add_parser('guide'); p.add_argument('database'); p.add_argument('question')
     p.add_argument('--category',action='append',default=[])
     p.add_argument('--start-date',type=date.fromisoformat);p.add_argument('--end-date',type=date.fromisoformat)
+    p = sub.add_parser('portfolio-demo');p.add_argument('directory');p.add_argument('--cases',type=int,default=1200);p.add_argument('--seed',type=int,default=2019)
     args = parser.parse_args()
+    if args.command=='portfolio-demo':
+        print(json.dumps(create_portfolio_demo(args.directory,args.cases,args.seed),indent=2));return
     if args.command=='prepare':
         if not Path(args.database).is_file():parser.error('Database does not exist; import an event log first')
         with duckdb.connect(args.database) as connection:

@@ -79,7 +79,7 @@ def test_empty_dashboard_is_usable_and_date_filter_is_item_based(database,monkey
     next(b for b in app.button if b.label=='Reset filters').click().run(timeout=30)
     app.checkbox(key='filter_dates').check().run(timeout=30)
     app.date_input(key='filter_date_range').set_value((date(2018,1,1),date(2018,1,1))).run(timeout=30)
-    assert app.metric[0].value=='3' and app.metric[2].value=='9' and not app.exception
+    assert app.metric[0].value=='3' and any('· 9 events ·' in caption.value for caption in app.caption) and not app.exception
 
 
 def test_guided_questions_have_actual_scoped_evidence(database):
@@ -123,13 +123,13 @@ def test_dashboard_widgets_change_metrics_queries_and_drilldown(database,monkeyp
     assert app.metric[0].value=='4'
     app.multiselect(key='filter_categories').set_value(['2-way synthetic']).run(timeout=30)
     assert not app.exception
-    assert app.metric[0].value=='1' and app.metric[2].value=='2'
+    assert app.metric[0].value=='1' and any('· 2 events ·' in caption.value for caption in app.caption)
     app.text_area[0].set_value('SELECT count(*) AS items FROM selected_cases')
     next(b for b in app.button if b.label=='Execute SQL').click().run(timeout=30)
     assert app.session_state['sql_evidence']['rows']==[(1,)]
     app.multiselect(key='filter_categories').set_value(['3-way synthetic']).run(timeout=30)
     assert 'sql_evidence' not in app.session_state
-    assert app.metric[0].value=='1' and app.metric[2].value=='4'
+    assert app.metric[0].value=='1' and any('· 4 events ·' in caption.value for caption in app.caption)
     next(b for b in app.button if b.label=='Reset filters').click().run(timeout=30)
     assert app.metric[0].value=='4' and not app.exception
 
@@ -138,6 +138,7 @@ def test_guided_chat_works_without_credentials(database,monkeypatch):
     monkeypatch.delenv('INSIGHTPILOT_LLM_API_KEY',raising=False)
     app=app_for(database,monkeypatch)
     app.multiselect(key='filter_categories').set_value(['2-way synthetic']).run(timeout=30)
+    app.radio(key='page').set_value('AI Business Analyst').run(timeout=30)
     app.chat_input[0].set_value('How many items?').run(timeout=30)
     assert not app.exception
     result=app.session_state['investigations'][-1]['result']

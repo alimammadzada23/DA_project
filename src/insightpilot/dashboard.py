@@ -19,6 +19,8 @@ class Filters:
     repeats: bool | None = None
     min_span: float | None = None
     max_span: float | None = None
+    companies: tuple = ()
+    activities: tuple = ()
 
     def predicate(self):
         if self.start_date and self.end_date and self.start_date > self.end_date:
@@ -26,7 +28,8 @@ class Filters:
         if self.min_span is not None and self.max_span is not None and self.min_span > self.max_span:
             raise ValueError('Minimum span must not exceed maximum span')
         parts, params = [], []
-        for column, values in [('matching_category',self.categories),('vendor',self.vendors),('spend_classification',self.spend_classes)]:
+        for column, values in [('matching_category',self.categories),('vendor',self.vendors),('spend_classification',self.spend_classes),
+                               ("json_extract_string(source_attributes,'$.Company')",self.companies)]:
             if not values: continue
             non_null = [value for value in values if value is not None]
             options = []
@@ -35,6 +38,9 @@ class Filters:
                 params.extend(non_null)
             if None in values: options.append(f'{column} IS NULL')
             parts.append('('+' OR '.join(options)+')')
+        if self.activities:
+            parts.append(f"case_id IN (SELECT case_id FROM events WHERE activity IN ({','.join('?' for _ in self.activities)}))")
+            params.extend(self.activities)
         for value, expression in [(self.start_date,'CAST(first_event AS DATE) >= ?'),(self.end_date,'CAST(first_event AS DATE) <= ?'),
                                   (self.min_span,'observed_span_days >= ?'),(self.max_span,'observed_span_days <= ?')]:
             if value is not None: parts.append(expression); params.append(value)
@@ -72,7 +78,11 @@ OVERVIEW_SQL = '''SELECT count(*) AS item_count,count(DISTINCT purchase_document
 
 
 class Dashboard:
-    catalog = QUESTIONS
+    catalog = QUESTIONS | {
+        'management_summary':('Summarize selected process performance for management.',OVERVIEW_SQL),
+        'repeat_activity_analysis':('Which recorded activities repeat most frequently?',''),
+        'group_comparison':('Compare selected matching flows and their recorded performance.',''),
+    }
 
     def __init__(self,database,filters=None):
         self.analyst = Analyst(database)
@@ -87,6 +97,11 @@ class Dashboard:
 
     def investigate(self,question_id):
         question, sql = self.catalog[question_id]
+        if question_id in ('management_summary','repeat_activity_analysis','group_comparison'):
+            result={'management_summary':lambda:self.overview()[1],
+                    'repeat_activity_analysis':self.repeated_activities,'group_comparison':self.group_comparison}[question_id]()
+            result.update(question=question,mode='Filtered deterministic SQL evidence; no LLM used')
+            return result
         replacements = {name:'selected_'+name for name in [
             'events','ordered_events','transitions','variants','transition_performance','category_performance','sequence_signals']}
         replacements.update({'cases':'selected_cases','case_metrics':'selected_cases'})
@@ -135,12 +150,96 @@ class Dashboard:
 
     def options(self):
         result = {}
-        for key,column in [('categories','matching_category'),('vendors','vendor'),('spend_classes','spend_classification')]:
+        for key,column in [('categories','matching_category'),('vendors','vendor'),('spend_classes','spend_classification'),
+                           ('companies',"json_extract_string(source_attributes,'$.Company')")]:
             # Bound options avoid flooding the interface on unexpectedly high-cardinality data.
             query = self.analyst.query(f'SELECT DISTINCT {column} FROM cases ORDER BY {column} LIMIT 1001',limit=1000)
             result[key] = {'values':[row[0] for row in query['rows']], 'truncated':query['truncated']}
         result['dates'] = self.analyst.query('SELECT min(CAST(first_event AS DATE)),max(CAST(first_event AS DATE)),max(observed_span_days) FROM case_metrics')['rows'][0]
+        activities=self.analyst.query('SELECT DISTINCT activity FROM events WHERE activity IS NOT NULL ORDER BY activity LIMIT 1001',limit=1000)
+        result['activities']={'values':[row[0] for row in activities['rows']], 'truncated':activities['truncated']}
         return result
+
+    def monthly_performance(self):
+        return self.run("""SELECT date_trunc('month',first_event) AS month,count(*) AS items,
+          median(observed_span_days) AS median_days,quantile_cont(observed_span_days,0.9) AS p90_days,
+          count(*) FILTER(WHERE repeated_event_count>0) AS repeat_cases
+          FROM selected_cases WHERE first_event IS NOT NULL GROUP BY month ORDER BY month""")
+
+    def duration_distribution(self):
+        return self.run("""SELECT CASE WHEN observed_span_days<1 THEN '<1 day' WHEN observed_span_days<3 THEN '1–<3 days'
+          WHEN observed_span_days<7 THEN '3–<7 days' WHEN observed_span_days<14 THEN '7–<14 days'
+          WHEN observed_span_days<30 THEN '14–<30 days' ELSE '30+ days' END AS duration_band,
+          CASE WHEN observed_span_days<1 THEN 0 WHEN observed_span_days<3 THEN 1 WHEN observed_span_days<7 THEN 2
+          WHEN observed_span_days<14 THEN 3 WHEN observed_span_days<30 THEN 4 ELSE 5 END AS band_order,
+          count(*) AS items FROM selected_cases WHERE observed_span_days IS NOT NULL
+          GROUP BY duration_band,band_order ORDER BY band_order""")
+
+    GROUPS={'Process type':'matching_category','Vendor':'vendor','Spend classification':'spend_classification',
+            'Company':"json_extract_string(source_attributes,'$.Company')"}
+
+    def group_comparison(self,dimension='Process type',min_items=1):
+        if dimension not in self.GROUPS:raise ValueError('Unsupported comparison dimension')
+        if min_items<1:raise ValueError('Minimum items must be positive')
+        expression=self.GROUPS[dimension]
+        return self.run(f"""SELECT {expression} AS group_name,count(*) AS items,
+          median(observed_span_days) AS median_days,quantile_cont(observed_span_days,0.9) AS p90_days,
+          count(*) FILTER(WHERE repeated_event_count>0) AS repeat_cases,
+          count(*) FILTER(WHERE repeated_event_count>0)*1.0/count(*) AS repeat_rate,
+          count(*) FILTER(WHERE missing_timestamps>0) AS items_with_missing_times
+          FROM selected_cases GROUP BY group_name HAVING count(*)>=?
+          ORDER BY median_days DESC NULLS LAST,items DESC,group_name LIMIT 1001""",limit=1000,parameters=[min_items])
+
+    def group_cases(self,dimension,value):
+        if dimension not in self.GROUPS:raise ValueError('Unsupported comparison dimension')
+        return self.run(f"""SELECT case_id,matching_category,vendor,observed_span_days,repeated_event_count,event_count,missing_timestamps
+          FROM selected_cases WHERE {self.GROUPS[dimension]} IS NOT DISTINCT FROM ?
+          ORDER BY observed_span_days DESC NULLS LAST,case_id LIMIT 100""",parameters=[value])
+
+    def repeated_activities(self):
+        return self.run("""SELECT activity,count(*) AS affected_items,sum(n-1) AS excess_occurrences,sum(n) AS total_occurrences
+          FROM (SELECT case_id,activity,count(*) AS n FROM selected_events WHERE activity IS NOT NULL
+          GROUP BY case_id,activity HAVING count(*)>1) GROUP BY activity ORDER BY excess_occurrences DESC,activity LIMIT 30""")
+
+    def flow_transitions(self):
+        return self.run("""SELECT previous_activity AS from_activity,activity AS to_activity,count(*) AS occurrences,
+          median(epoch(event_time-previous_time)/3600.0) AS median_wait_hours
+          FROM selected_ordered_events WHERE event_rank>1 AND previous_activity IS NOT NULL AND activity IS NOT NULL
+          GROUP BY previous_activity,activity ORDER BY occurrences DESC,previous_activity,activity LIMIT 1000""",limit=1000)
+
+    def review_breakdown(self):
+        return self.run("""SELECT matching_category,count(*) AS review_items FROM selected_sequence_signals
+          GROUP BY matching_category ORDER BY review_items DESC,matching_category""")
+
+    def item_summary(self,case_id,dimension=None,group_value=None):
+        clause='';parameters=[case_id]
+        if dimension is not None:
+            if dimension not in self.GROUPS:raise ValueError('Unsupported comparison dimension')
+            clause=f' AND {self.GROUPS[dimension]} IS NOT DISTINCT FROM ?';parameters.append(group_value)
+        return self.run('SELECT case_id,purchase_document,matching_category,observed_span_days,repeated_event_count,event_count,missing_timestamps FROM selected_cases WHERE case_id=?'+clause,parameters=parameters)
+
+    def recommendations(self,dimension='Process type',min_items=1):
+        if min_items<1:raise ValueError('Minimum items must be positive')
+        baseline,evidence=self.overview()
+        groups=self.group_comparison(dimension,min_items)
+        cards=[]
+        if baseline['median_span_days'] is None:return cards
+        for name,n,median,p90,repeats,repeat_rate,missing in groups['rows']:
+            if n<min_items or median is None or median<=baseline['median_span_days']:continue
+            label='Not recorded' if name is None else name
+            cards.append({
+                'title':f'Investigate observed duration · {label}',
+                'observation':f'{n:,} selected items have a median recorded span of {median:,.2f} days, compared with {baseline["median_span_days"]:,.2f} days across the selected cohort.',
+                'metric':{'items':n,'median_days':median,'p90_days':p90,'repeat_cases':repeats,'repeat_rate':repeat_rate,'items_with_missing_times':missing},
+                'interpretation':'This group is associated with longer recorded spans. Complexity, recurring orders, timing conventions or incomplete observation may explain the difference.',
+                'action':'Ask the process owner to review a sample, confirm completion boundaries and distinguish legitimate repeated handling before proposing a targeted pilot.',
+                'expected_direction':'If avoidable waiting is confirmed, seek lower median and P90 spans without weakening matching controls.',
+                'measurement':'Track the same eligible cohort definition, median/P90 spans, timestamp coverage, repeat patterns and validated exception burden before and after a pilot.',
+                'limitation':'Descriptive association, not a causal finding or quantified saving. Groups can differ in case mix; small samples and censoring limit interpretation.',
+                'group':name,'dimension':dimension,'evidence':[evidence,groups],
+            })
+            if len(cards)==3:break
+        return cards
 
     def transitions(self,min_occurrences=1):
         if min_occurrences<1: raise ValueError('Minimum occurrences must be positive')
@@ -171,6 +270,34 @@ class Dashboard:
     def guided_answer(self,question):
         """Transparent local routing over the query catalog, not a simulated LLM."""
         text = question.lower()
+        def response(answer,evidence,visual=None):
+            return {'answer':answer,'evidence':evidence,'mode':'Guided Analyst · SQL, not an LLM',
+                    'filters':asdict(self.filters),'visual':visual,
+                    'limitation':'Observed spans are not completion times. Repetition may be legitimate; associations do not establish causes or savings.'}
+        if re.search(r'\b(summarize|summary|overview)\b',text):
+            o,evidence=self.overview();groups=self.group_comparison()
+            duration='No usable observed spans are available.' if o['median_span_days'] is None else f"Median observed duration is **{o['median_span_days']:.2f} calendar days**, with a **P90 of {o['p90_span_days']:.2f} days**."
+            return response(f"The current selection contains **{o['item_count']:,} purchase-order items**, **{o['document_count']:,} documents** and **{o['event_count']:,} recorded events**. {duration} **{o['repeat_cases']:,} items** contain repeated activities. Review differences by matching flow before assigning causes or proposing a pilot.",[groups,evidence],'groups')
+        if re.search(r'\b(compare|comparison)\b',text):
+            groups=self.group_comparison();rows=groups['rows'][:2]
+            if len(rows)<2:return response('Select at least two available process types to compare their recorded performance.',[groups])
+            descriptions=[f"**{name or 'Not recorded'}**: {n:,} items, "+('duration unavailable' if median is None else f'{median:.2f}-day median / {p90:.2f}-day P90')+f', {rate:.1%} repeat-item rate' for name,n,median,p90,repeats,rate,missing in rows]
+            return response('Comparing the first two groups by median duration in the selected cohort:\n\n'+'\n\n'.join(descriptions)+'\n\nUse the process-type filters to choose a specific pair. Case mix, recurring orders and incomplete observation may explain differences; this is not causal proof.',[groups],'groups')
+        if re.search(r'\b(investigate|prioriti\w*|manager)\b',text):
+            cards=self.recommendations();groups=self.group_comparison()
+            if not cards:return response('No above-median group can be prioritized from this selection. Review data coverage and broaden the cohort before proposing an intervention.',[groups])
+            card=cards[0]
+            return response(card['observation']+'\n\n**Next investigation:** '+card['action']+'\n\n**Measure success:** '+card['measurement']+'\n\n'+card['limitation'],[groups],'groups')
+        if re.search(r'\b(repeat|repeated|repetition|rework)\b',text) and re.search(r'\b(activities|activity|frequen\w*|where)\b',text):
+            result=self.repeated_activities()
+            if not result['rows']:return response('No repeated non-null activities were recorded in the selected items.',[result])
+            activity,affected,excess,total=result['rows'][0]
+            return response(f"**{activity}** has the most excess occurrences in this selection: **{excess:,}**, across **{affected:,} items** ({total:,} total occurrences in those repeated item/activity pairs). Multiple receipts or invoices can be legitimate. Review event timelines and matching rules before calling this avoidable work.",[result],'repeats')
+        if re.search(r'\b(wait|waiting|intervals?|bottleneck|transitions?|delays?)\b',text):
+            result=self.transitions()
+            if not result['rows']:return response('No consecutive timed transitions were recorded for this selection.',[result])
+            start,end,n,median,p90=result['rows'][0]
+            return response(f"**{start} → {end}** has the longest displayed median recorded interval: **{median:.2f} hours**, with **{n:,} occurrences** and a **P90 of {p90:.2f} hours**. Investigate volume, category and case context. The interval mixes waiting, service and calendar effects and does not explain its cause.",[result],'waiting')
         if re.search(r'\b(cause|causes|why|explain)\b',text):
             return {'answer':'The log can show differences, but does not establish their cause. Compare matching categories and inspect case timelines before forming a hypothesis.',
                     'evidence':[self.investigate('categories')],'mode':'Guided SQL analyst (no LLM)', 'filters':asdict(self.filters)}

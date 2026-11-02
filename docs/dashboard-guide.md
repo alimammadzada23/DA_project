@@ -1,8 +1,8 @@
-# Open and use InsightPilot
+# InsightPilot dashboard — opening and interview walkthrough
 
-## Start the dashboard on your Mac
+## Update and reopen on your Mac
 
-Use the existing DA_project checkout. The application is on `feature/insightpilot` until its pull request is merged. Preserve any local work; these commands do not reset or force-push anything.
+Stop an existing Streamlit process with **Ctrl+C first**. Use the current checkout; no reset or force-push is required.
 
 ```sh
 cd /path/to/DA_project
@@ -11,74 +11,92 @@ git switch feature/insightpilot
 git pull --ff-only
 uv python install 3.12
 uv sync --frozen --extra test --python 3.12
-uv run --frozen streamlit run app.py --server.port 8501
+uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
 ```
 
-If `uv` is not installed, install it using its official instructions, or `brew install uv` if you use Homebrew. In a browser **on the same Mac**, open `http://localhost:8501`. The terminal must remain running; stop it with Ctrl+C. If port 8501 is occupied, use `--server.port 8502` and open that port instead. These are local Mac addresses, not links to the remote cloud workspace. Native Apple Silicon execution remains unverified; the locked Python environment and application interactions were tested on Linux.
+Install `uv` using its official installer, or `brew install uv` if you use Homebrew. On your Mac the final command opens its browser; otherwise use the Local URL printed in that same Mac terminal. Keep Terminal running and stop with Ctrl+C. If the port is occupied, use `--server.port 8502`. These commands launch locally; the cloud workspace does not expose a supported public preview. Native Apple Silicon execution has not been observed here; Linux installation, browser interaction and tests are verified.
 
-No API key, Power BI installation or environment publication is needed for the dashboard and guided SQL analyst.
+The dark theme is tracked in `.streamlit/config.toml`. Restart the server after pulling changes so it loads the updated presentation modules and theme. Plotly is included in the frozen dependency lock.
 
-## Choose a source
+## Choose data explicitly
 
-- **Original log available:** expand **Load an event log or open the demo** in the sidebar, select an original `.xes` or `.xes.gz`, leave the synthetic checkbox unchecked and click **Import XES**. The source is retained under `data/imports/` and a new analytical database is created. Existing source/databases are not overwritten.
-- **Try the application now:** click **Open labeled synthetic demo**. Its banner explicitly identifies the records as synthetic; they are not findings from BPI 2019. Switching to the demo is an explicit action, never a fallback after a real-data failure.
-- **Already imported:** enter its database path in **DuckDB database**. The standard real-log path is `data/analytics/bpi2019.duckdb`.
+Expand **Data & import** in the sidebar:
 
-Streamlit uploads are subject to its configured file-size limit and keep the uploaded buffer in memory. For a large original log use the streaming CLI instructions in [download-and-run.md](download-and-run.md), then enter the resulting database path. New imports prepare immutable analytical tables once to avoid regrouping the full event log on every dashboard interaction. For an existing database created by an older version, stop its active use and run:
+- **Explore synthetic portfolio demo** prepares 1,200 reproducible synthetic items across four illustrative matching flows, eight start months, four companies and multiple vendors/spend classes. Its seed is 2019. A purchasing document retains a single company and vendor across its items. Timing and repetition patterns are invented solely for UI exploration. A prominent warning labels every page; these are not BPI findings.
+- **Open labeled synthetic demo** retains the original four-item test fixture.
+- **Import XES** accepts original `.xes`/`.xes.gz` files. Read the source license first. Leave the synthetic checkbox unchecked only for a genuine source; that checkbox alone does not certify provenance. Original bytes are retained and analytical targets are new files.
+
+The real-file default remains `data/analytics/bpi2019.duckdb`; a failed genuine-data import never silently switches to a fixture. Existing database paths can be selected in **Advanced / Developer Tools**. Large logs should use streaming CLI ingestion because browser upload buffers have Streamlit memory/file-size limits.
+
+You can also prepare the portfolio demo explicitly:
 
 ```sh
-uv run --frozen insightpilot prepare data/analytics/bpi2019.duckdb
+uv run --frozen insightpilot portfolio-demo data/portfolio-demo-v2
 ```
 
-Preparation is idempotent and leaves raw cases/events unchanged. It materializes existing analytical views, not new business semantics. Reimport into a new database to apply changed normalization/model definitions; direct raw-table edits are unsupported and would invalidate derived snapshots.
+Do not repeat that command on an existing target; use the sidebar to reopen it. The original CLI `demo` command is unchanged.
 
-## Filter the investigation
+## The four business pages
 
-The sidebar controls matching category, vendor, spend classification, repeated-activity status, an optional item-start date range and an optional observed-span range. Empty multiselects mean all values. Select **(not recorded)** to isolate null attributes. Dimension pickers list at most 1000 distinct values; the UI discloses truncation and advanced database SQL remains available for other values.
+### Executive Overview
 
-Date ranges refer to the **first recorded event of an item, in UTC**, with both selected dates included. All recorded events of matching items are retained, including later events outside that range. Items without dates cannot match an active date filter. Span filters similarly exclude items without a usable span. **Reset filters** restores the full cohort.
+Start with item volume, median/P90 observed span and repeat-item rate. Document, event and repeated-item counts remain visible in the selection/summary. Monthly volume, duration trends, duration bands, flow comparisons and sequence-review signals are computed from the selected items. The executive summary reports executed metrics; it does not infer inefficiency. Recommendations show evidence, a possible explanation, an operational next step, expected direction, a measurement plan and limitations. The Power BI companion is downloadable without exposing report code.
 
-Seven KPIs update together: item, document and event counts; items with repeats; median/P90 observed spans; and repeat-item rate. Missing timestamps/activity names produce cohort-specific warnings. A span is first-to-last recorded time, not proven completion time; repetitions may be legitimate multi-receipt/invoice behavior.
+### Process Explorer
 
-## Explore the tabs
+Inspect the source/destination Sankey, variant frequencies, waiting bands, activity counts, repetitions and flow differences. Link widths represent occurrences; the two-layer Sankey is not an end-to-end BPMN model. Untimed edges are retained, with unknown intervals labeled as unavailable. The separate PM4Py action discovers a graph/Petri-net summary, including cycles. Up to 50 edges are drawn; large selections disclose the discovery bound. Full variant sequences and ordered item events remain accessible. Select an item or look up an exact ID; all active filters still apply.
 
-1. **Dataset & quality:** download the selected-cohort KPI evidence. Full-source quality/published-count checks remain separate and deliberately do not change with filters.
-2. **Process analysis:** compare category spans, monthly item starts, the top 20 variants, transition intervals and waiting bands. The minimum-transition-occurrence control affects the bottleneck table, not which items belong to the cohort. Build a filtered PM4Py process map; only the top 50 edges are drawn, while its evidence contains all discovered edges up to the documented 1000-edge bound. Review signals are not compliance verdicts. Inspect a displayed item or enter an exact item ID to see its ordered event timeline. Lookups stay inside the active filters. Download dashboard evidence for the displayed investigation.
-3. **Investigation & SQL:** select one of 20 curated questions. For custom queries, **Selected cohort** requires `selected_cases`, `selected_events`, `selected_transitions` or other `selected_*` relations; raw tables and dynamic table functions are rejected in that mode. **Whole database** explicitly bypasses the filters while retaining read-only/external-access restrictions. Click **Execute SQL**; changing the editor alone does not execute it. Source hash, SQL, parameters, filter context and truncation remain visible. Changing filters or scope clears the previous editor result.
-4. **Power BI & approvals:** download the prepared project or explicitly approve exporting a DAX proposal. These controls never modify report files. Windows acceptance is separate from operating this dashboard.
-5. **Validation & limitations:** review the documented evidence and interpretation limits.
+### Root-Cause Investigation
 
-## Ask a question without an API key
+Compare process types, companies, vendors or spend classes. The heading is an investigation lens, not a causal claim. Use Group A/B for side-by-side metrics. **Drag a box across a duration bar** using the chart selection tool to inspect the underlying group. If multiple bars are selected, the first drives details. Without a chart selection, Group A supplies the drill-down. Case lookups remain inside both the global cohort and this group. Rankings require an adjustable minimum group size and prioritize above-cohort-median groups by observed median span. This is a transparent review heuristic, not estimated savings or causal impact.
 
-Keep **Guided SQL analyst (no API)** selected and ask, for example:
+### AI Business Analyst
 
-- “How many purchase-order items are recorded?”
-- “Which flows have the longest observed spans?”
-- “Which process variants are most common?”
-- “Where are long waiting intervals?”
-- “How many items have repeated activities?”
-- “Show recorded exceptions for review.”
+**Guided Analyst** is available without credentials and is explicitly not an LLM. It answers supported questions by executing controlled SQL. Use the suggested investigations or type a question. Business answers and relevant charts appear first; expand **Evidence & methodology** for SQL, parameters, source hash and limitations. Supported investigations include management summary, longest flows, waiting intervals, repeated activities, two-flow comparison and management priorities.
 
-This mode uses transparent intent routing and real SQL. It is **not an LLM**, does not invent query results, and retains the current case filters. Unsupported questions return a list of supported investigations; causality, verified compliance and financial-saving claims are not supplied. Inspect SQL/rows under each saved answer; saved investigations retain their original filters even after you change the dashboard cohort.
+Optional **Live LLM** retains the existing tool-calling integration, requires secure API configuration and explicit transmission consent, and can only execute curated investigations inside the current cohort. Mocked tool protocol tests are distinct from live-provider acceptance. A filter change starts a fresh visible investigation; earlier answers/audits remain available in the developer archive with their original filters.
 
-Optional **Live LLM with filtered tools** uses the existing provider integration. It requires configured credentials and consent to transmit schema/results. Its only analytical tool executes a curated question in the fixed cohort; the model cannot change filters or call database-wide SQL. Its transport is tested with mocks, not a live provider in this instance. None of this blocks guided analysis.
+## Filters and analytical definitions
 
-The same guided workflow is available in Terminal:
+Process type, first-recorded-date range and repetition are in the sidebar. **More investigation filters** adds company, vendor, spend, item-containing-activity and observed-span ranges. Empty multiselects mean all values; **Not recorded** isolates null attributes. Dates include both boundaries in UTC and select whole items: later events outside the start-date window remain in the history. An activity filter selects items containing any chosen activity, not only those events. Date/span filters exclude observations without usable dates. Reset returns to the full cohort; active filters and selected record counts are always visible.
+
+Observed span is last minus first recorded timestamp in calendar days. It is not a verified completed-case cycle time. Repeat-item rate is the share of items with excess non-null activity occurrences; multiple receipts/invoices can be legitimate. Consecutive-event intervals combine waiting, service and calendar effects. Invoice-before-receipt signals require matching-flow interpretation and are never automatically called violations. Group differences are associations with possible confounding and censoring.
+
+## Technical capabilities are preserved
+
+The collapsed **Advanced / Developer Tools** section keeps all existing functionality:
+
+- Twenty verified SQL questions; filtered custom SQL uses selected_* relations. Explicit Whole database mode remains read-only and bypasses dashboard filters. Arbitrary filesystem/network tools, mutation and table-function scope escapes are blocked.
+- SQL/JSON evidence, source identity, quality report and cohort evidence downloads; full-source integrity checks deliberately remain separate from filtered KPIs.
+- PM4Py and chart-selection diagnostics, plus archived investigations with recorded filter contexts.
+- Original PBIP/PBIR/TMDL/DAX artifacts, project ZIP, measure proposals and explicit approval before exporting a proposal. No report files are changed by the assistant.
+- Test commands, query diagnostics and secure optional provider variable names. No credentials belong in chat or Git.
+
+## Genuine-data dependency and manual import
+
+The official DOI is https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1 and its resolver-confirmed file-repository page is https://data.4tu.nl/articles/_/12715853/1. The latest cloud attempts still return upstream HTTP 503; this retry of TU/e also returned HTTP 403. Previously retrieved official source-description facts are retained in `docs/official-source-verification.json`. The original file and license have not been retrieved, so genuine-data findings remain incomplete.
+
+On your Mac, open the DOI/4TU record, confirm **BPI Challenge 2019**, read and retain its license/documentation and download the **original XES** (or XES.gz, extracting ZIP if supplied). Copy it unchanged to `data/raw/`. Use the actual filename, not an invented binary URL:
 
 ```sh
-uv run --frozen insightpilot guide data/analytics/bpi2019.duckdb \
-  'Which flows have the longest observed spans?'
+mkdir -p data/raw data/analytics outputs
+SOURCE='data/raw/your-actual-original-filename.xes.gz'
+uv run --frozen insightpilot ingest "$SOURCE" data/analytics/bpi2019.duckdb
+uv run --frozen insightpilot validate-source "$SOURCE" data/analytics/bpi2019.duckdb
+uv run --frozen insightpilot analyze data/analytics/bpi2019.duckdb outputs/real-analysis
 ```
 
-## Current genuine-data dependency
+Set SOURCE to `.xes` instead for an uncompressed original. Review count/schema/quality differences before findings. Restart the dashboard with that database selected. Source hashes prove byte identity, not publisher authenticity. See `docs/download-and-run.md` for full provenance and Windows companion steps.
 
-The official TU/e description and DOI resolver were retrieved successfully. The resolver points to **https://data.4tu.nl/articles/_/12715853/1**. That exact file-repository landing page returns HTTP 503 upstream connection timeouts in this instance. No original log or file license has been retrieved, so no genuine-log business findings are claimed. See [official-source-verification.json](official-source-verification.json) for recorded source facts and access evidence. If the record opens in your browser, obtain the original XES/XES.gz and import it as above.
-
-## Reproduce validation
+## Reproduce checks
 
 ```sh
 uv run --frozen --extra test pytest -q
 uv run --frozen --extra test python powerbi/validate.py
 ```
 
-The current suite includes data pipeline/reference tests, independent source reconciliation, filtered metric/event/document-count agreement, date/cohort semantics, empty and missing-data states, SQL scope/injection checks, filtered process discovery, guided chat, mocked live tool calls and Streamlit interactions. Tests on fixtures do not substitute for validation of the original log.
+Source integrity, independent reference answers, chart values, shared filters, empty/error states, drill-downs, guided questions and technical restrictions are tested. Browser acceptance verifies rendered charts, navigation, filtered KPIs, group-to-case selection, guided answers and absence of raw technical output by default. Synthetic checks do not validate the original BPI log. Windows Desktop TMDL parsing, data refresh, DAX reconciliation and visual acceptance remain separate and unverified.
+
+### Optional browser regression
+
+Playwright is not needed to use the dashboard. For a developer browser check, install Playwright/Chromium, start the app with the portfolio-v2 database, then run `scripts/browser_smoke.py --url <your-local-server-url>`. A system browser can be selected with `--chromium <path>`. Results and screenshots are written under `outputs/browser-check/`. The committed acceptance result and four screenshots are in `docs/browser-verification.json` and `docs/screenshots/`.

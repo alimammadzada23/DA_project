@@ -20,3 +20,7 @@ Use the CLI `chat` command from docs/download-and-run.md or the consenting Strea
 Pass criteria: executed analytical-data queries, correct source scope, reproducible counts, independently matched important numbers, visible SQL and truncation, no invented result, accurate category/completion caveats, no unauthorized write or provider/tool action. Record per-question pass/fail, audit filename, provider/model identifier and unresolved issues. Without these records, live AI remains unverified.
 
 Current software rejects a final answer with no analytical-data query, including a fabricated constant SELECT. It does not provide a proof system for arbitrary prose. Mock-provider tests exercise transport/control flow only.
+
+## Business presentation
+
+The AI Business Analyst page displays business text and relevant Plotly charts first; raw SQL/JSON is under Evidence & methodology. Its Guided Analyst is explicitly not an LLM. Six suggested investigations (management summary, flow ranking, waiting intervals, repeated activities, two-flow comparison and management priorities) execute actual scoped SQL and are covered by tests. A changed cohort clears the current conversation and archives the earlier evidence. Live LLM tools use the same cohort; provider acceptance above remains outstanding.

@@ -99,6 +99,8 @@ class Analyst:
             from dataclasses import asdict
             messages[0]['content'] += ('\nUse the investigate tool to answer within this fixed case cohort. '
                 'All events of selected cases are retained. You cannot change filters or query outside this cohort. '
+                'Write a concise business-language answer with important metrics, interpretations, next steps and limitations. '
+                'Do not put SQL, DAX or JSON in the narrative; the application presents technical evidence separately. '
                 '\nFilters: '+json.dumps(asdict(dashboard.filters),default=str)+
                 '\nInvestigations: '+json.dumps({k:v[0] for k,v in dashboard.catalog.items()}))
             tool={'type':'function','function':{'name':'investigate','description':'Execute a verified SQL investigation within the active dashboard filters',

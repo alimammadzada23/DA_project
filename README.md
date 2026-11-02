@@ -1,66 +1,70 @@
 # InsightPilot — Enterprise Process Intelligence
 
-Portfolio case study for procurement business analysis using the **BPI Challenge 2019** public anonymized event log. The stakeholder scenario is hypothetical; no consulting engagement, stakeholder interview, approval, saving, or implementation outcome is claimed.
+A Business Analyst / Data Analyst portfolio application for investigating procurement process performance. The sponsor scenario is hypothetical; no real engagement, stakeholder sign-off, implemented saving or causal finding is claimed.
 
-**Status: working software milestone, not a completed real-data case study.** The official TU/e description and DOI resolver are now verified. The original log remains inaccessible because its 4TU landing page returns upstream HTTP 503 connection timeouts; original-file/license inspection and real-data findings remain incomplete. Tests use explicitly synthetic records. Power BI JSON components are generated for structural validation; Windows Desktop import, visual review and DAX reconciliation remain outstanding. Start with the [dashboard opening and usage guide](docs/dashboard-guide.md). See [validation](docs/validation.md), [exact download and Mac commands](docs/download-and-run.md), and [live AI acceptance](docs/ai-acceptance.md).
+**Current scope:** working analytical software and a four-page dark Streamlit interface. The original BPI Challenge 2019 log remains inaccessible from this cloud instance (4TU upstream HTTP 503). Demonstration patterns are explicitly synthetic. Genuine-log findings and source-license acceptance remain incomplete.
 
-## Run locally (Apple Silicon or Linux)
+[Open and use the dashboard](docs/dashboard-guide.md) · [Actual UI screenshots](docs/screenshots/) · [Validation evidence](docs/validation.md) · [Data definitions](docs/data-and-methods.md)
 
-Use Python 3.11+ and [uv](https://docs.astral.sh/uv/). Python 3.12 is tested in this cloud instance.
+## Open the application
+
+From your existing repository checkout, after stopping any previous server:
 
 ```sh
-cd DA_project
-uv sync --frozen --extra test
-uv run --frozen --extra test pytest -q
+git switch feature/insightpilot
+git pull --ff-only
+uv python install 3.12
+uv sync --frozen --extra test --python 3.12
+uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
 ```
 
-No API credential is needed for ingestion, SQL, process discovery, report export, or predefined investigations. Local package installation preserves TLS verification. `uv.lock` pins resolved packages; the full runtime is not claimed tested on macOS.
+Run these on your Mac to open its local browser. The cloud task has no supported public-preview endpoint. Use **Data & import → Explore synthetic portfolio demo** for the 1,200-item seeded UI demonstration, or import a genuine original XES/XES.gz. The original four-item fixture is retained as a separate option. API keys and Power BI are optional for using the dashboard.
 
-## Obtain the real dataset
+## Four business pages
 
-1. Open the [official TU/e record](https://research.tue.nl/en/datasets/bpi-challenge-2019/) and [DOI](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1).
-2. Follow the DOI to the official 4TU record. Read its documentation, license, field definitions and download terms before use. Record the exact filename, version and license in your analysis notes. The source description and attribute names are verified; the original artifact filename/version and license remain **unverified** in this environment. This repository does not redistribute the data.
-3. Download the official XES artifact to `data/raw/`. The importer accepts `.xes` or `.xes.gz`. Extract an archive locally if the source supplies another archive format. Do not convert to CSV or substitute another dataset.
-4. Run the following with the actual downloaded filename. The filename below is a local naming convention, not a verified source artifact name.
+| Page | Business question | Working capabilities |
+|---|---|---|
+| Executive Overview | How is the recorded process performing? | KPIs, monthly volume, median/P90 trends, duration bands, flow comparisons, review signals and an executive summary |
+| Process Explorer | Where are delays, complexity and repeated activities? | Interactive flow links, variants, activity/repetition analysis, waiting distributions, PM4Py discovery and ordered item timelines |
+| Root-Cause Investigation | What factors are associated with longer spans? | Group comparisons, chart-to-case selection, contextual drill-down and ranked investigation cards with evidence/limitations |
+| AI Business Analyst | What should management investigate? | Guided SQL questions without credentials, optional restricted LLM tools, business answers/charts and expandable evidence |
+
+A shared case cohort governs every main-page result. Filters cover process type, company, vendor, spend, item-start dates, observed spans, repeats and items containing an activity. Technical SQL, DAX, JSON, source configuration and Power BI proposals are preserved under collapsed **Advanced / Developer Tools**.
+
+## Real-source workflow
+
+Authoritative entry: [official DOI](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1). The published expected totals are 76,349 purchasing documents, 251,734 items, 1,595,923 events, 42 activities and 627 resources. These are source-description expectations, not our observed findings.
+
+Follow the [download/import procedure](docs/download-and-run.md), preserve the original file/license and use its actual filename:
 
 ```sh
-uv run insightpilot ingest data/raw/BPI_Challenge_2019.xes data/analytics/bpi2019.duckdb
-uv run insightpilot validate-source data/raw/BPI_Challenge_2019.xes data/analytics/bpi2019.duckdb
+uv run insightpilot ingest data/raw/your-original-log.xes.gz data/analytics/bpi2019.duckdb
+uv run insightpilot validate-source data/raw/your-original-log.xes.gz data/analytics/bpi2019.duckdb
 uv run insightpilot quality data/analytics/bpi2019.duckdb
 uv run insightpilot analyze data/analytics/bpi2019.duckdb outputs/real-analysis
-uv run insightpilot discover data/analytics/bpi2019.duckdb
-uv run insightpilot questions data/analytics/bpi2019.duckdb
 uv run insightpilot export data/analytics/bpi2019.duckdb data/exports
-uv run streamlit run app.py --server.headless true
 ```
 
-The database target must not exist. Use a new versioned target when reimporting; never overwrite the raw source. JSON case-field overrides are supported by `--mapping file.json`, for example `{"purchase_document":"Purchasing Document"}`. The initial field mapping is provisional until checked against official documentation. Never infer purchase documents by splitting case identifiers.
+Targets must be new files; failed imports do not replace sources. The pipeline streams XES, retains original attributes/order, rejects malformed data atomically, honors global defaults and materializes derived snapshots once. It does not load a full raw-log copy into every chart. `prepare <database>` idempotently materializes an older database's existing views without changing raw tables; reimport to apply changed normalization/model semantics.
 
-Counts reported by the source description (76,349 documents; 251,734 items; 1,595,923 events; 42 activities; 627 resources) are comparison targets, not our findings. A mismatch is retained in the report and requires investigation. Setting `--synthetic` labels a fixture; omitting it does not certify official provenance.
+## Reliability and limitations
 
-## Investigate
+- Items, documents and events remain distinct grains. Dates select full items by first recorded UTC timestamp, retaining complete histories.
+- Observed spans are not completed-case cycle time; legitimate multiple receipts/invoices may create repetitions. Matching-flow review signals are not verified noncompliance.
+- Source-byte reconciliation independently checks ten metrics. Automated fixtures/reference questions and browser tests support the software; original-log and native Mac acceptance remain outstanding.
+- The SQL tool uses a read-only connection, external-access restrictions, statement/table scope checks, row limits and timeout. No LLM shell or report-writing tool exists.
+- Optional live LLM credentials use secure process variables. A ChatGPT subscription does not provide API credits. Mocked provider tests are not live-provider acceptance, and arbitrary narrative claims still need evidence review.
+- The Power BI companion is preserved with official-schema/static-binding validation. Windows Desktop TMDL/refresh/DAX/rendering acceptance remains unverified; see [Power BI guide](powerbi/README.md).
 
 ```sh
-uv run insightpilot ask data/analytics/bpi2019.duckdb categories
+uv run --frozen --extra test pytest -q
+uv run --frozen --extra test python powerbi/validate.py
 ```
 
-Twenty predefined analytical questions execute real SQL. The UI exposes SQL and source hash. Custom SQL has a SELECT-only gate, read-only DuckDB connection, disabled external access, a row limit and a ten-second interrupt. The LLM has no shell tool or report-write tool. Local users who can edit code or the database remain outside this application security boundary.
+## Evidence and interview package
 
-Optional LLM mode uses an OpenAI-compatible `/chat/completions` tool-calling endpoint. Set `INSIGHTPILOT_LLM_API_KEY`, `INSIGHTPILOT_LLM_MODEL`, and optionally `INSIGHTPILOT_LLM_BASE_URL` in your process or secure environment settings. Never commit them. A ChatGPT subscription does not supply API credits. The UI requires consent before sending schema/results to the provider. Query execution is enforced; numerical fidelity of arbitrary LLM prose is **not** automatically guaranteed. Review the evidence. Live provider access has not been tested.
+[Business case / BRD / backlog / UAT](docs/business-analysis.md), [data and KPI dictionary](docs/data-and-methods.md), [source verification](docs/official-source-verification.json), [portfolio and interview questions](docs/portfolio.md), [live AI acceptance protocol](docs/ai-acceptance.md).
 
-## Project layout
+The business story is **Question → Dataset → Investigation → Observations → Recommendations → Validation**. Observations and recommendations must be supported by executed results and disclose source scope; the synthetic UI demo is not an original-company case study.
 
-- `src/insightpilot`: streaming importer, analytical SQL, CLI, PM4Py discovery, controlled agent
-- `tests`: synthetic edge cases, hand-calculated references, app and mocked provider tests
-- `powerbi`: generated PBIP/PBIR/TMDL candidate and official-schema validation
-- `docs`: business analysis, data dictionary, portfolio narrative and validation evidence
-
-Use the existing checkout in this isolated cloud task. Do not create a worktree unless explicitly requested. No raw data, credentials, databases, virtual environments or generated analysis exports belong in Git.
-
-## Latest application additions
-
-The existing app now provides charts, parameterized category investigation, persisted SQL evidence/chat history, data-quality and query downloads, a process-map rendering, and Power BI project ZIP export. An explicitly synthetic `insightpilot demo data/demo` command enables local demonstration without silently substituting data. See the download/run guide for the environment variable selecting it. `validate-source` re-reads the original bytes and independently checks ten quantities; `analyze` creates a source-labeled decision brief and complete SQL evidence bundle.
-
-## Interactive dashboard update
-
-All dashboard KPIs, charts, timelines and curated questions now share parameterized item filters (category, vendor, spend, first-event dates, span and repeats). Source-level integrity counts remain separate. The filtered SQL editor enforces selected_* relations; database-wide mode is an explicit choice. A guided SQL analyst works without credentials and is labeled as a non-LLM tool. Optional live-LLM tools are restricted to the same cohort. The sidebar supports original XES uploads and an explicit synthetic-demo action. New imports materialize derived tables once; older databases can use `insightpilot prepare <database>`. See the dashboard guide for scope semantics and exact browser instructions.
+Use this existing checkout in the isolated cloud task. Do not create a worktree unless explicitly requested. Raw data, databases, credentials, virtual environments and analysis exports are ignored by Git.

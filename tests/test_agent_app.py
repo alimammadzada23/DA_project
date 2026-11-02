@@ -89,7 +89,8 @@ def test_app_loaded_data(database,monkeypatch):
     app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=20)
     assert not app.exception
     assert any('SYNTHETIC' in w.value for w in app.warning)
-    assert len(app.tabs)==5
+    assert app.radio(key='page').options==['Executive Overview','Process Explorer','Root-Cause Investigation','AI Business Analyst']
+    app.radio(key='page').set_value('Process Explorer').run(timeout=30)
     next(b for b in app.button if b.label=='Discover directly-follows graph with PM4Py').click().run(timeout=30)
     assert not app.exception
 
