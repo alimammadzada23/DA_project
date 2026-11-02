@@ -1,0 +1,28 @@
+// Run in Windows Power BI Desktop DAX Query View AFTER refresh.
+// Preserve output, export manifest SHA-256 and Desktop version; results are not pre-verified.
+EVALUATE
+ROW("Items", [Items], "Documents", [Purchase Documents],
+    "MedianDays", [Median Observed Days], "P90Days", [P90 Observed Days],
+    "RepeatCases", [Repeat Cases], "RepeatRate", [Repeat Rate])
+
+EVALUATE
+SUMMARIZECOLUMNS(Cases[matching_category],
+    "Items", [Items], "Documents", [Purchase Documents],
+    "MedianDays", [Median Observed Days], "P90Days", [P90 Observed Days],
+    "RepeatCases", [Repeat Cases], "RepeatRate", [Repeat Rate])
+
+EVALUATE
+CALCULATETABLE(
+    ROW("Items", [Items], "Documents", [Purchase Documents],
+        "MedianDays", [Median Observed Days], "P90Days", [P90 Observed Days],
+        "RepeatCases", [Repeat Cases], "RepeatRate", [Repeat Rate]),
+    FILTER(Cases, ISBLANK(Cases[matching_category])))
+
+EVALUATE
+SUMMARIZECOLUMNS(Cases[matching_category],
+    "Transitions", [Transition Occurrences], "MedianWaitHours", [Median Wait Hours],
+    "P90WaitHours", [P90 Wait Hours])
+
+EVALUATE
+SUMMARIZECOLUMNS(TransitionEvents[Waiting Band],
+    "Transitions", [Transition Occurrences])

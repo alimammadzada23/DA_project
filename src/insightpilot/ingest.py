@@ -8,6 +8,7 @@ import tempfile
 from datetime import datetime, timezone
 
 import duckdb
+import pandas as pd
 from defusedxml.ElementTree import iterparse
 
 EXPECTED = {"cases": 251734, "events": 1595923, "purchase_documents": 76349,
@@ -26,6 +27,8 @@ def attributes(element):
     result = {}
     for child in element:
         if 'key' in child.attrib:
+            if len(child):
+                raise ValueError('Nested XES attributes require an explicit mapping; source is preserved')
             key = child.attrib['key']
             if key in result:
                 raise ValueError(f'Duplicate XES attribute key: {key}')
@@ -69,7 +72,18 @@ def ingest(source, target, *, synthetic=False, mapping=None, batch_size=10000):
         con.execute('INSERT INTO provenance VALUES (?,?,?,?,current_timestamp)',
                     [str(source), digest.hexdigest(), synthetic, json.dumps(fields)])
         opener = gzip.open if source.suffix == '.gz' else open
-        batch = []
+        batch, case_batch = [], []
+        trace_defaults, event_defaults = {}, {}
+        def flush_events():
+            if batch:
+                con.append('events',pd.DataFrame.from_records(batch,columns=[
+                    'case_id','source_order','activity','event_time','resource','lifecycle','source_attributes']))
+                batch.clear()
+        def flush_cases():
+            if case_batch:
+                con.append('cases',pd.DataFrame.from_records(case_batch,columns=[
+                    'case_id',*FIELDS,'source_attributes']))
+                case_batch.clear()
         with opener(source, 'rb') as stream:
             root = None
             for action, element in iterparse(stream, events=('start','end')):
@@ -77,31 +91,36 @@ def ingest(source, target, *, synthetic=False, mapping=None, batch_size=10000):
                     root = element
                     if tag(root) != 'log':
                         raise ValueError('Expected XES log root')
+                if action == 'end' and tag(element) == 'global':
+                    defaults = attributes(element)
+                    if element.attrib.get('scope') == 'trace': trace_defaults = defaults
+                    if element.attrib.get('scope') == 'event': event_defaults = defaults
                 if action != 'end' or tag(element) != 'trace':
                     continue
-                attrs = attributes(element)
+                attrs = trace_defaults | attributes(element)
                 case_id = attrs.get('concept:name')
                 if not case_id or not case_id.strip():
                     raise ValueError('Missing case identifier; import rejected without dropping records')
-                con.execute('INSERT INTO cases VALUES (?,?,?,?,?,?,?)',
-                            [case_id] + [attrs.get(fields[k]) for k in FIELDS] + [json.dumps(attrs)])
+                case_batch.append([case_id] + [attrs.get(fields[k]) for k in FIELDS] + [json.dumps(attrs)])
+                if len(case_batch) >= batch_size: flush_cases()
                 count = 0
                 for event in element:
                     if tag(event) != 'event':
                         continue
-                    a = attributes(event)
-                    batch.append((case_id, count, a.get('concept:name'), timestamp(a.get('time:timestamp')),
-                                  a.get('org:resource'), a.get('lifecycle:transition'), json.dumps(a)))
+                    a = event_defaults | attributes(event)
+                    activity = a.get('concept:name')
+                    resource = a.get('org:resource')
+                    batch.append((case_id, count, activity if activity and activity.strip() else None, timestamp(a.get('time:timestamp')),
+                                  resource if resource and resource.strip() else None, a.get('lifecycle:transition'), json.dumps(a)))
                     count += 1
                     if len(batch) >= batch_size:
-                        con.executemany('INSERT INTO events VALUES (?,?,?,?,?,?,?)', batch)
-                        batch.clear()
+                        flush_events()
                 if not count:
                     raise ValueError(f'Empty trace: {case_id}')
                 root.remove(element)
                 element.clear()
-        if batch:
-            con.executemany('INSERT INTO events VALUES (?,?,?,?,?,?,?)', batch)
+        flush_events()
+        flush_cases()
         if con.execute('SELECT count(*) FROM cases').fetchone()[0] == 0:
             raise ValueError('No traces in source')
         con.execute('COMMIT')

@@ -7,3 +7,5 @@ data/
 outputs/
 *.duckdb*
 *.parquet
+.DS_Store
+**/.pbi/

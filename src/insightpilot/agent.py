@@ -13,6 +13,23 @@ from .analytics import QUESTIONS
 LIMITATIONS = ('Observed spans are not completion times. Repeats may be legitimate. '
                'Sequence signals require category-specific review and are not verified violations. '
                'Resource names alone do not establish human versus batch status.')
+DATA_TABLES = {'cases','events','ordered_events','case_metrics','transitions','variants',
+               'transition_performance','category_performance','sequence_signals'}
+
+
+def referenced_tables(con,sql):
+    # Use parser output, not get_table_names: DuckDB 1.5.6 fails binding some nested views there.
+    ast=json.loads(con.execute('SELECT json_serialize_sql(?)',[sql]).fetchone()[0])
+    names=set();aliases=set()
+    def walk(value):
+        if isinstance(value,dict):
+            if value.get('type')=='BASE_TABLE':names.add(value['table_name'].lower())
+            for entry in value.get('cte_map',{}).get('map',[]):aliases.add(entry['key'].lower())
+            for child in value.values():walk(child)
+        elif isinstance(value,list):
+            for child in value:walk(child)
+    walk(ast)
+    return sorted(names-aliases)
 
 
 class Analyst:
@@ -21,7 +38,7 @@ class Analyst:
         if not self.database.is_file():
             raise FileNotFoundError(self.database)
 
-    def query(self, sql, limit=200):
+    def query(self, sql, limit=200, *, parameters=None):
         if not 1 <= limit <= 1000 or len(sql)>20000:
             raise ValueError('Query limits exceeded')
         if not re.match(r'^\s*(SELECT|WITH)\b',sql,re.IGNORECASE):
@@ -38,11 +55,13 @@ class Analyst:
             timer = threading.Timer(10, con.interrupt)
             timer.start()
             started = time.monotonic()
-            result = con.execute(sql)
+            tables=referenced_tables(con,sql)
+            result = con.execute(sql,parameters or [])
             columns = [x[0] for x in result.description]
             rows = result.fetchmany(limit+1)
             provenance = con.execute('SELECT sha256,synthetic FROM provenance').fetchone()
-            return {'sql':sql, 'columns':columns, 'rows':rows[:limit], 'truncated':len(rows)>limit,
+            return {'sql':sql, 'parameters':parameters or [], 'referenced_tables':tables,
+                    'columns':columns, 'rows':rows[:limit], 'truncated':len(rows)>limit,
                     'elapsed_seconds':round(time.monotonic()-started,4),
                     'source_sha256':provenance[0], 'synthetic':provenance[1], 'limitations':LIMITATIONS}
         finally:
@@ -89,8 +108,8 @@ class Analyst:
                     messages.append(message)
                     calls = message.get('tool_calls',[])
                     if not calls:
-                        if not evidence:
-                            raise ValueError('Ungrounded response rejected: no executed query')
+                        if not any(set(item['referenced_tables']) & DATA_TABLES for item in evidence):
+                            raise ValueError('Ungrounded response rejected: no executed query against analytical data')
                         return {'answer':message.get('content'), 'evidence':evidence,
                                 'validation':'Queries executed; narrative claims still require human review',
                                 'limitations':LIMITATIONS}

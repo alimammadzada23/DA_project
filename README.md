@@ -2,7 +2,7 @@
 
 Portfolio case study for procurement business analysis using the **BPI Challenge 2019** public anonymized event log. The stakeholder scenario is hypothetical; no consulting engagement, stakeholder interview, approval, saving, or implementation outcome is claimed.
 
-**Status: working software milestone, not a completed real-data case study.** Official data and license inspection are blocked by network policy. Tests use explicitly synthetic records. Power BI JSON components are generated for structural validation; Windows Desktop import, visual review and DAX reconciliation remain outstanding. See [validation](docs/validation.md).
+**Status: working software milestone, not a completed real-data case study.** Official source requests currently fail (TU/e HTTP 403; DOI/4TU upstream HTTP 503). Original data and license inspection remain blocked. Tests use explicitly synthetic records. Power BI JSON components are generated for structural validation; Windows Desktop import, visual review and DAX reconciliation remain outstanding. See [validation](docs/validation.md), [exact download and Mac commands](docs/download-and-run.md), and [live AI acceptance](docs/ai-acceptance.md).
 
 ## Run locally (Apple Silicon or Linux)
 
@@ -25,7 +25,9 @@ No API credential is needed for ingestion, SQL, process discovery, report export
 
 ```sh
 uv run insightpilot ingest data/raw/BPI_Challenge_2019.xes data/analytics/bpi2019.duckdb
-uv run insightpilot quality data/analytics/bpi2019.duckdb > outputs-quality.json
+uv run insightpilot validate-source data/raw/BPI_Challenge_2019.xes data/analytics/bpi2019.duckdb
+uv run insightpilot quality data/analytics/bpi2019.duckdb
+uv run insightpilot analyze data/analytics/bpi2019.duckdb outputs/real-analysis
 uv run insightpilot discover data/analytics/bpi2019.duckdb
 uv run insightpilot questions data/analytics/bpi2019.duckdb
 uv run insightpilot export data/analytics/bpi2019.duckdb data/exports
@@ -54,3 +56,7 @@ Optional LLM mode uses an OpenAI-compatible `/chat/completions` tool-calling end
 - `docs`: business analysis, data dictionary, portfolio narrative and validation evidence
 
 Use the existing checkout in this isolated cloud task. Do not create a worktree unless explicitly requested. No raw data, credentials, databases, virtual environments or generated analysis exports belong in Git.
+
+## Latest application additions
+
+The existing app now provides charts, parameterized category investigation, persisted SQL evidence/chat history, data-quality and query downloads, a process-map rendering, and Power BI project ZIP export. An explicitly synthetic `insightpilot demo data/demo` command enables local demonstration without silently substituting data. See the download/run guide for the environment variable selecting it. `validate-source` re-reads the original bytes and independently checks ten quantities; `analyze` creates a source-labeled decision brief and complete SQL evidence bundle.

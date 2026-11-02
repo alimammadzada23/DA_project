@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "categoryFilter",
+  "position": {
+    "x": 850,
+    "y": 350,
+    "z": 3,
+    "height": 210,
+    "width": 398,
+    "tabOrder": 3
+  },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "matching_category"
+                }
+              },
+              "queryRef": "Cases.matching_category"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

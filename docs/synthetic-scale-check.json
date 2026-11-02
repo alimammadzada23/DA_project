@@ -1,0 +1,12 @@
+{
+  "scope": "SYNTHETIC SCALE CHECK ONLY; not genuine-data or Mac performance",
+  "platform": "Linux x86_64",
+  "python": "3.12.14",
+  "duckdb": "1.5.6",
+  "cases": 10000,
+  "events": 100000,
+  "source_bytes": 14547801,
+  "ingest_seconds": 10.702,
+  "peak_process_rss_mib": 208.6,
+  "settings": "batch_size=10000; DuckDB threads=2 and memory_limit=1GB; RSS includes Python/pandas and native libraries"
+}

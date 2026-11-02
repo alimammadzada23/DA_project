@@ -4,5 +4,8 @@ model Model
 
 ref table Cases
 ref table Transitions
+ref table TransitionEvents
 ref table Signals
 ref table Opportunities
+ref relationship TransitionCase
+ref relationship SignalCase

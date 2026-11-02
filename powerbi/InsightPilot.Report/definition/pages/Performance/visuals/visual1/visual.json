@@ -3,10 +3,10 @@
   "name": "Performance1",
   "position": {
     "x": 32,
-    "y": 360,
+    "y": 260,
     "z": 1,
-    "height": 280,
-    "width": 1216,
+    "height": 210,
+    "width": 780,
     "tabOrder": 1
   },
   "visual": {
@@ -20,65 +20,65 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Transitions"
+                      "Entity": "TransitionEvents"
                     }
                   },
                   "Property": "from_activity"
                 }
               },
-              "queryRef": "Transitions.from_activity"
+              "queryRef": "TransitionEvents.from_activity"
             },
             {
               "field": {
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Transitions"
+                      "Entity": "TransitionEvents"
                     }
                   },
                   "Property": "to_activity"
                 }
               },
-              "queryRef": "Transitions.to_activity"
+              "queryRef": "TransitionEvents.to_activity"
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Transitions"
+                      "Entity": "TransitionEvents"
                     }
                   },
-                  "Property": "occurrences"
+                  "Property": "Transition Occurrences"
                 }
               },
-              "queryRef": "Transitions.occurrences"
+              "queryRef": "TransitionEvents.Transition Occurrences"
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Transitions"
+                      "Entity": "TransitionEvents"
                     }
                   },
-                  "Property": "median_wait_hours"
+                  "Property": "Median Wait Hours"
                 }
               },
-              "queryRef": "Transitions.median_wait_hours"
+              "queryRef": "TransitionEvents.Median Wait Hours"
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Transitions"
+                      "Entity": "TransitionEvents"
                     }
                   },
-                  "Property": "p90_wait_hours"
+                  "Property": "P90 Wait Hours"
                 }
               },
-              "queryRef": "Transitions.p90_wait_hours"
+              "queryRef": "TransitionEvents.P90 Wait Hours"
             }
           ]
         }

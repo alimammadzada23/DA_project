@@ -3,10 +3,10 @@
   "name": "Executive1",
   "position": {
     "x": 32,
-    "y": 360,
+    "y": 210,
     "z": 1,
-    "height": 280,
-    "width": 1216,
+    "height": 220,
+    "width": 780,
     "tabOrder": 1
   },
   "visual": {
@@ -30,16 +30,42 @@
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "Cases"
                     }
                   },
-                  "Property": "observed_span_days"
+                  "Property": "Items"
                 }
               },
-              "queryRef": "Cases.observed_span_days"
+              "queryRef": "Cases.Items"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "Median Observed Days"
+                }
+              },
+              "queryRef": "Cases.Median Observed Days"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "Repeat Rate"
+                }
+              },
+              "queryRef": "Cases.Repeat Rate"
             }
           ]
         }

@@ -26,7 +26,9 @@ QUESTIONS = {
 def discover(con):
     """PM4Py DFG discovery using an aggregated, bounded representation."""
     import pm4py
-    dfg = {(a,b): n for a,b,n in con.execute('SELECT from_activity,to_activity,count(*) FROM transitions GROUP BY ALL').fetchall()}
+    if con.execute('SELECT count(*) FROM events WHERE activity IS NULL').fetchone()[0]:
+        raise ValueError('Resolve missing activities before process discovery')
+    dfg = {(a,b): n for a,b,n in con.execute('SELECT previous_activity,activity,count(*) FROM ordered_events WHERE event_rank>1 GROUP BY ALL').fetchall()}
     starts = dict(con.execute('SELECT activity,count(*) FROM ordered_events WHERE event_rank=1 GROUP BY activity').fetchall())
     ends = dict(con.execute('SELECT activity,count(*) FROM (SELECT *,row_number() OVER(PARTITION BY case_id ORDER BY event_rank DESC) r FROM ordered_events) WHERE r=1 GROUP BY activity').fetchall())
     if None in starts or None in ends:

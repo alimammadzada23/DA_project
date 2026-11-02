@@ -2,7 +2,7 @@
 
 ## Current instance — 2026-11-02
 
-**46 tests passed, 0 failed, 0 skipped** in the latest run from the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
+**57 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
 
 | Capability | Evidence / outcome |
 |---|---|
@@ -14,7 +14,7 @@
 | SQL restrictions | Mutations, multiple statements, PRAGMA, extension install, ATTACH, external file/network reads rejected |
 | Optional LLM integration | Tool-calling protocol and audit tested with mocked transport; no-query narrative rejected |
 | Streamlit | Missing-data and loaded-fixture AppTest interactions passed; real service started; `/` HTTP 200 and health `ok` |
-| Power BI | 16 JSON files validate offline against 11 retained official schemas; 4 pages / 7 bound table visuals |
+| Power BI | 22 JSON files validate offline against 12 retained official schemas and static semantic bindings; 4 pages / 12 bound visuals |
 
 An initial test revealed that DuckDB's parser normalizes a read-only PRAGMA to SELECT; a lexical SELECT/WITH gate was added and the regression test now passes. The first service start was blocked by the command sandbox's socket restrictions; approved execution outside that sandbox started normally. No TLS or signature checks were disabled.
 
@@ -29,9 +29,9 @@ An initial test revealed that DuckDB's parser normalizes a read-only PRAGMA to S
 
 ## Outstanding prerequisites and limitations
 
-- Official TU/e/DOI/4TU access: proxy denied the source requests. Required domains were saved in the environment draft: `research.tue.nl`, `doi.org`, `data.4tu.nl`, `learn.microsoft.com`. Saving a draft does not apply it. Review/save network changes in environment settings and publish when appropriate; follow any additional redirect destinations only after verifying them.
+- Official TU/e/DOI/4TU access: current attempts return 403 or upstream 503 connection timeouts; exact manual download/run instructions are in docs/download-and-run.md. Required domains were saved in the environment draft: `research.tue.nl`, `doi.org`, `data.4tu.nl`, `learn.microsoft.com`. Saving a draft does not apply it. Review/save network changes in environment settings and publish when appropriate; follow any additional redirect destinations only after verifying them.
 - No authentic artifact, source license, actual schema, category definitions or published totals have been verified. User-supplied provenance requires validation even if `--synthetic` is absent.
-- Full-volume memory/performance and Apple Silicon operation remain unmeasured. No benchmark numbers are invented.
+- Genuine full-volume performance and Apple Silicon operation remain unmeasured. An executed Linux-only synthetic check processed 100,000 events / 10,000 cases in 10.702 seconds with 208.6 MiB peak process RSS; see docs/synthetic-scale-check.json. This is not a genuine-data or Mac benchmark.
 - Human-versus-batch users and terminal conditions remain unknown. No universal matching rule is implemented. Recorded repeats and sequence signals do not certify compliance or avoidable work.
 - Missing timestamps can understate observed intervals; missing activity values can understate repeats. Report coverage with these measures.
 - Live LLM requires separately provisioned API credentials/access and explicit consent to send query results. The presence of a successful query does not prove every sentence or number in an LLM narrative; human evidence review remains necessary. Only deterministic catalog answers are directly rendered from query results.
@@ -39,3 +39,15 @@ An initial test revealed that DuckDB's parser normalizes a read-only PRAGMA to S
 - Automated tests are not stakeholder UAT, and there are no sign-offs, approvals, company findings, savings or implemented operational improvements.
 
 Reusable install and start instructions were saved in the environment draft. The machine is prepared for software development and synthetic validation; this does **not** mean the real-data portfolio project is complete or that an environment snapshot has been published.
+
+## Continuation verification
+
+The project was extended in place. Vectorized case/event batches replaced per-row insertion; XES defaults are honored and nested attributes fail explicitly. Process discovery now retains untimed activity edges. Empty activity names become missing analytical values while raw attributes remain preserved.
+
+Added independent source-byte reconciliation (ten quantities), source-labeled analytical reports, Parquet export manifests, parameterized category SQL, persistent application evidence/chat history, charts and downloads. The demo workflow, source reconciliation, report generation and Parquet export were executed with explicitly synthetic data. CLI live AI execution was attempted and stopped at missing credentials; no provider request or live-AI success is claimed.
+
+A new query-provenance check initially failed because DuckDB 1.5.6 get_table_names binds some nested views incorrectly. Using DuckDB's parameterized SQL AST serializer avoids that binder path; relevant tests were rerun. Constant-only SELECT output cannot satisfy the AI's analytical-data evidence requirement. Arbitrary narrative correctness still requires review.
+
+Current Microsoft authoring documentation is now accessible and was reviewed. It exposed a missing required PBIR version metadata file, now added. The candidate also includes monthly trend/slicer bindings and blank-safe count measures. Windows TMDL/refresh/DAX/rendering acceptance is still incomplete.
+
+This continuation focuses on project functionality; it does not depend on publishing a Codex environment.

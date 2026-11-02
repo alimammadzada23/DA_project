@@ -1,0 +1,53 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "waitDistribution",
+  "position": {
+    "x": 32,
+    "y": 490,
+    "z": 2,
+    "height": 200,
+    "width": 780,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "Waiting Band"
+                }
+              },
+              "queryRef": "TransitionEvents.Waiting Band"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "Transition Occurrences"
+                }
+              },
+              "queryRef": "TransitionEvents.Transition Occurrences"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

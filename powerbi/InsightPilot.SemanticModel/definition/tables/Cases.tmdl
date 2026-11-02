@@ -1,14 +1,14 @@
 table Cases
 
-	measure 'Items' = COUNTROWS(Cases)
+	measure 'Items' = COALESCE(COUNTROWS(Cases), 0)
 
-	measure 'Purchase Documents' = COUNTROWS(FILTER(VALUES(Cases[purchase_document]), NOT ISBLANK(Cases[purchase_document])))
+	measure 'Purchase Documents' = COALESCE(COUNTROWS(FILTER(VALUES(Cases[purchase_document]), NOT ISBLANK(Cases[purchase_document]))), 0)
 
 	measure 'Median Observed Days' = MEDIAN(Cases[observed_span_days])
 
 	measure 'P90 Observed Days' = PERCENTILEX.INC(FILTER(Cases, NOT ISBLANK(Cases[observed_span_days])), Cases[observed_span_days], 0.9)
 
-	measure 'Repeat Cases' = COUNTROWS(FILTER(Cases, Cases[repeated_event_count] > 0))
+	measure 'Repeat Cases' = COALESCE(COUNTROWS(FILTER(Cases, Cases[repeated_event_count] > 0)), 0)
 
 	measure 'Repeat Rate' = DIVIDE([Repeat Cases], [Items])
 
@@ -26,6 +26,11 @@ table Cases
 		dataType: string
 		summarizeBy: none
 		sourceColumn: matching_category
+
+	column first_event
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: first_event
 
 	column variant
 		dataType: string
@@ -56,6 +61,11 @@ table Cases
 		dataType: string
 		summarizeBy: none
 		sourceColumn: completion_status
+
+	column 'Start Month' = IF(ISBLANK(Cases[first_event]), BLANK(), DATE(YEAR(Cases[first_event]), MONTH(Cases[first_event]), 1))
+		dataType: dateTime
+		formatString: yyyy-MM
+		summarizeBy: none
 
 	partition Cases = m
 		mode: import

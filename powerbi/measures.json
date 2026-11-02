@@ -1,8 +1,11 @@
 {
-  "Items": "COUNTROWS(Cases)",
-  "Purchase Documents": "COUNTROWS(FILTER(VALUES(Cases[purchase_document]), NOT ISBLANK(Cases[purchase_document])))",
+  "Items": "COALESCE(COUNTROWS(Cases), 0)",
+  "Purchase Documents": "COALESCE(COUNTROWS(FILTER(VALUES(Cases[purchase_document]), NOT ISBLANK(Cases[purchase_document]))), 0)",
   "Median Observed Days": "MEDIAN(Cases[observed_span_days])",
   "P90 Observed Days": "PERCENTILEX.INC(FILTER(Cases, NOT ISBLANK(Cases[observed_span_days])), Cases[observed_span_days], 0.9)",
-  "Repeat Cases": "COUNTROWS(FILTER(Cases, Cases[repeated_event_count] > 0))",
-  "Repeat Rate": "DIVIDE([Repeat Cases], [Items])"
+  "Repeat Cases": "COALESCE(COUNTROWS(FILTER(Cases, Cases[repeated_event_count] > 0)), 0)",
+  "Repeat Rate": "DIVIDE([Repeat Cases], [Items])",
+  "Transition Occurrences": "COALESCE(COUNTROWS(TransitionEvents), 0)",
+  "Median Wait Hours": "MEDIAN(TransitionEvents[waiting_hours])",
+  "P90 Wait Hours": "PERCENTILEX.INC(TransitionEvents, TransitionEvents[waiting_hours], 0.9)"
 }

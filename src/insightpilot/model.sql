@@ -28,7 +28,7 @@ SELECT c.*, m.* EXCLUDE(case_id) FROM cases c JOIN (
 CREATE VIEW transitions AS
 SELECT case_id, previous_activity AS from_activity, activity AS to_activity,
  epoch(event_time-previous_time)/3600.0 AS waiting_hours
-FROM ordered_events WHERE previous_activity IS NOT NULL AND event_time IS NOT NULL AND previous_time IS NOT NULL;
+FROM ordered_events WHERE previous_activity IS NOT NULL AND activity IS NOT NULL AND event_time IS NOT NULL AND previous_time IS NOT NULL;
 CREATE VIEW variants AS
 SELECT variant, count(*) AS case_count FROM case_metrics GROUP BY variant;
 CREATE VIEW transition_performance AS
