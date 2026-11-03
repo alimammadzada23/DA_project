@@ -1,0 +1,11 @@
+Complaint ID,Date received,Product,Issue,Company,Company response to consumer,Timely response?
+1,2025-09-01,Credit,A,SYNTHETIC Alpha,Closed,Yes
+2,2025-09-01,Loan,B,SYNTHETIC Alpha,Closed,No
+3,2025-09-02,Credit,A,SYNTHETIC Beta,Closed,Yes
+4,2025-09-04,Credit,C,SYNTHETIC Beta,In progress,
+5,2025-09-05,Credit,C,SYNTHETIC Alpha,Closed,Yes
+6,2025-09-06,Loan,C,SYNTHETIC Beta,In progress,Unknown
+7,invalid,Credit,A,,Closed,Yes
+8,2025-09-06,Loan,C,SYNTHETIC Gamma,Closed,No
+3,2025-09-02,Credit,A,SYNTHETIC Beta,Closed,Yes
+bad,2025-09-01,,,,,

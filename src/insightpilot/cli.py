@@ -4,6 +4,7 @@ import hashlib
 from datetime import date
 from pathlib import Path
 import duckdb
+import httpx
 from .ingest import ingest, quality, prepare_analytics
 from .agent import Analyst
 from .analytics import QUESTIONS, discover
@@ -31,7 +32,36 @@ def main():
     p.add_argument('--category',action='append',default=[])
     p.add_argument('--start-date',type=date.fromisoformat);p.add_argument('--end-date',type=date.fromisoformat)
     p = sub.add_parser('portfolio-demo');p.add_argument('directory');p.add_argument('--cases',type=int,default=1200);p.add_argument('--seed',type=int,default=2019)
+    p = sub.add_parser('cfpb-download', help='Download a full official CSV period extract; end date is exclusive')
+    p.add_argument('directory'); p.add_argument('--start', type=date.fromisoformat, required=True); p.add_argument('--end', type=date.fromisoformat, required=True)
+    p = sub.add_parser('cfpb-import'); p.add_argument('source'); p.add_argument('database'); p.add_argument('--synthetic', action='store_true')
+    p = sub.add_parser('cfpb-validate'); p.add_argument('source'); p.add_argument('database')
+    p = sub.add_parser('cfpb-analyze'); p.add_argument('database'); p.add_argument('directory')
+    p = sub.add_parser('cfpb-guide'); p.add_argument('database'); p.add_argument('question'); p.add_argument('--company', action='append', default=[])
+    p = sub.add_parser('inspect'); p.add_argument('source'); p.add_argument('--sheet', default=0)
+    p = sub.add_parser('import-table'); p.add_argument('source'); p.add_argument('database'); p.add_argument('--mapping', type=Path, required=True)
+    p.add_argument('--profile', choices=['descriptive', 'transactions', 'complaints', 'event_log'], default='descriptive'); p.add_argument('--revenue', action='store_true')
+    p.add_argument('--day-first', action='store_true'); p.add_argument('--assume-utc', action='store_true'); p.add_argument('--synthetic', action='store_true')
     args = parser.parse_args()
+    if args.command.startswith('cfpb-'):
+        from .complaints import download_extract, ingest_complaints, reconcile_complaints, export_complaints, Complaints
+        from .datasets import TableFilters
+        try:
+            if args.command == 'cfpb-download': result = download_extract(args.directory, args.start, args.end)
+            elif args.command == 'cfpb-import': result = ingest_complaints(args.source, args.database, synthetic=args.synthetic)
+            elif args.command == 'cfpb-validate': result = reconcile_complaints(args.source, args.database)
+            elif args.command == 'cfpb-analyze': result = export_complaints(args.database, args.directory)
+            else: result = Complaints(args.database, TableFilters(companies=tuple(args.company))).guided_answer(args.question)
+        except (ValueError, OSError, httpx.HTTPError) as exc: parser.exit(2, f'CFPB operation incomplete: {exc}\n')
+        print(json.dumps(result, default=str, indent=2))
+        if args.command == 'cfpb-validate' and not result['passed']: raise SystemExit(1)
+        return
+    if args.command in ('inspect', 'import-table'):
+        from .datasets import inspect_table, ingest_table
+        result = inspect_table(args.source, args.sheet) if args.command == 'inspect' else ingest_table(args.source, args.database,
+            json.loads(args.mapping.read_text()), profile=args.profile, revenue=args.revenue, day_first=args.day_first,
+            synthetic=args.synthetic, assume_utc=args.assume_utc)
+        print(json.dumps(result, default=str, indent=2)); return
     if args.command=='portfolio-demo':
         print(json.dumps(create_portfolio_demo(args.directory,args.cases,args.seed),indent=2));return
     if args.command=='prepare':

@@ -1,5 +1,7 @@
 # InsightPilot dashboard — opening and interview walkthrough
 
+This guide covers the preserved procurement module. Choose **Dataset workspace → Procurement Intelligence** first. For the new complaint/upload workspaces and complete Mac setup, see [multi-dataset-guide.md](multi-dataset-guide.md).
+
 ## Update and reopen on your Mac
 
 Stop an existing Streamlit process with **Ctrl+C first**. Use the current checkout; no reset or force-push is required.

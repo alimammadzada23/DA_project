@@ -1,8 +1,35 @@
 # Validation ledger
 
-## Current instance — 2026-11-02
+## Multi-dataset extension — 2026-11-03
 
-**96 tests passed, 0 failed, 0 skipped in the current suite; exact results are recorded in docs/test-results.xml.** Validation uses the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6). These tests use synthetic fixtures. See the committed JUnit result and synthetic reference outputs for reproducible evidence. No official dataset checks have been executed.
+**152 tests passed, 0 failed, 0 skipped.** The original 96 tests are retained; 56 additional tests cover the new dataset engine, complaint module and workspace UI. The current [JUnit artifact](test-results.xml) records the 95.38-second full run on Linux / Python 3.12.14 / DuckDB 1.5.6. Twelve pandas/Plotly date-array deprecation warnings are non-failing; they are not hidden. Frozen offline sync checked the 60-package installation. The lock includes Excel and flat Parquet readers.
+
+| Capability | Executed evidence / outcome | Limit |
+|---|---|---|
+| Genuine CFPB access | Official website, API and hosted docs denied by proxy HTTP 403; failure timestamp retained in [source verification](cfpb-source-verification.json) | **0 genuine records**, no real findings or live schema/usage acceptance |
+| Official documentation | CFPB-owned GitHub OpenAPI, export headers, serializer, date-filter builder and API metadata inspected at pinned revision | Documentation/code inspection is not a live deployed response |
+| Official connector | Mocked HTTPS CSV/count protocol; required actual headers, exact count reconciliation, local half-open boundaries, failure receipts | Successful **live** download unverified |
+| Complaint calculations | Independent CSV/Python counters versus SQL; 8 retained synthetic references, 4 Yes / 6 known responses, group/date distributions | These are software reference values, not CFPB observations |
+| Reusable ingestion | CSV/.xlsx/Parquet readers, schema suggestions/approval, invalid dates/numbers, unsupported profiles, atomic failures, provenance | Bounded local extracts; native Mac performance unmeasured |
+| Mapped profiles | Explicit revenue confirmation; customer representation; mapped complaints; CSV events reuse the existing process engine | No automatic profit, exposure, completion or causal KPI |
+| Dataset isolation | Workspace/snapshot switching resets current answers; source ID/hash plus full filter values participate in cache keys; selected cohorts/drill-downs agree | Local files and manifests can be edited by their owner; provenance is not a publisher signature |
+| AI | All six complaint business suggestions execute filtered SQL; no-consent blocks live transmission; mocked live tool remains inside the complaint catalog | No live provider call; arbitrary LLM prose needs evidence review |
+| Procurement regression | All original tests and real Chromium filters/reset/box selection/case lookup/guided analysis passed | No genuine original BPI log; prior 4TU HTTP 503 not repeatedly retried |
+| New workspace browser | Actual Chromium renders all complaint pages, donut/line/bar/stack/heatmap/distribution views; company filter 8→3, reset→8; issue-bar drill-down shows 3 records; no stale answers across complaints/custom/procurement | Explicitly synthetic QA sources; no public cloud preview |
+| Actual browser uploads | CSV, Excel and Parquet upload → inspection → approved mapping → 4 records / confirmed synthetic revenue 35. Event CSV → 2 cases / 3 events; selecting Close retains 1 complete case / 2 events | [Upload record](upload-browser-verification.json); no private or genuine records |
+| Power BI | Preserved procurement project: 22 JSON files pass schema/static bindings. New complaint Parquet/export, M/DAX candidates and semantic design prepared | No Windows Desktop, TMDL/DAX execution, refresh or visual acceptance |
+
+The extension found and fixed a genuine pandas/Arrow bar-chart compatibility error. It also caught a live import/filter race: metadata and analytical connections used different DuckDB settings, causing a scan to omit the active dataset and fall back to another source. Readers now share the restricted configuration; exports stream Arrow batches through Python with the same read-only settings. A regression test holds an analytical connection open while metadata, query and export readers run. The selected-file guard surfaces a read failure instead of silently falling back to another dataset.
+
+Chart selection updates the record dropdown through a scope-bound state change. Mapping, revenue/date/time-zone confirmation and synthetic flags are keyed by source hash, so different uploads do not inherit those approvals. Browser automation interacts with visible Streamlit labels/dropdown buttons and native box selection; it does not inject query results. Earlier browser-script locator/open-state failures were corrected and the complete scripts rerun successfully. Current records are [workspace checks](workspace-browser-verification.json), [upload checks](upload-browser-verification.json) and [procurement checks](browser-verification.json), with actual captures under [screenshots](screenshots/).
+
+No API key was requested because the dashboard, guided analyst, imports and calculations run locally without one. Public CFPB access is a real network blocker; secrets and environment publication are not required for the Mac application. Exact download/import/launch commands and manual source fallback are in [multi-dataset-guide.md](multi-dataset-guide.md). The narrow CFPB network draft is saved for review, not applied.
+
+The application remains **incomplete as a genuine-data interview case study** until an official extract has been obtained, independently reconciled and interpreted with its source limitations. Live AI, native Mac and Windows Power BI acceptance remain separate unexecuted checks.
+
+## Earlier instance — 2026-11-02
+
+**The earlier suite passed 96 tests, 0 failed, 0 skipped.** The current JUnit artifact supersedes that run and includes these tests. Validation used the frozen-install `.venv` (Python 3.12.14, DuckDB 1.5.6) and synthetic fixtures. No original-log checks were executed.
 
 | Capability | Evidence / outcome |
 |---|---|

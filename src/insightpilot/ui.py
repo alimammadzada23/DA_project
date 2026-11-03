@@ -13,7 +13,7 @@ import duckdb
 import streamlit as st
 
 from . import charts
-from .agent import Analyst, LIMITATIONS, propose_measure
+from .agent import Analyst, LIMITATIONS, SQL_CONFIG, propose_measure
 from .analytics import QUESTIONS
 from .dashboard import Dashboard, Filters
 from .demo import create_demo, create_portfolio_demo
@@ -47,7 +47,7 @@ h3 {font-size:1.05rem!important;}
 
 @st.cache_data(ttl=300)
 def load_quality(path,modified,size):
-    with duckdb.connect(path,read_only=True) as con:return quality(con)
+    with duckdb.connect(str(Path(path).resolve()),read_only=True,config=SQL_CONFIG) as con:return quality(con)
 
 
 @st.cache_data(ttl=300,max_entries=192)
@@ -373,7 +373,7 @@ def ai_analyst(ctx):
     if mode=='Guided Analyst':st.caption('Guided Analyst uses supported intents and actual SQL. It is explicitly not an LLM and needs no API key.')
     consent=False
     if mode=='Live LLM':
-        consent=st.checkbox('Allow sending schema and selected query results to the configured provider')
+        consent=st.checkbox('Allow sending schema and selected query results to the configured provider',key='provider-consent-'+ctx.scope_id)
         if not os.environ.get('INSIGHTPILOT_LLM_API_KEY') or not os.environ.get('INSIGHTPILOT_LLM_MODEL'):
             st.info('A live provider is not configured. Guided Analyst remains available; secure configuration instructions are in Advanced / Developer Tools.')
     suggestion=st.selectbox('Suggested investigation',SUGGESTIONS)
@@ -452,10 +452,11 @@ def advanced(ctx=None):
             st.caption('Optional live provider configuration: INSIGHTPILOT_LLM_API_KEY, INSIGHTPILOT_LLM_MODEL and optionally INSIGHTPILOT_LLM_BASE_URL. Never enter keys in chat or commit them.')
 
 
-def main():
-    st.set_page_config(page_title='InsightPilot · Procurement intelligence',page_icon='◈',layout='wide')
-    st.markdown(SHELL,unsafe_allow_html=True)
-    st.sidebar.markdown('<div class="brand"><div class="brand-mark">IP</div><div><div class="brand-name">InsightPilot</div><div class="brand-sub">PROCESS INTELLIGENCE</div></div></div>',unsafe_allow_html=True)
+def main(*, embedded=False):
+    if not embedded:
+        st.set_page_config(page_title='InsightPilot · Procurement intelligence',page_icon='◈',layout='wide')
+        st.markdown(SHELL,unsafe_allow_html=True)
+        st.sidebar.markdown('<div class="brand"><div class="brand-mark">IP</div><div><div class="brand-name">InsightPilot</div><div class="brand-sub">PROCESS INTELLIGENCE</div></div></div>',unsafe_allow_html=True)
     page=st.sidebar.radio('Workspace',PAGES,key='page',label_visibility='collapsed')
     if 'database_path' not in st.session_state:st.session_state['database_path']=os.environ.get('INSIGHTPILOT_DATABASE','data/analytics/bpi2019.duckdb')
     if 'pending_database' in st.session_state:st.session_state['database_path']=st.session_state.pop('pending_database')

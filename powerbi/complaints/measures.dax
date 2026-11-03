@@ -1,0 +1,36 @@
+// Candidates: create individually in Windows Desktop, then reconcile with SQL.
+Reported Complaints = COALESCE(COUNTROWS(Complaints), 0)
+
+Represented Companies =
+COALESCE(COUNTROWS(FILTER(VALUES(Complaints[company]), NOT ISBLANK(Complaints[company]))), 0)
+
+Known Timeliness =
+CALCULATE([Reported Complaints], KEEPFILTERS(Complaints[timely] IN {"Yes", "No"}))
+
+Timely Yes =
+CALCULATE([Reported Complaints], KEEPFILTERS(Complaints[timely] = "Yes"))
+
+Timely No =
+CALCULATE([Reported Complaints], KEEPFILTERS(Complaints[timely] = "No"))
+
+Timely Response Share = DIVIDE([Timely Yes], [Known Timeliness])
+
+Known Response Coverage = DIVIDE([Known Timeliness], [Reported Complaints])
+
+Unknown Timeliness = [Reported Complaints] - [Known Timeliness]
+
+Missing Received Dates =
+CALCULATE([Reported Complaints], KEEPFILTERS(ISBLANK(Complaints[record_date])))
+
+// For a product chart: respects the selected product population in the slicer.
+Selected Product Share =
+DIVIDE([Reported Complaints], CALCULATE([Reported Complaints], ALLSELECTED(DimProduct)))
+
+// Use only with a continuous, marked DimDate and comparable complete periods.
+Previous Month Complaints =
+CALCULATE([Reported Complaints], DATEADD(DimDate[Date], -1, MONTH))
+
+Month Complaint Change =
+IF(ISBLANK([Previous Month Complaints]), BLANK(), [Reported Complaints] - [Previous Month Complaints])
+
+Month Complaint Change Share = DIVIDE([Month Complaint Change], [Previous Month Complaints])

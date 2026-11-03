@@ -1,0 +1,79 @@
+{
+  "verified_at": "2026-11-03",
+  "official_source": "https://www.consumerfinance.gov/data-research/consumer-complaints/",
+  "official_api": "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+  "official_docs": "https://cfpb.github.io/ccdb5-api/",
+  "documentation_repository": "https://github.com/cfpb/ccdb5-api",
+  "repository_commit": "9bf8c3e8b013d846394dd285bb49470a23ead628",
+  "documentation_files": {
+    "README.md": {
+      "sha256": "57abc158b959bdea16546f4ecccefe183942dcc0f29e924066bd7b927985bdcf",
+      "bytes": 3062,
+      "git_blob_matches_pinned_tree": true
+    },
+    "swagger-config.yaml": {
+      "sha256": "a384563b5bf721a448085b2bb4c9e374469b982dedb68da3094cffe677a5bb99",
+      "bytes": 19549,
+      "git_blob_matches_pinned_tree": true
+    },
+    "TERMS.md": {
+      "sha256": "378e7cb2d0578a7b318b26e40aca6fef9e219b79d800f0b63b8b041d4f348f7e",
+      "bytes": 2919,
+      "git_blob_matches_pinned_tree": true
+    },
+    "es_interface.py": {
+      "sha256": "0cd81529584744c05cfafce1a25f3a5bb38a6af47b58166485a0788ed5cc1d59",
+      "bytes": 11908,
+      "git_blob_matches_pinned_tree": true
+    },
+    "es_builders.py": {
+      "sha256": "edaacd09a1b2d50fc4a709f123ad588031d027ca4c782f1d3b3e6bba0a4241e9",
+      "bytes": 13186,
+      "git_blob_matches_pinned_tree": true
+    },
+    "serializer.py": {
+      "sha256": "147df01a866770d4c6989767ea3a37a75bb9f4b5d2f6c953749f26113957fbf8",
+      "bytes": 6408,
+      "git_blob_matches_pinned_tree": true
+    },
+    "export.py": {
+      "sha256": "b53330ae9419a7abf5439f849cfb524ef17064d954d424968ce722749c7c594d",
+      "bytes": 2443,
+      "git_blob_matches_pinned_tree": true
+    },
+    "views.py": {
+      "sha256": "c0046ad41680217bd43393801029c19e512309d1d3574a2a1abd6636f0eb32d0",
+      "bytes": 5945,
+      "git_blob_matches_pinned_tree": true
+    },
+    "defaults.py": {
+      "sha256": "fe8b449c4ec1cfcf0634d030856eac1cac3d0a40aa3caf8d3c5c8b34c110d2ea",
+      "bytes": 2288,
+      "git_blob_matches_pinned_tree": true
+    }
+  },
+  "verified_documentation_facts": [
+    "CSV export ignores pagination parameters.",
+    "The source README says hosted API documentation is not being updated.",
+    "The API has company, product, issue, received-date, response and timely fields.",
+    "hits.total.value and relation=eq describe an exact result count.",
+    "Source implementation _meta exposes freshness, data-issue status and license=CC0 (API metadata; no live response verified).",
+    "Swagger describes an exclusive date maximum; implementation uses range from/to without explicit include_upper. Local half-open enforcement and boundary accounting are required.",
+    "Pinned official CSV_ORDERED_HEADERS confirms the required input header labels; optional fields may differ from historical exports."
+  ],
+  "schema_status": "Declared fields inspected. Actual deployed response headers/schema NOT obtained; connector validates them before importing.",
+  "usage_status": "Software/API CC0 terms inspected; live dataset website usage and limitations pages remain unavailable. No independent dataset-license acceptance claimed.",
+  "actual_download_attempt": {
+    "source": "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+    "start": "2026-09-01",
+    "end_exclusive": "2026-09-08",
+    "attempted_at": "2026-11-03T07:18:30.124605+00:00",
+    "error": "ProxyError",
+    "detail": "403 Forbidden"
+  },
+  "website_and_hosted_docs_result": "Proxy tunnel HTTP 403 Forbidden",
+  "genuine_records_imported": 0,
+  "real_findings_available": false,
+  "network_draft": "Narrow CFPB domains saved for review; saving does not apply or publish policy.",
+  "existing_bpi_status": "Original log remains absent; prior 4TU upstream HTTP 503; not retried in this extension."
+}

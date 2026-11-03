@@ -1,10 +1,10 @@
-# InsightPilot — Enterprise Process Intelligence
+# InsightPilot — AI Business Intelligence
 
-A Business Analyst / Data Analyst portfolio application for investigating procurement process performance. The sponsor scenario is hypothetical; no real engagement, stakeholder sign-off, implemented saving or causal finding is claimed.
+A Business Analyst / Data Analyst portfolio application with independent procurement, customer-complaint and mapped-upload workspaces. The sponsor scenarios are hypothetical; no real engagement, stakeholder sign-off, implemented saving or causal finding is claimed. Existing procurement ingestion, DuckDB queries, dashboards, guided analyst and Power BI artifacts are preserved.
 
-**Current scope:** working analytical software and a four-page dark Streamlit interface. The original BPI Challenge 2019 log remains inaccessible from this cloud instance (4TU upstream HTTP 503). Demonstration patterns are explicitly synthetic. Genuine-log findings and source-license acceptance remain incomplete.
+**Current data status:** zero genuine CFPB records and zero genuine BPI records imported in this cloud task. CFPB website/API access is denied by the proxy (HTTP 403); the BPI source previously returned upstream HTTP 503. Test results and screenshots use clearly labeled synthetic references. Real-data findings, deployed CFPB schema/usage acceptance, Windows Power BI and live LLM acceptance remain incomplete. The product is not claimed fully interview-ready.
 
-[Open and use the dashboard](docs/dashboard-guide.md) · [Actual UI screenshots](docs/screenshots/) · [Validation evidence](docs/validation.md) · [Data definitions](docs/data-and-methods.md)
+[Mac installation and all workspaces](docs/multi-dataset-guide.md) · [Procurement guide](docs/dashboard-guide.md) · [Actual UI screenshots](docs/screenshots/) · [Validation evidence](docs/validation.md) · [CFPB source verification](docs/cfpb-source-verification.json)
 
 ## Open the application
 
@@ -18,7 +18,32 @@ uv sync --frozen --extra test --python 3.12
 uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
 ```
 
-Run these on your Mac to open its local browser. The cloud task has no supported public-preview endpoint. Use **Data & import → Explore synthetic portfolio demo** for the 1,200-item seeded UI demonstration, or import a genuine original XES/XES.gz. The original four-item fixture is retained as a separate option. API keys and Power BI are optional for using the dashboard.
+Run these on your Mac to open its local browser. The cloud task has no supported public-preview endpoint. Fresh launches show a dataset selector. Choose **Procurement Intelligence → Data & import → Explore synthetic portfolio demo** for the 1,200-item seeded demonstration, or import an original XES/XES.gz. The original four-item fixture remains available. API keys and Power BI are optional.
+
+## Independent dataset workspaces
+
+| Workspace | Supported analysis | Source treatment |
+|---|---|---|
+| Procurement Intelligence | Existing four pages, case filters, process discovery, variants, waits, repeated activities, SQL and AI | Original BPI import is unverified until obtained; demonstrations visibly synthetic |
+| Customer Experience & Risk Intelligence | Reported volumes, product donut, company comparison/stacks, daily trends, concentration heatmap, equal-period issue changes, response coverage, paginated drill-down and guided SQL | Official HTTPS period connector records raw bytes, schema, hash, download receipt and quality; uploaded exports remain user supplied |
+| Analyze My Dataset | CSV, .xlsx, Parquet; schema/quality review, sample rows and approved mapping; compatible transactional, complaint or process profiles; revenue only after explicit confirmation | Isolated local snapshots; missing/invalid values disclosed; private records stay local unless live-AI transmission is authorized |
+
+Each dataset owns its metadata, filters, analytical profile and history scope. Charts use SQL aggregates; record views paginate at 100 rows. Bar selection reveals matching records within the active filters. Chart PNG/HTML, current-page CSV, manifests, evidence and a complaint management summary can be exported. Raw SQL/JSON and Power BI preparation remain in expandable evidence/Developer Tools.
+
+## Obtain and analyze official CFPB records
+
+On your Mac or another machine with source access:
+
+```sh
+uv run --frozen insightpilot cfpb-download data/cfpb/2026-09-01-week --start 2026-09-01 --end 2026-09-08
+uv run --frozen insightpilot cfpb-validate data/cfpb/2026-09-01-week/complaints.csv data/cfpb/2026-09-01-week/analytics.duckdb
+uv run --frozen insightpilot cfpb-analyze data/cfpb/2026-09-01-week/analytics.duckdb outputs/cfpb-report
+uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
+```
+
+Choose **Customer Experience & Risk Intelligence**. The connector obtains a full date-filtered CSV, checks its actual headers, compares source rows with the exact JSON API count, and enforces the requested half-open period locally. Source boundary rows and all exclusions are disclosed. It retains source pages for usage review; the software repository’s CC0 terms are not represented as a verified dataset license. The API may change or reject large exports: choose a shorter period and inspect recorded failures. Read [source and KPI definitions](docs/complaints-case-study.md).
+
+If the connector is unavailable, export CSV from the [official CFPB database](https://www.consumerfinance.gov/data-research/consumer-complaints/) and use the complaint workspace’s import form. A manual export remains labeled **user uploaded**, with an unverified completeness/provenance claim. No real findings are prefilled. `cfpb-analyze` produces actual SQL evidence, independent source validation, a management summary, case study and [Power BI-ready export](powerbi/complaints/README.md) after a successful import.
 
 ## Four business pages
 
