@@ -231,7 +231,7 @@ def selected_chart(result, dimension, scope):
 def complaints_executive(service, get, scope):
     values, result = get('overview')
     columns = st.columns(4)
-    for column, label, value in zip(columns, ['Reported complaints', 'Represented companies', 'Timely-response share', 'Known response coverage'],
+    for column, label, value in zip(columns, ['Reported complaints', 'Represented companies', 'Timely-response share', 'Known timeliness coverage'],
         [f'{values["complaints"]:,}', f'{values["companies"]:,}', 'Unavailable' if values['timely_share'] is None else f'{values["timely_share"]:.1%}',
          'Unavailable' if not values['complaints'] else f'{values["known_timely"]/values["complaints"]:.1%}']): column.metric(label, value)
     st.caption(f'Timely denominator · {values["timely_yes"]:,} Yes / {values["known_timely"]:,} known Yes/No responses · {values["complaints"]-values["known_timely"]:,} unknown. {values["missing_dates"]:,} records excluded from date trends.')
@@ -380,7 +380,9 @@ def complaints_workspace(path=None):
         st.session_state['tabular_history'] = []; st.session_state['tabular_scope'] = scope
     overview, _ = get('overview')
     st.title(page); st.caption(f'Selected cohort · {overview["complaints"]:,} of {service.metadata["rows"]:,} imported complaints · independent complaint IDs')
-    st.caption(service.limitations)
+    st.caption('Complaint counts are descriptive, not company-quality rankings. See data interpretation and limitations below.')
+    with st.expander('Data interpretation and limitations'):
+        st.write(service.limitations)
     if overview['complaints'] == 0: st.info('No complaints match these filters. Reset the dataset filters or broaden the selection.')
     if page == COMPLAINT_PAGES[0]: complaints_executive(service, get, scope)
     elif page == COMPLAINT_PAGES[1]: company_comparison(service, get, scope)
@@ -506,10 +508,11 @@ def custom_workspace():
     def get(key): return calculation(path, signature.st_mtime_ns, signature.st_size, filters, 'custom', 'investigate', (key,))
     result = get('summary'); values = dict(zip(result['columns'], result['rows'][0])); capabilities = service.metadata['capabilities']
     st.subheader('Compatible analytical view')
-    st.metric('Selected records', f'{values["records"]:,}')
+    metric_columns = st.columns(2) if 'numeric_distribution' in capabilities else st.columns(1)
+    metric_columns[0].metric('Selected records', f'{values["records"]:,}')
     if not values['records']: st.info('No records match these filters. Broaden the selection.')
     if 'numeric_distribution' in capabilities:
-        st.metric('Confirmed revenue' if service.metadata['revenue_confirmed'] else 'Mapped numeric total', number(values['total_measure']))
+        metric_columns[1].metric('Confirmed revenue' if service.metadata['revenue_confirmed'] else 'Mapped numeric total', number(values['total_measure']))
         st.caption(f'{values["numeric_records"]:,} valid numeric records. No currency or profit assumption is made.')
     else: st.info('Numeric KPIs are disabled: no approved numeric measure is available.')
     if 'trends' in capabilities:
