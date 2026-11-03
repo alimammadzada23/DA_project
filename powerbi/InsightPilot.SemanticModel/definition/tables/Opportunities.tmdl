@@ -1,0 +1,22 @@
+table Opportunities
+
+	column 'Hypothesis'
+		dataType: string
+		sourceColumn: Hypothesis
+
+	column 'Evidence status'
+		dataType: string
+		sourceColumn: Evidence status
+
+	column 'Verification'
+		dataType: string
+		sourceColumn: Verification
+
+	column 'Target KPI'
+		dataType: string
+		sourceColumn: Target KPI
+
+	partition Opportunities = m
+		mode: import
+		source =
+			#table(type table [Hypothesis=text, #"Evidence status"=text, Verification=text, #"Target KPI"=text], {{"Targeted exception routing", "Hypothesis only; real data unavailable", "Validate flow-specific signals and operational ownership", "Time to review an exception; not observable in this log"}})

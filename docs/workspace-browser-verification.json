@@ -1,0 +1,41 @@
+{
+  "scope": "ALL RECORDS ARE SYNTHETIC SOFTWARE REFERENCES. No genuine CFPB extract was available.",
+  "checks": [
+    {
+      "workspace": "complaints",
+      "http_status": 200,
+      "records": 8,
+      "timely_share": "66.7%",
+      "known_coverage": "75.0%",
+      "visible_json": 0
+    },
+    {
+      "complaint_chart_box_selection": "issue A",
+      "drilldown_records": 3
+    },
+    {
+      "company_filter": "SYNTHETIC Alpha",
+      "selected_records": 3,
+      "reset_records": 8,
+      "company_comparison_rendered": true
+    },
+    {
+      "complaint_investigation": "heatmap, equal-period changes, response stacks"
+    },
+    {
+      "complaint_guided_sql": "executed and rendered",
+      "visible_json": 0
+    },
+    {
+      "workspace": "custom",
+      "records": 4,
+      "mapped_numeric_total": 35,
+      "old_complaint_messages": 0
+    },
+    {
+      "dataset_switching": "complaints \u2192 custom \u2192 procurement \u2192 complaints",
+      "stale_messages": 0
+    }
+  ],
+  "uncaught_browser_errors": []
+}

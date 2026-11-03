@@ -1,0 +1,37 @@
+{
+  "scope": "SYNTHETIC SOFTWARE ACCEPTANCE ONLY",
+  "checks": [
+    {
+      "format": "csv",
+      "browser_upload": true,
+      "mapping_approved": true,
+      "records": 4,
+      "confirmed_revenue": 35,
+      "invalid_numeric_excluded": 1
+    },
+    {
+      "format": "xlsx",
+      "browser_upload": true,
+      "mapping_approved": true,
+      "records": 4,
+      "confirmed_revenue": 35,
+      "invalid_numeric_excluded": 1
+    },
+    {
+      "format": "parquet",
+      "browser_upload": true,
+      "mapping_approved": true,
+      "records": 4,
+      "confirmed_revenue": 35,
+      "invalid_numeric_excluded": 1
+    },
+    {
+      "format": "mapped event CSV",
+      "cases": 2,
+      "events": 3,
+      "activity_filter_cases": 1,
+      "activity_filter_events": 2
+    }
+  ],
+  "uncaught_browser_errors": []
+}

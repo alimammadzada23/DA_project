@@ -1,0 +1,52 @@
+{
+  "title": "BPI Challenge 2019",
+  "creator": "Boudewijn van Dongen",
+  "publisher": "4TU.Centre for Research Data",
+  "doi": "10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1",
+  "verified_description_url": "https://research.tue.nl/p/en/datasets/bpi-challenge-2019",
+  "doi_resolver_api": "https://doi.org/api/handles/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1",
+  "official_landing_url": "https://data.4tu.nl/articles/_/12715853/1",
+  "verified_date": "2026-11-02",
+  "description_html_sha256": "e68541f93c2d0267e08954eed59073dfb6a026de0b802f8720f26e4b029c6d5e",
+  "confirmed_attribute_names": [
+    "concept:name",
+    "Purchasing Document",
+    "Item",
+    "Item Type",
+    "GR-Based Inv. Verif.",
+    "Goods Receipt",
+    "Source",
+    "Company",
+    "Spend classification text",
+    "Vendor",
+    "Item Category"
+  ],
+  "publisher_reported_counts": {
+    "purchase_documents": 76349,
+    "items": 251734,
+    "events": 1595923,
+    "activities": 42,
+    "resources": 627,
+    "human_resources": 607,
+    "batch_resources": 20
+  },
+  "counts_status": "Publisher description only, not counts observed in an ingested official log",
+  "license": {
+    "portal_license_value": null,
+    "status": "License terms not yet obtained from the file repository; do not infer a license from portal metadata"
+  },
+  "file_access": {
+    "status": "blocked",
+    "url": "https://data.4tu.nl/articles/_/12715853/1",
+    "http_status": 503,
+    "observed_body": "upstream connect error or disconnect/reset before headers. reset reason: connection timeout"
+  },
+  "real_log_imported": false,
+  "latest_retry": {
+    "date": "2026-11-02",
+    "file_repository_status": 503,
+    "file_repository_error": "upstream connect error or disconnect/reset before headers. reset reason: connection timeout",
+    "tue_status": 403,
+    "real_log_imported": false
+  }
+}

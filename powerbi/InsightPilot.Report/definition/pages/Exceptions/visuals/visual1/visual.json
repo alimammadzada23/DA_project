@@ -1,0 +1,88 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "Exceptions1",
+  "position": {
+    "x": 32,
+    "y": 360,
+    "z": 1,
+    "height": 280,
+    "width": 780,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "case_id"
+                }
+              },
+              "queryRef": "Cases.case_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "matching_category"
+                }
+              },
+              "queryRef": "Cases.matching_category"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "missing_timestamps"
+                }
+              },
+              "queryRef": "Cases.missing_timestamps"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "missing_activities"
+                }
+              },
+              "queryRef": "Cases.missing_activities"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Cases"
+                    }
+                  },
+                  "Property": "repeated_event_count"
+                }
+              },
+              "queryRef": "Cases.repeated_event_count"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

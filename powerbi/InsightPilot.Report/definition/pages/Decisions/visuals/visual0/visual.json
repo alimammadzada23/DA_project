@@ -1,0 +1,75 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "Decisions0",
+  "position": {
+    "x": 32,
+    "y": 40,
+    "z": 0,
+    "height": 280,
+    "width": 1216,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Opportunities"
+                    }
+                  },
+                  "Property": "Hypothesis"
+                }
+              },
+              "queryRef": "Opportunities.Hypothesis"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Opportunities"
+                    }
+                  },
+                  "Property": "Evidence status"
+                }
+              },
+              "queryRef": "Opportunities.Evidence status"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Opportunities"
+                    }
+                  },
+                  "Property": "Verification"
+                }
+              },
+              "queryRef": "Opportunities.Verification"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Opportunities"
+                    }
+                  },
+                  "Property": "Target KPI"
+                }
+              },
+              "queryRef": "Opportunities.Target KPI"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

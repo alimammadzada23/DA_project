@@ -1,0 +1,416 @@
+{
+  "scope": "SYNTHETIC regression records only. The genuine 81,915-row source was not available.",
+  "date_parser_version": 2,
+  "quality": {
+    "source_rows": 12,
+    "missing_or_invalid_ids": 1,
+    "duplicate_ids": 1,
+    "conflicting_duplicate_ids": 0,
+    "invalid_received_dates": 2,
+    "invalid_sent_dates": 1,
+    "unrecognized_timely_values": 1,
+    "missing_timely": 1,
+    "outside_requested_coverage": 0,
+    "missing_received_dates": 1,
+    "missing_sent_dates": 4,
+    "imported_rows": 10,
+    "excluded_rows": 2,
+    "future_received_dates": 0,
+    "missing": {
+      "complaint_id": 0,
+      "record_date": 3,
+      "product": 0,
+      "sub_product": 10,
+      "issue": 0,
+      "sub_issue": 10,
+      "company": 0,
+      "state": 10,
+      "submitted_via": 10,
+      "date_sent": 5,
+      "response": 0,
+      "timely": 2,
+      "consumer_disputed": 10,
+      "record_id": 0
+    },
+    "duplicate_policy": "First occurrence of each valid complaint ID retained; all raw rows preserved.",
+    "date_policy": "ISO 8601 timestamps are converted to UTC calendar dates; offset-free timestamps are interpreted as UTC. YYYY-MM-DD and MM/DD/YYYY retain their calendar date. Invalid or missing dates remain NULL and are excluded only from date analyses. An import with no usable received dates is rejected."
+  },
+  "independent_validation": {
+    "passed": true,
+    "checks": {
+      "complaints": true,
+      "known_timely": true,
+      "timely_yes": true,
+      "timely_no": true,
+      "missing_dates": true,
+      "companies": true,
+      "source_sha256": true,
+      "product_distribution": true,
+      "issue_distribution": true,
+      "daily_distribution": true,
+      "company_distribution": true,
+      "company_product_distribution": true,
+      "timely_share": true
+    },
+    "independent_counts": {
+      "complaints": 10,
+      "known_timely": 8,
+      "timely_yes": 5,
+      "timely_no": 3,
+      "missing_dates": 3,
+      "companies": 2
+    },
+    "independent_daily_counts": {
+      "2026-09-01": 2,
+      "2026-09-02": 1,
+      "2026-09-03": 1,
+      "2026-09-04": 1,
+      "2026-09-05": 1,
+      "2026-09-06": 1
+    },
+    "date_reference": "Independent pandas ISO8601/US-date parser, normalized to UTC",
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "origin": "synthetic",
+    "evidence": {
+      "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT count(*) AS complaints, count(DISTINCT company) AS companies,\n            count(timely) AS known_timely, count(*) FILTER(WHERE timely='Yes') AS timely_yes,\n            count(*) FILTER(WHERE timely='No') AS timely_no,\n            count(*) FILTER(WHERE record_date IS NULL) AS missing_dates,\n            count(*) FILTER(WHERE timely='Yes')::DOUBLE / nullif(count(timely),0) AS timely_share FROM selected",
+      "parameters": [],
+      "referenced_tables": [
+        "complaints"
+      ],
+      "columns": [
+        "complaints",
+        "companies",
+        "known_timely",
+        "timely_yes",
+        "timely_no",
+        "missing_dates",
+        "timely_share"
+      ],
+      "rows": [
+        [
+          10,
+          2,
+          8,
+          5,
+          3,
+          3,
+          0.625
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0042,
+      "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+      "synthetic": true,
+      "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+      "filters": {
+        "start_date": null,
+        "end_date": null,
+        "companies": [],
+        "products": [],
+        "issues": [],
+        "states": [],
+        "responses": [],
+        "timely": [],
+        "categories": []
+      },
+      "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+      "question": "Summarize the selected complaints",
+      "mode": "Guided SQL analyst; no LLM used"
+    },
+    "note": "Reconciles source bytes and calculations; does not authenticate an uploaded source."
+  },
+  "summary": {
+    "complaints": 10,
+    "companies": 2,
+    "known_timely": 8,
+    "timely_yes": 5,
+    "timely_no": 3,
+    "missing_dates": 3,
+    "timely_share": 0.625
+  },
+  "daily": {
+    "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT record_date, count(*) AS complaints FROM selected\n            WHERE record_date IS NOT NULL GROUP BY record_date ORDER BY record_date LIMIT 1000",
+    "parameters": [],
+    "referenced_tables": [
+      "complaints"
+    ],
+    "columns": [
+      "record_date",
+      "complaints"
+    ],
+    "rows": [
+      [
+        "2026-09-01",
+        2
+      ],
+      [
+        "2026-09-02",
+        1
+      ],
+      [
+        "2026-09-03",
+        1
+      ],
+      [
+        "2026-09-04",
+        1
+      ],
+      [
+        "2026-09-05",
+        1
+      ],
+      [
+        "2026-09-06",
+        1
+      ]
+    ],
+    "truncated": false,
+    "elapsed_seconds": 0.0032,
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "synthetic": true,
+    "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+    "filters": {
+      "start_date": null,
+      "end_date": null,
+      "companies": [],
+      "products": [],
+      "issues": [],
+      "states": [],
+      "responses": [],
+      "timely": [],
+      "categories": []
+    },
+    "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+    "question": "What is the daily reported complaint volume?",
+    "mode": "Guided SQL analyst; no LLM used"
+  },
+  "products": {
+    "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT product, count(*) AS complaints,\n            count(*)::DOUBLE / nullif(sum(count(*)) OVER(),0) AS share FROM selected GROUP BY product ORDER BY complaints DESC, product NULLS LAST LIMIT 1000",
+    "parameters": [],
+    "referenced_tables": [
+      "complaints"
+    ],
+    "columns": [
+      "product",
+      "complaints",
+      "share"
+    ],
+    "rows": [
+      [
+        "Credit",
+        5,
+        0.5
+      ],
+      [
+        "Loan",
+        5,
+        0.5
+      ]
+    ],
+    "truncated": false,
+    "elapsed_seconds": 0.0064,
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "synthetic": true,
+    "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+    "filters": {
+      "start_date": null,
+      "end_date": null,
+      "companies": [],
+      "products": [],
+      "issues": [],
+      "states": [],
+      "responses": [],
+      "timely": [],
+      "categories": []
+    },
+    "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+    "question": "Which products account for the largest share?",
+    "mode": "Guided SQL analyst; no LLM used"
+  },
+  "companies": {
+    "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT company, count(*) AS complaints,\n            count(timely) AS known_timely, count(*) FILTER(WHERE timely='Yes') AS timely_yes,\n            count(*) FILTER(WHERE timely='No') AS timely_no,\n            count(*) FILTER(WHERE timely='Yes')::DOUBLE/nullif(count(timely),0) AS timely_share\n            FROM selected GROUP BY company ORDER BY complaints DESC, company NULLS LAST LIMIT 1000",
+    "parameters": [],
+    "referenced_tables": [
+      "complaints"
+    ],
+    "columns": [
+      "company",
+      "complaints",
+      "known_timely",
+      "timely_yes",
+      "timely_no",
+      "timely_share"
+    ],
+    "rows": [
+      [
+        "SYNTHETIC Alpha",
+        5,
+        5,
+        3,
+        2,
+        0.6
+      ],
+      [
+        "SYNTHETIC Beta",
+        5,
+        3,
+        2,
+        1,
+        0.6666666666666666
+      ]
+    ],
+    "truncated": false,
+    "elapsed_seconds": 0.006,
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "synthetic": true,
+    "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+    "filters": {
+      "start_date": null,
+      "end_date": null,
+      "companies": [],
+      "products": [],
+      "issues": [],
+      "states": [],
+      "responses": [],
+      "timely": [],
+      "categories": []
+    },
+    "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+    "question": "Which companies have the highest reported complaint volumes?",
+    "mode": "Guided SQL analyst; no LLM used"
+  },
+  "company_product": {
+    "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT company, product, count(*) AS complaints,\n            count(timely) AS known_timely, count(*) FILTER(WHERE timely='Yes')::DOUBLE/nullif(count(timely),0) AS timely_share\n            FROM selected GROUP BY company, product ORDER BY complaints DESC, company NULLS LAST, product NULLS LAST LIMIT 1000",
+    "parameters": [],
+    "referenced_tables": [
+      "complaints"
+    ],
+    "columns": [
+      "company",
+      "product",
+      "complaints",
+      "known_timely",
+      "timely_share"
+    ],
+    "rows": [
+      [
+        "SYNTHETIC Alpha",
+        "Credit",
+        3,
+        3,
+        0.6666666666666666
+      ],
+      [
+        "SYNTHETIC Beta",
+        "Loan",
+        3,
+        2,
+        0.5
+      ],
+      [
+        "SYNTHETIC Alpha",
+        "Loan",
+        2,
+        2,
+        0.5
+      ],
+      [
+        "SYNTHETIC Beta",
+        "Credit",
+        2,
+        1,
+        1.0
+      ]
+    ],
+    "truncated": false,
+    "elapsed_seconds": 0.0072,
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "synthetic": true,
+    "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+    "filters": {
+      "start_date": null,
+      "end_date": null,
+      "companies": [],
+      "products": [],
+      "issues": [],
+      "states": [],
+      "responses": [],
+      "timely": [],
+      "categories": []
+    },
+    "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+    "question": "Compare complaint categories of selected companies",
+    "mode": "Guided SQL analyst; no LLM used"
+  },
+  "periods": {
+    "sql": "WITH selected AS (SELECT * FROM complaints WHERE TRUE) SELECT issue, count(*) FILTER(WHERE record_date < CAST(? AS DATE)) AS earlier,\n            count(*) FILTER(WHERE record_date >= CAST(? AS DATE)) AS later,\n            (later-earlier)::DOUBLE/nullif(earlier,0) AS change_share FROM selected\n            WHERE record_date >= CAST(? AS DATE) AND record_date < CAST(? AS DATE)\n            GROUP BY issue ORDER BY later-earlier DESC, issue NULLS LAST LIMIT 1000",
+    "parameters": [
+      "2026-09-04",
+      "2026-09-04",
+      "2026-09-01",
+      "2026-09-07"
+    ],
+    "referenced_tables": [
+      "complaints"
+    ],
+    "columns": [
+      "issue",
+      "earlier",
+      "later",
+      "change_share"
+    ],
+    "rows": [
+      [
+        "C",
+        0,
+        2,
+        null
+      ],
+      [
+        "B",
+        1,
+        1,
+        0.0
+      ],
+      [
+        "A",
+        3,
+        0,
+        -1.0
+      ]
+    ],
+    "truncated": false,
+    "elapsed_seconds": 0.0059,
+    "source_sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1",
+    "synthetic": true,
+    "limitations": "Reported complaints are a selected, changing subset of consumer experiences, not a representative survey. Counts do not measure company quality: customer exposure, market share and reporting behavior differ. No defensible exposure denominator is present. Timely response is the reported Yes/No category; missing values are excluded from that percentage. Recent complaints may be incomplete or still in progress. Observed concentrations and changes are investigation signals, not demonstrated causes.",
+    "filters": {
+      "start_date": null,
+      "end_date": null,
+      "companies": [],
+      "products": [],
+      "issues": [],
+      "states": [],
+      "responses": [],
+      "timely": [],
+      "categories": []
+    },
+    "dataset_id": "544bc9c0-ee8f-41b9-9b3f-5688fa7846c5",
+    "comparison_periods": {
+      "earlier_start": "2026-09-01",
+      "later_start": "2026-09-04",
+      "end_exclusive": "2026-09-07",
+      "days_per_period": 3,
+      "excluded_tail_days": 0
+    }
+  },
+  "filtered_summary": {
+    "complaints": 3,
+    "companies": 2,
+    "known_timely": 3,
+    "timely_yes": 1,
+    "timely_no": 2,
+    "missing_dates": 0,
+    "timely_share": 0.3333333333333333
+  }
+}

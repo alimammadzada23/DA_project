@@ -1,0 +1,5 @@
+date,product,customer,quantity,price,amount
+2025-01-01,A,X,2,10,20
+2025-01-02,B,X,3,5,15
+invalid,A,Y,1,10,bad
+2025-02-01,A,Z,,10,

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "Performance1",
+  "position": {
+    "x": 32,
+    "y": 260,
+    "z": 1,
+    "height": 210,
+    "width": 780,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "from_activity"
+                }
+              },
+              "queryRef": "TransitionEvents.from_activity"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "to_activity"
+                }
+              },
+              "queryRef": "TransitionEvents.to_activity"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "Transition Occurrences"
+                }
+              },
+              "queryRef": "TransitionEvents.Transition Occurrences"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "Median Wait Hours"
+                }
+              },
+              "queryRef": "TransitionEvents.Median Wait Hours"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "TransitionEvents"
+                    }
+                  },
+                  "Property": "P90 Wait Hours"
+                }
+              },
+              "queryRef": "TransitionEvents.P90 Wait Hours"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

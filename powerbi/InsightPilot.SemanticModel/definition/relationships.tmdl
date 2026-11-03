@@ -1,0 +1,9 @@
+relationship TransitionCase
+	fromColumn: TransitionEvents.case_id
+	toColumn: Cases.case_id
+	crossFilteringBehavior: oneDirection
+
+relationship SignalCase
+	fromColumn: Signals.case_id
+	toColumn: Cases.case_id
+	crossFilteringBehavior: oneDirection

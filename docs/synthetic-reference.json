@@ -1,0 +1,551 @@
+{
+  "scope": "SYNTHETIC ONLY; not BPI 2019 findings",
+  "quality": {
+    "dataset": "synthetic fixture",
+    "sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+    "mapping": {
+      "purchase_document": "Purchasing Document",
+      "item": "Item",
+      "matching_category": "Item Category",
+      "vendor": "Vendor",
+      "spend_classification": "Spend classification text"
+    },
+    "counts": {
+      "cases": 4,
+      "events": 10,
+      "purchase_documents": 3,
+      "activities": 4,
+      "users": 2
+    },
+    "published_count_comparison": {
+      "cases": {
+        "expected": 251734,
+        "actual": 4,
+        "matches": false
+      },
+      "events": {
+        "expected": 1595923,
+        "actual": 10,
+        "matches": false
+      },
+      "purchase_documents": {
+        "expected": 76349,
+        "actual": 3,
+        "matches": false
+      },
+      "activities": {
+        "expected": 42,
+        "actual": 4,
+        "matches": false
+      },
+      "users": {
+        "expected": 627,
+        "actual": 2,
+        "matches": false
+      }
+    },
+    "issues": {
+      "missing_activities": 0,
+      "missing_timestamps": 0,
+      "missing_resources": 2,
+      "missing_purchase_documents": 0,
+      "source_order_reversals": 1,
+      "duplicate_signature_excess": 0,
+      "tied_timestamp_excess": 1,
+      "outside_review_window": 0
+    },
+    "time_range": [
+      "2018-01-01 00:00:00+00:00",
+      "2020-09-27 00:00:00+00:00"
+    ],
+    "filters": "None; invalid IDs/dates reject the import atomically; duplicates retained",
+    "completion": "Unknown; spans are observed intervals, not verified completion times"
+  },
+  "questions": {
+    "item_volume": {
+      "sql": "SELECT count(*) AS items FROM cases",
+      "columns": [
+        "items"
+      ],
+      "rows": [
+        [
+          4
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0019,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many purchase-order items are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "event_volume": {
+      "sql": "SELECT count(*) AS events FROM events",
+      "columns": [
+        "events"
+      ],
+      "rows": [
+        [
+          10
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0017,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many events are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "document_volume": {
+      "sql": "SELECT count(DISTINCT purchase_document) AS documents FROM cases",
+      "columns": [
+        "documents"
+      ],
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.003,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many purchase documents are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "activity_volume": {
+      "sql": "SELECT count(DISTINCT activity) AS activities FROM events",
+      "columns": [
+        "activities"
+      ],
+      "rows": [
+        [
+          4
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0028,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many distinct activities are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "user_volume": {
+      "sql": "SELECT count(DISTINCT resource) AS resources FROM events",
+      "columns": [
+        "resources"
+      ],
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0031,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many resources are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "median_span": {
+      "sql": "SELECT median(observed_span_days) AS median_days FROM case_metrics",
+      "columns": [
+        "median_days"
+      ],
+      "rows": [
+        [
+          2.5
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.007,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "What is the median observed case span?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "p90_span": {
+      "sql": "SELECT quantile_cont(observed_span_days,0.9) AS p90_days FROM case_metrics",
+      "columns": [
+        "p90_days"
+      ],
+      "rows": [
+        [
+          700.9000000000002
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0032,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "What is the 90th percentile observed case span?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "repeat_cases": {
+      "sql": "SELECT count(*) AS cases FROM case_metrics WHERE repeated_event_count>0",
+      "columns": [
+        "cases"
+      ],
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.008,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many cases contain repeated activities?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "repeat_events": {
+      "sql": "SELECT sum(repeated_event_count) AS repeat_occurrences FROM case_metrics",
+      "columns": [
+        "repeat_occurrences"
+      ],
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0069,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many repeated activity occurrences are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "variant_count": {
+      "sql": "SELECT count(*) AS variants FROM variants",
+      "columns": [
+        "variants"
+      ],
+      "rows": [
+        [
+          4
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0057,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many process variants are recorded?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "top_variants": {
+      "sql": "SELECT * FROM variants ORDER BY case_count DESC,variant LIMIT 20",
+      "columns": [
+        "variant",
+        "case_count"
+      ],
+      "rows": [
+        [
+          "Create",
+          1
+        ],
+        [
+          "Create \u2192 Change \u2192 Change",
+          1
+        ],
+        [
+          "Create \u2192 Record Invoice Receipt",
+          1
+        ],
+        [
+          "Create \u2192 Record Invoice Receipt \u2192 Record Goods Receipt \u2192 Record Goods Receipt",
+          1
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0048,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which variants account for most cases?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "categories": {
+      "sql": "SELECT * FROM category_performance ORDER BY median_span_days DESC,matching_category",
+      "columns": [
+        "matching_category",
+        "case_count",
+        "median_span_days",
+        "p90_span_days",
+        "cases_with_repeats"
+      ],
+      "rows": [
+        [
+          "[unknown]",
+          1,
+          1000.0,
+          1000.0,
+          1
+        ],
+        [
+          "3-way synthetic",
+          1,
+          3.0,
+          3.0,
+          1
+        ],
+        [
+          "2-way synthetic",
+          1,
+          2.0,
+          2.0,
+          0
+        ],
+        [
+          "consignment synthetic",
+          1,
+          0.0,
+          0.0,
+          0
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0082,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which matching categories have the longest observed spans?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "transitions": {
+      "sql": "SELECT * FROM transition_performance ORDER BY median_wait_hours DESC,from_activity,to_activity LIMIT 30",
+      "columns": [
+        "from_activity",
+        "to_activity",
+        "occurrences",
+        "median_wait_hours",
+        "p90_wait_hours"
+      ],
+      "rows": [
+        [
+          "Change",
+          "Change",
+          1,
+          23952.0,
+          23952.0
+        ],
+        [
+          "Create",
+          "Change",
+          1,
+          48.0,
+          48.0
+        ],
+        [
+          "Record Invoice Receipt",
+          "Record Goods Receipt",
+          1,
+          48.0,
+          48.0
+        ],
+        [
+          "Create",
+          "Record Invoice Receipt",
+          2,
+          36.0,
+          45.6
+        ],
+        [
+          "Record Goods Receipt",
+          "Record Goods Receipt",
+          1,
+          0.0,
+          0.0
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0059,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which transitions have the longest median waiting intervals?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "missing_users": {
+      "sql": "SELECT count(*) AS events FROM events WHERE resource IS NULL",
+      "columns": [
+        "events"
+      ],
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0017,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many events have no resource?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "missing_times": {
+      "sql": "SELECT count(*) AS events FROM events WHERE event_time IS NULL",
+      "columns": [
+        "events"
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0028,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many events have no timestamp?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "sequence_signals": {
+      "sql": "SELECT * FROM sequence_signals ORDER BY case_id LIMIT 100",
+      "columns": [
+        "case_id",
+        "matching_category",
+        "classification",
+        "reason"
+      ],
+      "rows": [
+        [
+          "A",
+          "3-way synthetic",
+          "review_required",
+          "Invoice receipt recorded before first goods receipt; flow interpretation required"
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0041,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which sequences require matching-flow investigation?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "activity_frequency": {
+      "sql": "SELECT activity,count(*) AS events FROM events GROUP BY activity ORDER BY events DESC,activity",
+      "columns": [
+        "activity",
+        "events"
+      ],
+      "rows": [
+        [
+          "Create",
+          4
+        ],
+        [
+          "Change",
+          2
+        ],
+        [
+          "Record Goods Receipt",
+          2
+        ],
+        [
+          "Record Invoice Receipt",
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0036,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which activities occur most often?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "monthly_cases": {
+      "sql": "SELECT date_trunc('month',first_event) AS month,count(*) AS cases FROM case_metrics GROUP BY month ORDER BY month",
+      "columns": [
+        "month",
+        "cases"
+      ],
+      "rows": [
+        [
+          "2018-01-01 00:00:00+00:00",
+          4
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0062,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "How many cases start in each month?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "resource_frequency": {
+      "sql": "SELECT resource,count(*) AS events FROM events GROUP BY resource ORDER BY events DESC,resource LIMIT 30",
+      "columns": [
+        "resource",
+        "events"
+      ],
+      "rows": [
+        [
+          "human",
+          6
+        ],
+        [
+          "batch",
+          2
+        ],
+        [
+          null,
+          2
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0039,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which resources record most events?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    },
+    "long_spans": {
+      "sql": "SELECT case_id,observed_span_days FROM case_metrics ORDER BY observed_span_days DESC,case_id LIMIT 30",
+      "columns": [
+        "case_id",
+        "observed_span_days"
+      ],
+      "rows": [
+        [
+          "D",
+          1000.0
+        ],
+        [
+          "A",
+          3.0
+        ],
+        [
+          "B",
+          2.0
+        ],
+        [
+          "C",
+          0.0
+        ]
+      ],
+      "truncated": false,
+      "elapsed_seconds": 0.0045,
+      "source_sha256": "c23ce48462e1f2a41e4f205dd32d1d055efbf3ecc5069669232f3b85f28f603f",
+      "synthetic": true,
+      "limitations": "Observed spans are not completion times. Repeats may be legitimate. Sequence signals require category-specific review and are not verified violations. Resource names alone do not establish human versus batch status.",
+      "question": "Which cases have the longest observed spans?",
+      "mode": "deterministic SQL evidence; no LLM used"
+    }
+  }
+}

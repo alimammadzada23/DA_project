@@ -1,0 +1,41 @@
+table TransitionEvents
+
+	measure 'Transition Occurrences' = COALESCE(COUNTROWS(TransitionEvents), 0)
+
+	measure 'Median Wait Hours' = MEDIAN(TransitionEvents[waiting_hours])
+
+	measure 'P90 Wait Hours' = PERCENTILEX.INC(TransitionEvents, TransitionEvents[waiting_hours], 0.9)
+
+	column case_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: case_id
+
+	column from_activity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: from_activity
+
+	column to_activity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: to_activity
+
+	column waiting_hours
+		dataType: double
+		summarizeBy: none
+		sourceColumn: waiting_hours
+
+	column 'Waiting Band' = SWITCH(TRUE(), TransitionEvents[waiting_hours] < 1, "<1 hour", TransitionEvents[waiting_hours] < 24, "1-24 hours", TransitionEvents[waiting_hours] < 168, "1-7 days", "7+ days")
+		dataType: string
+		sortByColumn: 'Waiting Band Sort'
+		summarizeBy: none
+
+	column 'Waiting Band Sort' = SWITCH(TRUE(), TransitionEvents[waiting_hours] < 1, 1, TransitionEvents[waiting_hours] < 24, 2, TransitionEvents[waiting_hours] < 168, 3, 4)
+		dataType: int64
+		summarizeBy: none
+
+	partition TransitionEvents = m
+		mode: import
+		source =
+			Parquet.Document(File.Contents(DataFolder & "\transitions.parquet"))
