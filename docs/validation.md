@@ -1,8 +1,36 @@
 # Validation ledger
 
-## Multi-dataset extension — 2026-11-03
+## Confirmed CFPB timestamp and donut defects — 2026-11-03
 
-**152 tests passed, 0 failed, 0 skipped.** The original 96 tests are retained; 56 additional tests cover the new dataset engine, complaint module and workspace UI. The current [JUnit artifact](test-results.xml) records the 95.38-second full run on Linux / Python 3.12.14 / DuckDB 1.5.6. Twelve pandas/Plotly date-array deprecation warnings are non-failing; they are not hidden. Frozen offline sync checked the 60-package installation. The lock includes Excel and flat Parquet readers.
+**182 tests passed, 0 failed, 0 skipped in 158.99 seconds**, including all previous 152 tests and 30 focused regressions. [JUnit](test-results.xml) records this full run. Twelve existing pandas/Plotly timezone-array deprecation warnings remain non-failing. Frozen offline sync checked the 60-package installation. No dependencies or procurement model were replaced.
+
+The user reported a genuine **81,915-complaint / approximately 27 MB** CSV. **That source is unavailable here; no full-file or real-business finding verification is claimed.** The correction is validated with explicitly synthetic records using the exact source timestamp syntax and long CFPB product names. The earlier cloud source-access evidence remains historical; this repair did not depend on downloading another extract.
+
+| Check | Actual result |
+|---|---|
+| Exact timestamp | `2026-09-02T19:36:07.000Z` → `2026-09-02` |
+| Offset boundaries | `2026-09-02T00:30:00+02:00` → September 1 UTC; `2026-09-02T23:30:00-05:00` → September 3 UTC |
+| Legacy formats | YYYY-MM-DD / MM/DD/YYYY retained; fractions, UTC offsets and offset-free ISO timestamps covered |
+| Independent reference | Separate pandas date parser and Python counters agree with SQL; production `_date` is explicitly forbidden during the reconciliation regression |
+| Hand-counted source | 12 raw rows → 10 retained valid unique IDs; 7 dated, 1 missing date, 2 invalid dates; daily counts 2/1/1/1/1/1 |
+| Product/company checks | Product counts 5/5; company counts 5/5; exact company/product cells, timely denominators, inclusive dates and compound filters verified |
+| Period comparisons | Explicit earlier/later issue counts and relative changes agree; UTC coverage, odd unmatched day and zero-baseline behavior covered |
+| Entirely unusable dates | Clear atomic import failure; old all-NULL-date snapshot displays a visible reimport error, with import controls still accessible |
+| Donut aggregation | 1,000 synthetic records → slices 600/180/90/60/50/20; below-3% categories combine into Other; selected-cohort shares recalculate |
+| Rendered label geometry | Chromium at 1280×800 and 1440×900: six legend entries, zero overlapping/clipped labels, no horizontal page overflow |
+| Real hover | The small Other slice visibly reports **20 selected complaints / 2.00%**. Native Plotly percentage calculation replaces an incorrectly resolved custom hover field |
+| Browser filters | 1,000 → 500 after company filter → 250 with September 2–4; plotted daily counts 84/83/83 |
+| Browser original-CSV reimport | Fresh snapshot selects automatically; old filters clear; 10 complaints / 7 dated / 1 missing / 2 invalid shown correctly |
+| Preserved UI | All three existing browser scripts passed: procurement filters/reset/box selection/case lookup/guided SQL, all workspaces and isolation, CSV/Excel/Parquet and mapped-event uploads |
+| Preserved Power BI | 22 existing JSON files pass schemas/static bindings; no Windows Desktop execution is claimed |
+
+Evidence: [independent reference calculations](cfpb-date-reference.json), [date/donut browser checks](cfpb-date-browser-verification.json), [actual screenshots](screenshots/date-fix/), and the refreshed existing browser-check records. The new browser script uses visible calendar segments and Enter/blur to commit a date range; hidden native inputs are not treated as editable controls. Browser checks completed with zero uncaught errors.
+
+The all-NULL dates already stored in the user's snapshot require **reimport of the original CSV**, followed by independent validation and regenerated exports. Exact Mac update/reimport commands are in [cfpb-date-fix.md](cfpb-date-fix.md). Native Mac execution and the full 81,915-row source remain unverified here. The tests establish the corrected parser, calculations and UI behavior on the documented references, not genuine-file acceptance.
+
+## Earlier multi-dataset extension — 2026-11-03
+
+**That stage passed 152 tests, 0 failed, 0 skipped in 95.38 seconds.** The original 96 tests were retained; 56 additional tests covered the dataset engine, complaint module and workspace UI on Linux / Python 3.12.14 / DuckDB 1.5.6. The current [JUnit artifact](test-results.xml) supersedes this run and includes all these tests. Twelve pandas/Plotly date-array deprecation warnings were non-failing. Frozen offline sync checked the 60-package installation; the lock includes Excel and flat Parquet readers.
 
 | Capability | Executed evidence / outcome | Limit |
 |---|---|---|

@@ -1,0 +1,70 @@
+{
+  "scope": "SYNTHETIC regression records using the reported timestamp syntax. The user\u2019s 81,915-row file was unavailable.",
+  "checks": [
+    {
+      "csv_import_exact_timestamp_format": true,
+      "records": 1000,
+      "dated_records": 1000,
+      "independent_daily_counts": [
+        168,
+        168,
+        166,
+        166,
+        166,
+        166
+      ],
+      "donut_counts": [
+        600,
+        180,
+        90,
+        60,
+        50,
+        20
+      ]
+    },
+    {
+      "viewport": [
+        1280,
+        800
+      ],
+      "legend_items": 6,
+      "overlapping_labels": 0,
+      "clipped_labels": 0,
+      "horizontal_page_overflow": false
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "legend_items": 6,
+      "overlapping_labels": 0,
+      "clipped_labels": 0,
+      "horizontal_page_overflow": false
+    },
+    {
+      "actual_hover": {
+        "complaints": 20,
+        "share": "2.00%"
+      }
+    },
+    {
+      "company_filter_records": 500,
+      "company_and_date_filter_records": 250,
+      "filtered_daily_counts": [
+        84,
+        83,
+        83
+      ]
+    },
+    {
+      "original_csv_reimport": true,
+      "records": 10,
+      "dated": 7,
+      "missing_dates": 1,
+      "invalid_dates": 2,
+      "stale_filters": false
+    }
+  ],
+  "uncaught_browser_errors": []
+}

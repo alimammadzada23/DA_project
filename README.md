@@ -6,6 +6,8 @@ A Business Analyst / Data Analyst portfolio application with independent procure
 
 [Mac installation and all workspaces](docs/multi-dataset-guide.md) · [Procurement guide](docs/dashboard-guide.md) · [Actual UI screenshots](docs/screenshots/) · [Validation evidence](docs/validation.md) · [CFPB source verification](docs/cfpb-source-verification.json)
 
+**CFPB date fix:** ISO 8601 received/sent timestamps (including `2026-09-02T19:36:07.000Z`) now parse to UTC calendar dates. **Previously imported snapshots are not repaired automatically: reimport the original CSV.** Follow the [exact update, reimport and validation steps](docs/cfpb-date-fix.md). The reported 81,915-record genuine file is not available in this cloud task; regression verification uses labeled synthetic data.
+
 ## Open the application
 
 From your existing repository checkout, after stopping any previous server:

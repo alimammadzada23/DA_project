@@ -33,13 +33,28 @@ FIELDS = {'Complaint ID': 'complaint_id', 'Date received': 'record_date', 'Produ
           'Consumer disputed?': 'consumer_disputed'}
 REQUIRED = {'Complaint ID', 'Date received', 'Product', 'Issue', 'Company',
             'Company response to consumer', 'Timely response?'}
+DATE_PARSER_VERSION = 2
+DATE_POLICY = ('ISO 8601 timestamps are converted to UTC calendar dates; offset-free timestamps '
+               'are interpreted as UTC. YYYY-MM-DD and MM/DD/YYYY retain their calendar date. '
+               'Invalid or missing dates remain NULL and are excluded only from date analyses. '
+               'An import with no usable received dates is rejected.')
+
+
+class UnusableComplaintDates(ValueError):
+    """The source/snapshot cannot support any received-date analysis."""
 
 
 def _date(value):
-    if not value: return None
-    for fmt in ('%Y-%m-%d', '%m/%d/%Y'):
-        try: return datetime.strptime(value.strip(), fmt).date()
-        except ValueError: pass
+    if not value or not value.strip(): return None
+    text = value.strip()
+    try:
+        # Do not take text[:10]: offset timestamps can cross a UTC day boundary.
+        instant = datetime.fromisoformat(text[:-1] + '+00:00' if text.endswith(('Z', 'z')) else text)
+        if instant.tzinfo is not None: instant = instant.astimezone(timezone.utc)
+        return instant.date()
+    except (ValueError, OverflowError): pass
+    try: return datetime.strptime(text, '%m/%d/%Y').date()
+    except ValueError: pass
     return None
 
 
@@ -54,7 +69,7 @@ def _normalized(source, coverage=None):
         qa = {'source_rows': 0, 'missing_or_invalid_ids': 0, 'duplicate_ids': 0,
               'conflicting_duplicate_ids': 0, 'invalid_received_dates': 0,
               'invalid_sent_dates': 0, 'unrecognized_timely_values': 0, 'missing_timely': 0,
-              'outside_requested_coverage': 0}
+              'outside_requested_coverage': 0, 'missing_received_dates': 0, 'missing_sent_dates': 0}
         for number, source_row in enumerate(reader, 1):
             if number > 500_000: raise ValueError('Extract exceeds 500,000 rows; choose a shorter period.')
             if None in source_row or any(value is None for value in source_row.values()):
@@ -75,6 +90,7 @@ def _normalized(source, coverage=None):
             for column, label in [('record_date', 'received'), ('date_sent', 'sent')]:
                 value = row[column]; row[column] = _date(value)
                 if value and row[column] is None: qa[f'invalid_{label}_dates'] += 1
+                if value is None: qa[f'missing_{label}_dates'] += 1
             if coverage and row['record_date'] is not None and not (
                 date.fromisoformat(coverage['start_inclusive']) <= row['record_date'] < date.fromisoformat(coverage['end_exclusive'])):
                 qa['outside_requested_coverage'] += 1; continue
@@ -84,11 +100,16 @@ def _normalized(source, coverage=None):
             row['timely'] = value.capitalize() if value and value.lower() in ('yes', 'no') else None
             rows.append(row)
     if not rows: raise ValueError('No valid complaint IDs in extract; nothing was imported.')
+    if not any(row['record_date'] is not None for row in rows):
+        raise UnusableComplaintDates(f'No usable received dates were parsed from {len(rows):,} retained complaints '
+            f'({qa["missing_received_dates"]:,} missing, {qa["invalid_received_dates"]:,} invalid). '
+            'Check Date received in the original CSV. Supported formats include 2026-09-02T19:36:07.000Z, '
+            'ISO timestamps with offsets, YYYY-MM-DD and MM/DD/YYYY. No snapshot was created; reimport the original CSV after correcting its dates.')
     qa.update(imported_rows=len(rows), excluded_rows=qa['missing_or_invalid_ids'] + qa['duplicate_ids'] + qa['outside_requested_coverage'],
               future_received_dates=sum(row['record_date'] is not None and row['record_date'] > date.today() for row in rows),
               missing={column: sum(row[column] is None for row in rows) for column in rows[0]},
               duplicate_policy='First occurrence of each valid complaint ID retained; all raw rows preserved.',
-              date_policy='Invalid or missing dates remain NULL. Counts retain those complaints; trends omit them.')
+              date_policy=DATE_POLICY)
     return rows, raw, header, qa
 
 
@@ -110,6 +131,7 @@ def ingest_complaints(source, database, *, download=None, synthetic=False):
             'coverage': download.get('coverage') if verified else {'start_inclusive': str(min(dates)) if dates else None,
                 'end_exclusive': str(max(dates) + timedelta(days=1)) if dates else None, 'basis': 'observed dates; completeness unverified'},
             'rows': len(rows), 'source_schema': header, 'quality': qa,
+            'date_parser_version': DATE_PARSER_VERSION, 'date_policy': DATE_POLICY,
             'usage': 'Official publicly released consumer complaint records. See retained publisher source/usage documentation; no CFPB endorsement.',
             'usage_documents_retained': bool(verified and download.get('publisher_pages')),
             'usage_verified': False, 'usage_review': 'Review the retained publisher pages and current usage conditions; software CC0 is not a separate dataset license verification.', 'limitations': LIMITATIONS}
@@ -228,7 +250,8 @@ class Complaints(ScopedAnalytics):
             GROUP BY response,timely ORDER BY complaints DESC, response NULLS LAST, timely NULLS LAST LIMIT 1000'''),
         'donut': ('Product mix across all selected complaints', '''WITH groups AS (SELECT product, count(*) AS complaints FROM selected GROUP BY product),
             ranked AS (SELECT *,row_number() OVER(ORDER BY complaints DESC,product NULLS LAST) AS position FROM groups)
-            SELECT CASE WHEN position<=5 THEN coalesce(product,'Not recorded') ELSE 'Other products (combined)' END AS category,
+            SELECT CASE WHEN position<=5 AND complaints::DOUBLE/nullif((SELECT sum(complaints) FROM groups),0)>=0.03
+                THEN coalesce(product,'Not recorded') ELSE 'Other products (combined)' END AS category,
             sum(complaints) AS complaints FROM ranked GROUP BY 1 ORDER BY complaints DESC,category'''),
         'company_distribution': ('Distribution of reported complaint counts across represented companies', '''WITH groups AS
             (SELECT company,count(*) AS complaints FROM selected WHERE company IS NOT NULL GROUP BY company)
@@ -249,6 +272,16 @@ class Complaints(ScopedAnalytics):
                 THEN coalesce(b.product,'Not recorded') ELSE 'Other categories (combined)' END AS product, count(*) AS complaints
             FROM base b GROUP BY 1,2 ORDER BY complaints DESC,company NULLS LAST,product'''),
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        qa = self.metadata['quality']
+        qa = qa.get('complaint_validation', qa)
+        if self.metadata['rows'] and qa.get('missing', {}).get('record_date') == self.metadata['rows']:
+            raise UnusableComplaintDates('This imported snapshot has no usable received dates. '
+                'Its stored dates cannot be repaired by restarting the dashboard. '
+                'Reimport your original CSV into a new snapshot using the updated application, then select that snapshot. '
+                'Keep the original CSV; do not reuse the invalid database or its exports.')
 
     def overview(self):
         result = self.investigate('summary')
@@ -319,26 +352,25 @@ def reconcile_complaints(source, database):
     """A second implementation using csv + Python counters, independent of ingestion normalization."""
     from .datasets import metadata
     info = metadata(database); counters = Counter({k: 0 for k in ('complaints', 'known_timely', 'timely_yes', 'timely_no', 'missing_dates')})
-    companies = Counter(); products = Counter(); days = Counter(); issues = Counter(); seen = set()
+    companies = Counter(); products = Counter(); days = Counter(); issues = Counter(); company_products = Counter(); seen = set()
     with Path(source).open(encoding='utf-8-sig', newline='') as stream:
         for row in csv.DictReader(stream):
             identifier = row['Complaint ID'].strip()
             if not identifier.isdigit() or int(identifier) <= 0 or int(identifier) in seen: continue
             seen.add(int(identifier))
-            parsed = None
             value = row['Date received'].strip()
-            try:
-                if len(value.split('-')) == 3:
-                    year, month, day = map(int, value.split('-'))
-                else: month, day, year = map(int, value.split('/'))
-                parsed = date(year, month, day)
-            except (ValueError, TypeError): pass
+            # Independent reference implementation: pandas ISO parser, not _date
+            # or datetime.fromisoformat. Explicit legacy fallback, no locale guess.
+            reference = pd.to_datetime(value, format='ISO8601', errors='coerce', utc=True)
+            if pd.isna(reference): reference = pd.to_datetime(value, format='%m/%d/%Y', errors='coerce', utc=True)
+            parsed = None if pd.isna(reference) else reference.date()
             if info.get('download_receipt') and parsed:
                 first = date.fromisoformat(info['coverage']['start_inclusive']); stop = date.fromisoformat(info['coverage']['end_exclusive'])
                 if parsed < first or parsed >= stop: continue
             counters['complaints'] += 1
             if row['Company'].strip(): companies[row['Company'].strip()] += 1
             products[row['Product'].strip() or None] += 1; issues[row['Issue'].strip() or None] += 1
+            company_products[(row['Company'].strip() or None, row['Product'].strip() or None)] += 1
             timely = row['Timely response?'].strip().lower()
             counters['known_timely'] += timely in ('yes', 'no'); counters['timely_yes'] += timely == 'yes'; counters['timely_no'] += timely == 'no'
             if parsed: days[parsed] += 1
@@ -350,8 +382,18 @@ def reconcile_complaints(source, database):
     checks['product_distribution'] = dict((r[0], r[1]) for r in service.investigate('products')['rows']) == dict(products)
     checks['issue_distribution'] = dict((r[0], r[1]) for r in service.investigate('issues')['rows']) == dict(issues)
     checks['daily_distribution'] = dict(service.investigate('daily')['rows']) == dict(days)
+    # Reconciliation covers every company, including a long tail beyond the
+    # dashboard's bounded ranking. Only aggregates are read into Python.
+    from .agent import SQL_CONFIG
+    with duckdb.connect(str(Path(database).resolve()), read_only=True, config=SQL_CONFIG) as con:
+        actual_companies = dict(con.execute('SELECT company,count(*) FROM complaints WHERE company IS NOT NULL GROUP BY company').fetchall())
+        actual_pairs = {(company, product): count for company, product, count in con.execute('SELECT company,product,count(*) FROM complaints GROUP BY company,product').fetchall()}
+    checks['company_distribution'] = actual_companies == dict(companies)
+    checks['company_product_distribution'] = actual_pairs == dict(company_products)
     checks['timely_share'] = actual['timely_share'] == (counters['timely_yes'] / counters['known_timely'] if counters['known_timely'] else None)
-    return {'passed': all(checks.values()), 'checks': checks, 'independent_counts': dict(counters), 'source_sha256': digest(source),
+    return {'passed': all(checks.values()), 'checks': checks, 'independent_counts': dict(counters),
+            'independent_daily_counts': {str(day): count for day, count in sorted(days.items())},
+            'date_reference': 'Independent pandas ISO8601/US-date parser, normalized to UTC', 'source_sha256': digest(source),
             'origin': info['origin'], 'evidence': evidence, 'note': 'Reconciles source bytes and calculations; does not authenticate an uploaded source.'}
 
 

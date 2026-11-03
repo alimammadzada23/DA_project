@@ -13,7 +13,7 @@ import streamlit as st
 
 from . import business_charts as visual, charts, ui
 from .agent import Analyst
-from .complaints import Complaints, download_extract, ingest_complaints, management_summary, export_complaints
+from .complaints import Complaints, UnusableComplaintDates, download_extract, ingest_complaints, management_summary, export_complaints
 from .custom import CustomAnalytics, CustomProcessAnalytics
 from .datasets import TableFilters, inspect_table, ingest_table, metadata, MAX_BYTES
 
@@ -238,7 +238,10 @@ def complaints_executive(service, get, scope):
     st.write('Use reported complaint volumes to identify investigation priorities. Company quality and complaint rates require defensible exposure data that this dataset does not contain.')
     left, right = st.columns([1.35, 1])
     with left: st.subheader('Reported complaints over time'); draw(visual.trend(get('investigate', ('daily',))), 'complaints-trend-' + scope)
-    with right: st.subheader('Product mix'); draw(visual.donut(get('investigate', ('donut',))), 'complaints-donut-' + scope)
+    with right:
+        st.subheader('Product mix')
+        draw(visual.donut(get('investigate', ('donut',))), 'complaints-donut-' + scope)
+        st.caption('Up to five products; categories below 3% and remaining products are combined in Other. Hover for counts and shares of all selected complaints.')
     left, right = st.columns(2)
     with left: st.subheader('Concentrated issues'); chosen = selected_chart(get('investigate', ('issues',)), 'issue', scope)
     with right: st.subheader('Company volume distribution'); draw(visual.histogram(get('investigate', ('company_distribution',))), 'company-distribution-' + scope)
@@ -367,11 +370,20 @@ def complaints_workspace(path=None):
         st.title('Customer Experience & Risk Intelligence')
         st.info('No genuine complaint dataset is loaded. Download or import an official CFPB extract to begin. No complaint findings are claimed.')
         cfpb_import(); return
-    service = Complaints(path)
     if not custom:
         with st.sidebar.expander('Load another complaint snapshot'): cfpb_import()
+    try: service = Complaints(path)
+    except UnusableComplaintDates as exc:
+        st.title('Customer Experience & Risk Intelligence'); st.error(str(exc))
+        if custom: st.info('Use Import another dataset above to reimport the original source with its approved mapping.')
+        else: st.info('Open Load another complaint snapshot in the sidebar and import the original CSV again.')
+        return
     page = st.sidebar.radio('Complaint analytics', COMPLAINT_PAGES, key='custom-complaint-page' if custom else 'complaint-page')
     source_banner(service.metadata)
+    qa = service.metadata['quality']; qa = qa.get('complaint_validation', qa)
+    if 'missing_received_dates' in qa:
+        st.caption(f'Source received-date quality · {qa["missing_received_dates"]:,} missing · {qa["invalid_received_dates"]:,} invalid '
+                   'before dashboard filters. Timestamp-based dates use UTC; date-only values retain their calendar date.')
     filters = tabular_filters(service, path); service = Complaints(path, filters)
     signature = Path(path).stat()
     scope = hashlib.sha256((service.metadata['dataset_id'] + json.dumps(asdict(filters), default=str, sort_keys=True)).encode()).hexdigest()[:16]

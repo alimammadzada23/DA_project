@@ -1,0 +1,13 @@
+Complaint ID,Date received,Product,Issue,Company,Company response to consumer,Timely response?,Date sent to company
+1,2026-09-01T00:15:00.000Z,Credit,A,SYNTHETIC Alpha,Closed,Yes,2026-09-01T21:30:00.000Z
+2,2026-09-02T19:36:07.000Z,Credit,A,SYNTHETIC Alpha,Closed,No,2026-09-02T22:15:00+00:00
+3,2026-09-02T00:30:00+02:00,Loan,B,SYNTHETIC Beta,Closed,Yes,2026-09-03T00:30:00+02:00
+4,2026-09-02T23:30:00-05:00,Credit,A,SYNTHETIC Beta,Closed,Yes,2026-09-03
+5,2026-09-04,Loan,B,SYNTHETIC Alpha,Closed,No,09/04/2026
+6,09/05/2026,Loan,C,SYNTHETIC Beta,In progress,,
+7,2026-09-06T03:15:00.123456Z,Credit,C,SYNTHETIC Alpha,Closed,Yes,invalid
+8,,Credit,C,SYNTHETIC Beta,In progress,Unknown,
+9,not-a-date,Loan,C,SYNTHETIC Alpha,Closed,Yes,
+10,2026-02-30T19:36:07.000Z,Loan,A,SYNTHETIC Beta,Closed,No,
+2,2026-09-02T19:36:07.000Z,Credit,A,SYNTHETIC Alpha,Closed,No,2026-09-02T22:15:00+00:00
+bad,2026-09-02T19:36:07.000Z,Credit,A,SYNTHETIC Alpha,Closed,Yes,

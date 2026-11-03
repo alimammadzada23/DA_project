@@ -1,5 +1,7 @@
 # Install, launch and use the dataset workspaces
 
+For the confirmed CFPB timestamp defect, first read [date-fix update and original-CSV reimport instructions](cfpb-date-fix.md). Existing databases containing NULL dates must be replaced with a fresh import after updating.
+
 ## Mac installation and update
 
 Use Terminal on the Mac. No Codex publication, AI key or Windows installation is needed to run the application.

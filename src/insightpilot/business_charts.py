@@ -1,4 +1,6 @@
 """Reusable, bounded visualizations for mapped tabular datasets."""
+from html import escape
+import textwrap
 import plotly.graph_objects as go
 from .charts import AMBER, BLUE, TEAL, MUTED, frame, style
 
@@ -7,11 +9,24 @@ COLORS = [TEAL, BLUE, AMBER, '#B89AFF', '#ED8EAC', '#6986A6']
 
 def donut(result, label='category', value='complaints'):
     data = frame(result)
-    fig = go.Figure(go.Pie(labels=data[label].fillna('Not recorded'), values=data[value], hole=.68,
-        sort=False, marker={'colors': COLORS}, textinfo='percent',
-        hovertemplate='%{label}<br>%{value:,} selected records<br>%{percent} of this selection<extra></extra>'))
-    fig.update_layout(showlegend=True, legend={'orientation': 'h', 'y': -.15}, margin={'b': 100})
-    return style(fig, height=410)
+    labels = data[label].fillna('Not recorded').astype(str).tolist()
+    total = sum(data[value])
+    wrapped = ['<br>'.join(escape(line) for line in textwrap.wrap(textwrap.shorten(name, width=96, placeholder='…'), width=28)) for name in labels]
+    legend_height = sum(18 * (name.count('<br>') + 1) + 6 for name in wrapped)
+    # No labels on/outside arcs: even a very thin slice has a readable legend
+    # entry and exact count/share in the tooltip, without overlapping text.
+    fig = go.Figure(go.Pie(labels=wrapped, values=data[value], hole=.68,
+        sort=False, marker={'colors': COLORS}, textinfo='none',
+        text=[escape(name) for name in labels],
+        customdata=[[escape(name), count / total if total else 0] for name, count in zip(labels, data[value])],
+        hovertemplate='%{text}<br>%{value:,} selected complaints<br>%{percent:.2%} of all selected complaints<extra></extra>'))
+    style(fig, height=300 + legend_height + 30)
+    # Apply after shared styling, which supplies its own legend and margins.
+    fig.update_layout(showlegend=bool(labels), legend={'orientation': 'v', 'y': -.08, 'yanchor': 'top',
+        'x': 0, 'xanchor': 'left', 'font': {'size': 11}, 'itemsizing': 'constant', 'itemclick': False, 'itemdoubleclick': False},
+        margin={'l': 8, 'r': 8, 't': 12, 'b': legend_height + 30},
+        annotations=[{'text': f'{total:,}<br>complaints', 'x': .5, 'y': .5, 'showarrow': False, 'font': {'size': 14}}])
+    return fig
 
 
 def ranked(result, label, value, *, unit='Reported complaints', top=12, percentage=False):
