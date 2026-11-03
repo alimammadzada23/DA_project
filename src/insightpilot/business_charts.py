@@ -35,7 +35,7 @@ def trend(result, date='record_date', value='complaints', *, unit='Reported comp
     else:
         fig.add_trace(go.Scatter(x=data[date], y=data[value], mode='lines+markers', line={'color': TEAL, 'width': 3},
             fill='tozeroy', fillcolor='rgba(97,213,197,.07)', hovertemplate='%{x|%Y-%m-%d}<br>%{y:,} '+unit.lower()+'<extra></extra>'))
-    return style(fig, x_title='Received date' if date == 'record_date' else 'Mapped date', y_title=unit)
+    return style(fig, x_title='Received date' if date == 'record_date' else 'Month (monthly totals)' if date == 'month' else 'Mapped date', y_title=unit)
 
 
 def stacked(result, group='company', category='product', value='complaints'):
