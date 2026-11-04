@@ -65,6 +65,35 @@ def test_compound_counts_means_sorting_and_chart_units(analysis_model):
     assert json.loads(result['figures'][1])['layout']['xaxis']['title']['text']=='units'
 
 
+def test_standard_comparison_uses_canonical_count_order_without_a_requested_rank(analysis_model):
+    e,p=engine_and_profile(analysis_model)
+    result=analyze_question(e,p,Metric('Records'),'Compare mean and median value by segment.',Conversation())
+    expected=analysis_model[1].groupby('segment').agg(records=('value','size'),mean=('value','mean'),median=('value','median')).sort_values('records',ascending=False)
+    actual=frame_of(result['primary'])
+    assert list(actual.group_0)==list(expected.index)
+    assert list(actual.records)==list(expected.records)
+    assert list(actual.m0)==pytest.approx(list(expected['mean']))
+    assert list(actual.m1)==pytest.approx(list(expected['median']))
+    assert result['plan']['sort_by']=='records'
+
+
+@pytest.mark.parametrize('question,descending,limit',[
+    ('Which segment has the highest average value?',True,15),
+    ('Which segment has the lowest average value?',False,15),
+    ('Show the top three segment groups by average value.',True,3),
+])
+def test_standard_explicit_metric_rank_and_followup_keep_the_requested_order(analysis_model,question,descending,limit):
+    e,p=engine_and_profile(analysis_model);conversation=Conversation()
+    result=analyze_question(e,p,Metric('Records'),question,conversation)
+    expected=analysis_model[1].groupby('segment').value.mean().sort_values(ascending=not descending).head(limit)
+    actual=frame_of(result['primary'])
+    assert list(actual.group_0)==list(expected.index) and list(actual.m0)==pytest.approx(list(expected))
+    assert result['plan']['sort_by']=='m0' and result['plan']['descending']==descending
+    follow=analyze_question(e,p,Metric('Records'),'Now show only the top two.',conversation)
+    assert list(frame_of(follow['primary']).group_0)==list(expected.index[:2])
+    assert follow['plan']['sort_by']=='m0' and follow['plan']['descending']==descending
+
+
 def test_new_rate_requires_human_approval_and_discloses_denominators(analysis_model):
     p=plan(operation='aggregate',group_by=['zone'],measures=[{'aggregation':'rate','numerator':{'column':'flag','operator':'eq','value':'yes'},'denominator':{'kind':'nonmissing','column':'flag'}}])
     assert run(analysis_model,p)['status']=='approval_required'

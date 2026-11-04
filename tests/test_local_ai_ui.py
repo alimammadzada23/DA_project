@@ -57,6 +57,8 @@ def test_standard_compound_request_results_tables_figures_and_history(ai_workspa
     assert len(a.session_state['analyst-conversation'].entries)==1
     ask(a,'Now show only the top two.')
     assert len(a.session_state['analyst-conversation'].entries)==2
+    follow=a.session_state['analyst-conversation'].last_response
+    assert follow['plan']['limit']==2 and len(follow['primary']['rows'])==2
 
 
 def test_unavailable_ollama_never_breaks_standard_or_sql(ai_workspace,monkeypatch):

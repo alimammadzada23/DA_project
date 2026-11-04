@@ -1,5 +1,10 @@
 # Local AI upgrade acceptance
 
+**Follow-up:** [The benchmark review](LOCAL_AI_BENCHMARK_REVIEW.md) fixes default
+comparison ordering and the `top two` follow-up. Standard now reconciles 48/51,
+with three disclosed parser limitations. The original acceptance results below
+describe `75fe6d5`; the review receipt records the new verification results.
+
 Engineering implementation is complete on **`codex/insightpilot-local-ai`**, based
 on the published unified baseline
 `e3874eeef01275700852bef683eb06ccae056a74`. The new branch is for a local commit

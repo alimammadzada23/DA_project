@@ -75,9 +75,9 @@ def standard_plan(engine,profile,metric,question,previous=None):
     old=previous.data if hasattr(previous,'data') else previous
     follow=bool(old) and bool(re.search(r'^\s*(?:now|and|also|instead|can you visualize|visualize|plot that)|\btheir\b|\bthose\b',text))
     plan=base|({'inherit':True} if follow else {})
-    top=re.search(r'\btop\s+(\d+|five|ten|three)\b',text)
+    top=re.search(r'\btop\s+(\d+|two|three|five|ten)\b',text)
     if top:
-        words={'five':5,'ten':10,'three':3};plan['limit']=words.get(top[1],int(top[1]) if top[1].isdigit() else 5)
+        words={'two':2,'three':3,'five':5,'ten':10};plan['limit']=words.get(top[1],int(top[1]) if top[1].isdigit() else 5)
     if follow and re.search(r'visuali[sz]e|chart|plot that',text):return plan|{'chart':'auto'}
     if follow and top and not re.search(r'average|mean|median|sum|total|count|records|groups|categories|distribution',text):return plan
     if re.search(r'\b(columns|fields)\b',text) and not re.search(r'missing|null|blank',text):return plan|{'operation':'schema'}
@@ -144,7 +144,7 @@ def standard_plan(engine,profile,metric,question,previous=None):
             if spec not in measures:measures.append(spec)
     if re.search(r'\b(percent(?:age)?|share|proportion)\b',text):
         if re.search(r'\b(?:has|among|equal to|nonmissing)\b|\bshare is\b',text) or filters:
-            return clarify('This requests a conditional rate. Define a reviewed numerator, eligible denominator and missing-value policy, or ask Local AI to propose a definition for your approval. Standard analysis will not substitute shares by group.')
+            return clarify('Standard analysis does not parse this conditional-rate wording. Use a reviewed saved metric, or ask Local AI to propose the numerator, eligible denominator and missing-value policy for your approval. No rate was calculated or replaced with group shares.')
         if not group:return clarify('Specify the grouping for selected-record shares, or define a reviewed numerator and denominator for a conditional rate.')
         measures=[{'aggregation':'share'}];group_requested=True
     if not measures and re.search(r'summar|selected metric|current metric',text):measures=[{'aggregation':'saved','metric':metric.name}]
@@ -155,5 +155,7 @@ def standard_plan(engine,profile,metric,question,previous=None):
     if group_requested:plan['group_by']=[group]
     if re.search(r'highest|largest|most|top|rank',text):plan['sort_by']='records' if measures[0]['aggregation']=='records' else 'm0';plan['descending']=True
     if re.search(r'lowest|smallest',text):plan['sort_by']='m0';plan['descending']=False
-    if not follow:plan.setdefault('sort_by','records' if measures[0]['aggregation']=='records' else 'm0')
+    # A comparison without a requested rank uses the validator's canonical
+    # source-count ordering. Explicit rankings above and inherited order win.
+    if not follow:plan.setdefault('sort_by','records')
     return plan

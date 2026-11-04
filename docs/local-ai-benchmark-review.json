@@ -1,0 +1,146 @@
+{
+  "base_commit": "75fe6d5a6c1ccb11af01deb26e5f36f829f12759",
+  "independent_calculator": "Pandas directly on the unchanged public trip source and the synthetic benchmark input; no production SQL/Metric compiler or benchmark comparison helper used.",
+  "cases": {
+    "s18": {
+      "independent_numerator": 12,
+      "independent_denominator": 22,
+      "independent_rate": 0.5454545454545454,
+      "old_status": "clarify",
+      "classification": "Valid descriptive request unsupported by the finite Standard parser; clarification, no calculation executed. Not an expected benchmark refusal."
+    },
+    "s19": {
+      "independent_numerator": 12,
+      "independent_denominator": 21,
+      "independent_rate": 0.5714285714285714,
+      "old_status": "clarify",
+      "classification": "Valid descriptive request unsupported by the finite Standard parser; clarification, no calculation executed. Not an expected benchmark refusal."
+    },
+    "s22": {
+      "independent_rows": [
+        [
+          "Group 0",
+          6,
+          1,
+          -5,
+          -0.8333333333333334
+        ],
+        [
+          "Group 2",
+          0,
+          4,
+          4,
+          null
+        ],
+        [
+          "Group 3",
+          3,
+          0,
+          -3,
+          -1.0
+        ],
+        [
+          "Group 5",
+          0,
+          1,
+          1,
+          null
+        ]
+      ],
+      "earlier_total": 9,
+      "later_total": 6,
+      "net_change": -3,
+      "old_status": "clarify",
+      "classification": "Valid period comparison unsupported by Standard date-language parsing; clarification, no calculation executed. Not an expected benchmark refusal."
+    },
+    "t06": {
+      "independently_verified_groups": [
+        {
+          "payment": "credit card",
+          "mean": 13.694749836137207,
+          "median": 9.5,
+          "records": 4577
+        },
+        {
+          "payment": null,
+          "mean": 11.988636363636363,
+          "median": 8.5,
+          "records": 44
+        },
+        {
+          "payment": "cash",
+          "mean": 11.592991169977925,
+          "median": 8.5,
+          "records": 1812
+        }
+      ],
+      "old_group_order": [
+        "credit card",
+        null,
+        "cash"
+      ],
+      "reference_group_order": [
+        "credit card",
+        "cash",
+        null
+      ],
+      "classification": "No calculation error. Standard imposed an unrequested mean ranking instead of the existing canonical source-count order; default-order inconsistency fixed in the planner."
+    }
+  },
+  "benchmark_files_unchanged": {
+    "scripts/local_ai_benchmark_cases.py": "b0c17ff2d7457cf20455faa7762f870b457dcb615fc49bd79221ca2fb0933fd0",
+    "scripts/benchmark_local_ai.py": "f116b5395bb97067c5269d22a9fff8803ec14ad4b9bc5e25aab77f326854f53a"
+  },
+  "at": "2026-11-04T22:24:17.252580+01:00",
+  "branch": "codex/insightpilot-local-ai",
+  "expected_results_unchanged": true,
+  "all_51_expected_tables_sha256": "a71bcefb84f24aea3d6d951d3af68265af02e99b2c7263d908b1369e3c05b1b7",
+  "full_suite": {
+    "tests": 416,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 416,
+    "reported_seconds": 103.98,
+    "junit": "outputs/local-ai-review-tests.xml"
+  },
+  "focused_suite": {
+    "passed": 59,
+    "failed": 0,
+    "seconds": 31.67
+  },
+  "new_regressions": {
+    "cases": 4,
+    "failed_before": 4,
+    "passed_after": 4,
+    "existing_ui_assertions_strengthened": true
+  },
+  "standard_before": {
+    "passed": 47,
+    "failed": 4
+  },
+  "standard_after": {
+    "passed": 48,
+    "failed": 3,
+    "remaining_failed_cases": [
+      "s18",
+      "s19",
+      "s22"
+    ],
+    "remaining_failure_kind": "Unsupported Standard wording, safe clarification; still expected to execute in the benchmark."
+  },
+  "integration_after": {
+    "passed": 51,
+    "failed": 0,
+    "actual_model_executed": false
+  },
+  "expected_clarification_refusal_after": {
+    "numerator": 7,
+    "denominator": 7,
+    "fraction": 1.0
+  },
+  "actual_qwen_executed": false,
+  "pushed": false,
+  "merged": false,
+  "review_scope": "Original four benchmark mismatches plus the top-two follow-up defect discovered by ranking regressions; no new conditional-rate or date-language parser added."
+}

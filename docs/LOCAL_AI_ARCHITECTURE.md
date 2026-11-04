@@ -29,7 +29,7 @@ The JSON Schema is `analyst_plan.PLAN_SCHEMA`. Its root contains `version: 1`,
 | fields | Up to 40 actual columns for metadata/statistical operations |
 | date_basis / grain | Must agree with the shared reviewed basis and grain |
 | periods | Exactly four explicit date boundaries for period comparison |
-| sort_by / descending / limit | Existing result measure or records; 1–100 groups |
+| sort_by / descending / limit | Existing result measure or records; 1–100 groups. Default comparisons use descending source-row count; explicit metric rankings and inherited order take precedence. |
 | chart / bins | Validated auto/table/bar/line/histogram/box/scatter/pie; 5–80 bins |
 | relationship | Exact existing approved relationship, revalidated against current versions |
 | inherit | Inherit prior validated intent; never grants execution or approval rights |

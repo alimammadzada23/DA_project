@@ -1,5 +1,11 @@
 # Local AI question evaluation
 
+**Follow-up review:** Standard now reconciles **48/51** after correcting its
+default comparison ordering. Three unsupported Standard questions remain failed;
+expected results are unchanged. See [the four-case investigation](LOCAL_AI_BENCHMARK_REVIEW.md)
+and [new receipt](local-ai-standard-review.json). The original evaluation below
+and its receipts are retained as historical evidence for `75fe6d5`.
+
 Run on Linux/Python 3.12.14 on 2026-11-04. **No Ollama installation, Qwen weights
 or actual model inference was available.** Model accuracy, cold start, inference
 speed, model RAM and Apple Silicon behavior are unmeasured. A genuine model run
