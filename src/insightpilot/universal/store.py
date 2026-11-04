@@ -93,6 +93,7 @@ class Workspace:
         retained = sources / (key + source.suffix.lower())
         shutil.copyfile(source, retained)
         table = 't_' + key
+        parse_warnings=[]
         try:
             with self.connect(write=True, external=True) as con:
                 con.execute('BEGIN')
@@ -105,6 +106,10 @@ class Workspace:
                     if delimiter not in (',','\t',';','|'): raise ValueError('Choose comma, tab, semicolon or pipe delimiter.')
                     with retained.open(encoding='utf-8-sig', newline='') as stream:
                         header = next(csv.reader(stream, delimiter=delimiter), [])
+                    if len(header)==1:
+                        from .import_preview import parsing_preview
+                        with retained.open('rb') as stream: preview=parsing_preview(stream.read(65536),delimiter)
+                        if preview['warning']:parse_warnings.append(preview['warning'])
                     if not header or any(not n.strip() for n in header) or len({n.casefold() for n in header}) != len(header):
                         raise ValueError('Delimited files need unique nonempty column names (case insensitive).')
                     con.execute(f'''CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,*
@@ -137,7 +142,7 @@ class Workspace:
                 if not 1 <= count <= MAX_ROWS:
                     raise ValueError(f'Use 1–{MAX_ROWS:,} records; no silent sampling is performed.')
                 info = {'name':name, 'current':table, 'columns':cols, 'rows':count, 'roles':{},
-                        'grain':'Unconfirmed; review what one row represents.', 'created_at':now(),
+                        'grain':'Unconfirmed; review what one row represents.', 'created_at':now(),'import_warnings':parse_warnings,
                         'source':{'origin':'user_upload', **(provenance or {}),
                                   'filename':(provenance or {}).get('filename',source.name),
                                   'retained':str(retained.relative_to(self.directory)),

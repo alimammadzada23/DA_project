@@ -11,6 +11,13 @@ include scripts/browser_unified.py
 include scripts/browser_heldout.py
 include scripts/prepare_heldout_evaluation.py
 include scripts/benchmark_universal.py
+include docs/LOCAL_AI*.md
+include docs/local-ai-*.json
+recursive-include docs/screenshots/local-ai *.png
+include scripts/benchmark_local_ai.py
+include scripts/local_ai_benchmark_cases.py
+include scripts/browser_local_ai.py
+recursive-include tests *.py *.csv
 prune data
 prune outputs
 global-exclude __pycache__ *.pyc .env

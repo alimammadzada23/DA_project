@@ -1,0 +1,55 @@
+{
+  "at": "2026-11-04T22:02:55.927269+01:00",
+  "status": "passed",
+  "build": "uv build --out-dir outputs/local-ai-package",
+  "wheel": {
+    "filename": "insightpilot-0.1.0-py3-none-any.whl",
+    "sha256": "0c6defcd4a115dfaf1b038539f4ffc113e507197e7b4e12d5e8c2f6f8ebc0a83",
+    "bytes": 182165
+  },
+  "source_distribution": {
+    "filename": "insightpilot-0.1.0.tar.gz",
+    "required_members_verified": [
+      "app.py",
+      "uv.lock",
+      ".streamlit/config.toml",
+      "docs/LOCAL_AI_ARCHITECTURE.md",
+      "docs/LOCAL_AI_MAC_GUIDE.md",
+      "docs/LOCAL_AI_ACCEPTANCE.md",
+      "scripts/benchmark_local_ai.py",
+      "scripts/local_ai_benchmark_cases.py",
+      "scripts/browser_local_ai.py",
+      "src/insightpilot/universal/local_ai.py",
+      "src/insightpilot/universal/analyst_plan.py",
+      "tests/test_local_ai_client.py",
+      "tests/fixtures/SYNTHETIC-sales.csv"
+    ],
+    "forbidden_generated_or_data_paths": 0,
+    "hash_note": "Final archive hash is stored in the external transfer manifest to avoid self-referential hashes."
+  },
+  "installed_wheel_smoke": {
+    "status": "passed",
+    "module_file": "/workspace/DA_project/outputs/local-ai-package/installed/insightpilot/universal/analyst_session.py",
+    "compound_result": [
+      [
+        "A",
+        2,
+        15.0,
+        2,
+        2
+      ],
+      [
+        "B",
+        1,
+        30.0,
+        1,
+        1
+      ]
+    ],
+    "charts": 2,
+    "remote_endpoint_rejected": true,
+    "packaged_python_modules_matching_source": 47
+  },
+  "native_macos_tested": false,
+  "actual_qwen_executed": false
+}

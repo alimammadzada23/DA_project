@@ -1,0 +1,25 @@
+{
+  "mode": "ollama",
+  "model": "qwen3.5:4b",
+  "actual_model_quality_measured": false,
+  "automatic_weight_download": false,
+  "case_count": 51,
+  "reference": "Independent Pandas/NumPy calculations on the original input frames; manually specified reference intents. Mock plans prove software integration, not language understanding.",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "apple_silicon_tested": false,
+  "status": "actual_model_unavailable",
+  "reason": "Ollama is not reachable. It may not be installed or running. Start the Ollama app on this computer, then refresh; Standard analysis works without it.",
+  "code": "unavailable",
+  "model_quality": {
+    "valid_plan_generation": null,
+    "correct_field_selection": null,
+    "correct_operation_selection": null,
+    "correct_clarification_refusal": null,
+    "end_to_end_answers": null,
+    "incorrect_plans": null,
+    "unsupported_behavior": null
+  },
+  "cases_run": 0,
+  "model_memory_mib": null
+}

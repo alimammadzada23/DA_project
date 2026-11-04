@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-04T20:24:32.500976+00:00",
+  "phase": "Generic planner and validator implemented before assembling the cross-schema benchmark.",
+  "system_prompt_sha256": "7cf0cc50a2ce286567108b0b0082ed7b83a183a186086590f293264074f49491",
+  "plan_schema_sha256": "fc8e02bc147a2cae1527dd179038fe1674832da70d06c78384097fa80db96c29",
+  "prompt_examples": "No dataset-specific field names, sample rows, source filenames or numerical answers.",
+  "heldout_policy": "Reserve a different authentic schema for evaluation, not for prompt examples. Known historical public data can be reused as an AI-prompt holdout, not claimed as a new never-seen source."
+}

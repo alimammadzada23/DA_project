@@ -9,7 +9,10 @@ The application now has one catalog and navigation. The former procurement,
 complaint and mapped-upload front doors are retired. Existing databases, sources,
 reports and backend/CLI compatibility remain intact.
 
-[Acceptance and limitations](docs/UNIFIED_ACCEPTANCE.md) ·
+[Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
+[Mac local AI setup](docs/LOCAL_AI_MAC_GUIDE.md) ·
+[Local AI architecture](docs/LOCAL_AI_ARCHITECTURE.md) ·
+[Unified baseline acceptance](docs/UNIFIED_ACCEPTANCE.md) ·
 [Migration inventory](docs/UNIFICATION_MIGRATION.md) ·
 [Architecture and SQL security](docs/UNIFIED_ARCHITECTURE.md) ·
 [Measured scale](docs/unified-benchmarks.json) ·
@@ -17,10 +20,10 @@ reports and backend/CLI compatibility remain intact.
 
 ## Run on your Mac
 
-This refactor is on **`codex/unified-insightpilot`**, based on `156a116` from
-`codex/insightpilot-next`. It has not been pushed. Fetching the old remote branch
-alone will not install these local changes. Use the accompanying Git bundle until
-a new push is explicitly authorized. These commands use ordinary Mac paths:
+The local AI upgrade is on **`codex/insightpilot-local-ai`**, based on the published
+unified baseline `e3874ee`. **This new branch has not been pushed.** Transfer its
+source archive or Git bundle; fetching the baseline alone does not install this
+upgrade. These commands use ordinary Mac paths:
 
 ```bash
 # If you do not already have a clone:
@@ -30,9 +33,9 @@ cd DA_project
 # Otherwise cd into your existing DA_project checkout first.
 git status --short
 # Preserve any local edits before changing branches; do not reset or clean data.
-git bundle verify ~/Downloads/insightpilot-unified.bundle
-git fetch ~/Downloads/insightpilot-unified.bundle codex/unified-insightpilot:codex/unified-insightpilot
-git switch codex/unified-insightpilot
+git bundle verify ~/Downloads/insightpilot-local-ai.bundle
+git fetch ~/Downloads/insightpilot-local-ai.bundle codex/insightpilot-local-ai:codex/insightpilot-local-ai
+git switch codex/insightpilot-local-ai
 
 # Install uv first if needed: https://docs.astral.sh/uv/getting-started/installation/
 uv python install 3.12
@@ -43,11 +46,13 @@ uv run streamlit run app.py --server.address 127.0.0.1
 Open **http://localhost:8501** in your Mac browser. No shared cloud desktop is
 required. Native macOS acceptance has not been executed in this Linux environment.
 
-If you later authorize publication, the equivalent synchronization is
-`git fetch origin` followed by
-`git switch --track origin/codex/unified-insightpilot` in a clone without that
-local branch. Never merge into `main` just to launch the application. The remote
-repository is public; a local bundle does not change its visibility.
+For optional local inference, install Ollama yourself and explicitly run
+`ollama pull qwen3.5:4b`. Follow the [Mac guide](docs/LOCAL_AI_MAC_GUIDE.md),
+including disabling Ollama cloud features. Then choose **AI Analyst → Local AI
+Analyst** and refresh installed models. Default endpoint is loopback
+`http://127.0.0.1:11434`; no paid provider is required. Standard analysis, SQL Lab
+and all other pages work without Ollama. Actual Qwen quality and Apple Silicon
+performance remain unverified here; mocked integration is reported separately.
 
 ## First minute
 
@@ -82,7 +87,7 @@ retain the data version and chart preset.
 | Explore | Ranked bars, histograms, scatterplots, calendar trends, group box summaries, bounded heatmaps, genuine bar-selection drill-through and paginated records |
 | SQL Lab | Guided builder, SQL-highlighted editor and accessible text alternative, SELECT/CTE validation, approved joins, time/memory/row limits, EXPLAIN, named queries, charts and report blocks |
 | Advanced | Statistical comparisons, regression, outliers, time analysis, guarded baseline forecasts, cohorts, funnels, RFM, text, clustering, contribution/rate-mix and event sequences |
-| AI Analyst | Finite deterministic questions; optional model selects a validated plan and never supplies executable SQL or numerical findings |
+| AI Analyst | Standard finite questions or optional local Ollama structured plans; compound measures, guarded rates, follow-ups, charts, evidence and saved replay; model never supplies executable SQL or numerical findings |
 | Reports | Version-bound replay, standalone escaped HTML, saved evidence blocks, chart/PNG/HTML downloads and bounded source-scope CSV/XLSX/Power Query preparation |
 
 File imports: 512 MiB / 5 million rows / 150 columns; Excel 100 MiB / 500,000 rows.
@@ -129,9 +134,11 @@ needed in Git.
 
 Optional extras: `uv sync --extra postgres` installs the PostgreSQL client.
 Credentials are read from secure process configuration, never saved in receipts.
-The optional model uses `INSIGHTPILOT_LLM_API_KEY`, `INSIGHTPILOT_LLM_MODEL` and
+The separate optional external planner uses `INSIGHTPILOT_LLM_API_KEY`, `INSIGHTPILOT_LLM_MODEL` and
 `INSIGHTPILOT_LLM_BASE_URL`; transmitting the question/schema/metric requires
 explicit UI consent. Source rows and calculated values are not sent by that planner.
+Local Ollama configuration and its separate privacy boundaries are documented in
+[LOCAL_AI_ARCHITECTURE.md](docs/LOCAL_AI_ARCHITECTURE.md).
 
 Earlier database formats remain usable through `uv run insightpilot --help` and
 read-only Data Hub snapshots. Earlier source-specific Power BI assets remain in

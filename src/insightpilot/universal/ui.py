@@ -405,20 +405,8 @@ def investigation(engine,report,metric,scope):
 
 
 def analyst(engine,report,metric,scope):
-    st.subheader('Ask a question, inspect the calculation')
-    st.caption('The selected explicit metric governs every answer. The optional model only chooses a validated analysis plan; numerical answers are produced by the local engine.')
-    numeric,dates,dims=fields(report)
-    dimension=engine.context.comparison
-    dt=engine.context.date_basis
-    st.caption('Shared grouping: '+str(dimension)+' · date basis: '+str(dt))
-    question=st.text_input('Your analytical question','Summarize the selected metric')
-    provider=st.checkbox('Use optional external model for planning')
-    consent=st.checkbox('I authorize sending this question, column names and selected metric definition. No source records or calculated values will be sent.',disabled=not provider)
-    if st.button('Calculate evidence-backed answer',type='primary'):
-        result=assistant.answer(engine,question,metric,dimension=dimension,date_column=dt,use_provider=provider,consent=consent)
-        st.write(result['answer']); st.caption(result['mode']); st.caption(result['limitations'])
-        st.dataframe(frame_of(result['evidence']),hide_index=True,width='stretch'); evidence(result['evidence'])
-        if result['usage']: st.write('Provider-reported usage:',result['usage'])
+    from .analyst_ui import render
+    render(engine,report,metric,scope)
 
 
 def reports(engine,report,metric,scope):
@@ -463,17 +451,9 @@ def _main():
         st.session_state['universal-page']=pending['page']
         for key,value in pending.get('presets',{}).items(): st.session_state[key]=value
     st.title('InsightPilot')
-    configured=os.environ.get('INSIGHTPILOT_UNIVERSAL_WORKSPACE')
-    directory=Path(configured) if configured else Path(st.session_state.get('universal-directory','data/universal/default'))
-    workspace=Workspace(directory) if (directory/'workspace.duckdb').is_file() else Workspace.create(directory)
-    if not configured:
-        options=sorted(str(p.parent) for p in Path('data/universal').glob('*/workspace.duckdb'))
-        selected=st.sidebar.selectbox('Analytics workspace',options,index=options.index(str(directory)) if str(directory) in options else 0)
-        workspace=Workspace(selected); directory=Path(selected)
-        st.session_state['universal-directory']=str(directory)
-        if st.sidebar.button('Create independent workspace'):
-            path=Path('data/universal')/uuid.uuid4().hex[:12]; Workspace.create(path)
-            st.session_state['universal-directory']=str(path); st.session_state['universal-page']='Data Hub'; st.rerun()
+    from .ui_workspaces import choose_workspace
+    from .workspace_labels import table_labels
+    workspace=choose_workspace();directory=workspace.directory
     names=list(workspace.tables())
     if 'universal-page' not in st.session_state:
         st.session_state['universal-page']='Overview' if names else 'Data Hub'
@@ -481,7 +461,8 @@ def _main():
     if page=='Data Hub' and not names: data_hub(workspace); return
     if not names: st.info('Import a dataset in Data Hub to begin. Your source files and original versions are retained.'); return
     tag=hashlib.sha256(str(workspace.directory).encode()).hexdigest()[:8]
-    table=st.sidebar.selectbox('Analysis table',names,key='universal-table-'+tag)
+    labels=table_labels(workspace)
+    table=st.sidebar.selectbox('Analysis table',names,format_func=labels.get,key='universal-table-'+tag)
     info=workspace.info(table)
     with st.spinner('Profiling the active data version…'):
         report=cached_profile(str(workspace.directory),table,info['current'])
@@ -685,8 +666,10 @@ def saved_reports(engine,metric,scope):
         for name in chosen:
             block=blocks[name]
             replay(engine.workspace,block['analysis'])  # Validate retained source and definitions.
-            if block.get('figure'): figures.append(go.Figure(json.loads(block['figure'])))
+            for serialized in block.get('figures',[]) or ([block['figure']] if block.get('figure') else []):
+                figures.append(go.Figure(json.loads(serialized)))
             results.append(block['evidence'])
+            results.extend(block.get('evidence_bundle',[]))
         html=html_report(engine,metric,evidence=results,figures=figures,title='InsightPilot · saved analytical evidence')
         download('Download assembled report',html,file_name='saved-findings.html')
         st.caption('Each block retains its original SQL, filters, version and source hash. Blocks can represent different selections; inspect their individual evidence.')

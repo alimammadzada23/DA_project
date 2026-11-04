@@ -1,0 +1,41 @@
+{
+  "at": "2026-11-04T22:00:39.771984+01:00",
+  "branch": "codex/insightpilot-local-ai",
+  "base_commit": "e3874eeef01275700852bef683eb06ccae056a74",
+  "baseline": {
+    "passed": 294,
+    "failed": 0,
+    "seconds": 73.01
+  },
+  "final": {
+    "tests": 412,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 412,
+    "seconds": 103.837
+  },
+  "command": ".venv/bin/python -m pytest -q --junitxml=outputs/local-ai-final-tests.xml",
+  "raw_junit": "outputs/local-ai-final-tests.xml",
+  "browser": {
+    "status": "passed",
+    "seconds": 46.64,
+    "real_model_executed": false
+  },
+  "benchmark": {
+    "http_mock_integration": {
+      "passed": 51,
+      "total": 51,
+      "real_model_executed": false
+    },
+    "standard": {
+      "passed": 47,
+      "total": 51
+    },
+    "actual_qwen": {
+      "executed": 0,
+      "quality_measured": false
+    }
+  },
+  "publication": "No push, merge, PR or deployment; local commit only."
+}

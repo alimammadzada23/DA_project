@@ -14,8 +14,6 @@ import httpx
 
 def plan_question(question):
     text=question.lower()
-    if re.search(r'\b(rate|percentage|proportion)\b',text) and not metric.components and 'weighted_avg(' not in metric.formula:
-        raise ValueError('Define the requested numerator and eligible denominator, then select that rate metric. A record count is not a rate.')
     if any(word in text for word in ('cause','profit','roi','lifetime value','guarantee','best company')):
         raise ValueError('This question needs additional definitions or causal evidence. Choose a descriptive calculation.')
     if re.search(r'\b(trend|monthly|over time|by month)\b',text): return {'analysis':'trend'}
@@ -54,6 +52,8 @@ def provider_plan(engine,question,metric,dimension,date_column,*,consent=False):
 def answer(engine,question,metric,*,dimension=None,date_column=None,use_provider=False,consent=False):
     if not question.strip() or len(question)>2000: raise ValueError('Enter a question of 1–2,000 characters.')
     text=question.lower()
+    if re.search(r'\b(rate|percentage|proportion)\b',text) and not metric.components and 'weighted_avg(' not in metric.formula:
+        raise ValueError('Define the requested numerator and eligible denominator, then select that rate metric. A record count is not a rate.')
     if re.search(r'\b(average|mean)\b',text) and 'avg(' not in metric.formula.replace(' ','').lower():
         raise ValueError('The selected metric does not define an arithmetic mean. Select or define the intended average metric, or ask to summarize the current explicit metric.')
     if re.search(r'\bmedian\b',text) and 'median(' not in metric.formula.replace(' ','').lower():

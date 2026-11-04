@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-04T20:58:02.143492+00:00",
+  "status": "passed",
+  "browser": "System Chromium via Playwright, Linux",
+  "model_execution": "Explicit Ollama HTTP test double; no model weights, no actual Qwen execution. Numerical calculations are real.",
+  "screenshots": "outputs/local-ai-browser/20261104T205714-3f6609/screenshots",
+  "run_directory": "outputs/local-ai-browser/20261104T205714-3f6609",
+  "events": [
+    {
+      "friendly_workspace_selected": true,
+      "stable_id": "b332a7d087b9e12ff27b13ff"
+    },
+    {
+      "standard_compound": true,
+      "top_group_records": 7,
+      "top_group_mean_age": 22.5,
+      "two_verified_charts": true
+    },
+    {
+      "local_transport": "Explicit HTTP test double; no Qwen execution",
+      "model": "test-double:latest",
+      "followup_preserves_top_five": true,
+      "duplicate_inference_prevented": true
+    },
+    {
+      "saved_plan_charts_evidence": true
+    },
+    {
+      "shared_filter_invalidates_history": true
+    },
+    {
+      "heldout_reference_reconciled": true,
+      "cross_workspace_context_isolation": true,
+      "heldout_rows": 344
+    },
+    {
+      "workspace_rename_preserves_identity_data_and_history": true
+    },
+    {
+      "malformed_model_output_rejected": true
+    },
+    {
+      "stopped_test_service_detected": true,
+      "standard_fallback_correct": 344,
+      "cloud_fallback_used": false
+    },
+    {
+      "existing_sql_lab_works_without_ollama": true
+    },
+    {
+      "delimiter_warning_before_import": true,
+      "manual_separator_two_fields": true,
+      "duplicate_imports_retained_with_context": true
+    },
+    {
+      "friendly_creation_and_persistence_after_reload": true,
+      "existing_workspaces_preserved": true
+    },
+    {
+      "tablet_width": 768,
+      "horizontal_overflow": false,
+      "keyboard_focus": true
+    }
+  ],
+  "javascript_errors": [],
+  "browser_external_requests": [],
+  "elapsed_seconds": 46.64
+}

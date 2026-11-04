@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 from datetime import date
 import hashlib
 import json
+import math
 import threading
 import time
 
@@ -51,9 +52,17 @@ class Engine:
             col = self.column(f.column)
             if f.operator == 'eq':
                 clauses.append(f'{col} IS NOT DISTINCT FROM ?'); params.append(f.value)
-            elif f.operator in ('gte','lte'):
-                clauses.append(f'{numeric_expression(f.column)} {">=" if f.operator=="gte" else "<="} ?')
+            elif f.operator in ('gt','gte','lt','lte','eq_numeric','ne_numeric'):
+                operator={'gt':'>','gte':'>=','lt':'<','lte':'<=','eq_numeric':'=','ne_numeric':'<>'}[f.operator]
+                if not isinstance(f.value,(int,float)) or isinstance(f.value,bool) or not math.isfinite(f.value):
+                    raise ValueError('Numeric filters require a finite number.')
+                clauses.append(f'{numeric_expression(f.column)} {operator} ?')
                 params.append(float(f.value))
+            elif f.operator=='ne':
+                clauses.append(f'{col} IS DISTINCT FROM ?'); params.append(f.value)
+            elif f.operator in ('is_missing','not_missing'):
+                missing=f"({col} IS NULL OR trim(CAST({col} AS VARCHAR))='')"
+                clauses.append(('NOT ' if f.operator=='not_missing' else '')+missing)
             elif f.operator in ('from','through'):
                 clauses.append(f'{date_expression(f.column)} {">=" if f.operator=="from" else "<="} ?::DATE')
                 params.append(date.fromisoformat(str(f.value)))
@@ -111,12 +120,17 @@ class Engine:
         self.column(column)
         if not 5 <= bins <= 100: raise ValueError('Choose 5–100 bins.')
         expr = numeric_expression(column)
-        return self.run(f'''SELECT CASE WHEN hi=lo THEN lo ELSE lo+floor((x-lo)/NULLIF(hi-lo,0)*{bins})
-            * (hi-lo)/{bins} END AS bin_start,count(*) AS records FROM
-            (SELECT {expr} x,min({expr}) OVER () lo,max({expr}) OVER () hi FROM selected)
+        return self.run(f'''SELECT CASE WHEN hi=lo THEN lo ELSE lo+bin_index*width END AS bin_start,count(*) AS records FROM
+            (SELECT *,CASE WHEN hi=lo THEN 0 WHEN x=hi THEN {bins}
+                WHEN x<lo+candidate*width THEN candidate-1
+                WHEN candidate<{bins} AND x>=lo+(candidate+1)*width THEN candidate+1
+                ELSE candidate END AS bin_index FROM
+                (SELECT *,floor((x-lo)/NULLIF(width,0)) AS candidate FROM
+                    (SELECT *,(hi-lo)/{bins} AS width FROM
+                        (SELECT {expr} x,min({expr}) OVER () lo,max({expr}) OVER () hi FROM selected))))
             WHERE x IS NOT NULL GROUP BY 1 ORDER BY 1''',method={'field':column,
                 'units':self.info.get('semantics',{}).get('units',{}).get(column) or 'units unconfirmed',
-                'rule':'Equal-width bins; NULL and nonfinite values excluded; exact maximum may occupy the final boundary bin.'})
+                'rule':'Equal-width left-closed/right-open bins; width is calculated once and boundary roundoff is corrected. NULL/nonfinite excluded; exact maximum occupies a separate boundary bin.'})
 
     def numeric_summary(self, column):
         self.column(column)

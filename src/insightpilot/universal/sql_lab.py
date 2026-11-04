@@ -17,7 +17,7 @@ from .relationships import inspect_relationship, load_relationships
 # Unknown functions fail closed. In particular, no filesystem, network, settings,
 # secrets, extension loading, dynamic SQL, sequence or Python UDF functions.
 FUNCTIONS=set('''count count_star sum avg mean median min max quantile_cont quantile_disc
-    stddev_samp stddev_pop variance var_samp var_pop corr covar_samp count_if
+    stddev_samp stddev_pop variance var_samp var_pop corr covar_samp count_if skewness
     abs round floor ceil ceiling sqrt pow power exp ln log log10 sign greatest least
     coalesce nullif if ifnull typeof isfinite isnan isinf
     lower upper trim ltrim rtrim length char_length substring substr left right
@@ -137,7 +137,7 @@ class SQLLab:
             entries.append(quote(alias)+' AS ('+body+')')
         return ','.join(entries)
 
-    def execute(self, sql, *, page=0, size=100, explain=False, timeout=10):
+    def execute(self, sql, *, page=0, size=100, explain=False, timeout=10, parameters=()):
         sql,scans=self.validate(sql)
         if not 0<=page<=1000 or not 1<=size<=5000: raise ValueError('Page or result-size limit exceeded.')
         prefix=self._prefix()
@@ -146,7 +146,7 @@ class SQLLab:
         body=f'WITH {prefix} SELECT * FROM ({sql}) AS __user_query' if prefix else sql
         query=f'SELECT * FROM ({body}) AS __sql_result LIMIT {size+1} OFFSET {page*size}'
         try:
-            result=self.engine.run(query,limit=size,explain=explain,timeout=timeout,method={
+            result=self.engine.run(query,parameters,limit=size,explain=explain,timeout=timeout,method={
                 'mode':'SQL Lab: validated read-only SELECT', 'user_sql':sql,'scanned_sources':scans,
                 'scope':self.catalog(),'relationships':self.relationships,'page':page,'page_size':size,
                 'time_limit_seconds':min(20,timeout),'memory_limit':'768MB','external_access':False})

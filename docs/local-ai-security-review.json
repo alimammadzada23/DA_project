@@ -1,0 +1,17 @@
+{
+  "at": "2026-11-04T22:02:55.901216+01:00",
+  "scanner": "Gitleaks 8.24.3, default rules; redacted reports in ignored outputs/local-ai-security",
+  "snapshot_leaks": 0,
+  "base_history_leaks": 0,
+  "base_history_commits_scanned": 12,
+  "known_credential_pattern_matches": 0,
+  "unexpected_sensitive_data_paths": 0,
+  "unchanged_synthetic_csv_fixtures": [
+    "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+    "tests/fixtures/SYNTHETIC-complaints.csv",
+    "tests/fixtures/SYNTHETIC-sales.csv"
+  ],
+  "new_data": "Synthetic/public aggregate evaluation receipts and genuine browser screenshots only. No private datasets, raw public source files, model weights, databases, environment credentials or generated secrets staged.",
+  "final_gate": "Final staged snapshot is scanned again before local commit; new commit history is scanned after commit. No push, merge, PR or deploy authorized.",
+  "limits": "A clean scanner is evidence from these rules, not a proof about every possible secret. Intended source, fixture provenance and exports also reviewed."
+}

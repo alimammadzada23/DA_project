@@ -25,24 +25,24 @@ def data_hub(workspace):
         getattr(st,level)(message)
     tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL','Event logs'])
     with tabs[0]:
-        with st.form('universal-upload'):
-            files=st.file_uploader('Dataset files',type=['csv','tsv','xlsx','parquet','json','jsonl','ndjson'],accept_multiple_files=True,key=message_key+'-files')
-            sheet=st.text_input('Excel sheet name (blank = first sheet)')
-            delimiter=st.selectbox('Delimited text separator',[None,',','\t',';','|'],format_func=lambda v:'By extension: comma for CSV, tab for TSV' if v is None else repr(v))
-            synthetic=st.checkbox('These files are synthetic test data')
-            submitted=st.form_submit_button('Import tables')
+        from .import_preview import parsing_preview
+        files=st.file_uploader('Dataset files',type=['csv','tsv','xlsx','parquet','json','jsonl','ndjson'],accept_multiple_files=True,key=message_key+'-files')
+        delimiter=st.selectbox('Delimited text separator',[None,',','\t',';','|'],format_func=lambda v:'By extension: comma for CSV, tab for TSV' if v is None else repr(v))
         if files:
             with st.expander('Preview source parsing',expanded=True):
                 for upload in files:
                     if Path(upload.name).suffix.lower() not in ('.csv','.tsv'): continue
                     sep=delimiter or ('\t' if upload.name.lower().endswith('.tsv') else ',')
                     try:
-                        sample=upload.getvalue()[:65536].decode('utf-8-sig')
-                        rows=list(csv.reader(io.StringIO(sample),delimiter=sep))[:6]
-                        st.caption(upload.name+' · UTF-8 · delimiter '+repr(sep)+' · ISO dates recognized; slash dates require explicit conversion. Empty cells are missing; NA-like markers are flagged for review.')
-                        if rows and len(rows[0])==1: st.warning('Only one field was detected. Review the separator before importing.')
-                        st.dataframe(pd.DataFrame(rows[1:],columns=rows[0]),hide_index=True,width='stretch')
-                    except (UnicodeDecodeError,ValueError,csv.Error): st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import validates the complete source and retains rejected bytes.')
+                        preview=parsing_preview(upload.getbuffer(),sep)
+                        st.caption(upload.name+' · UTF-8 · selected separator '+repr(sep)+' · '+str(preview['field_count'])+' fields detected. ISO dates recognized; ambiguous dates need explicit conversion.')
+                        if preview['warning']:st.warning(preview['warning'])
+                        st.dataframe(pd.DataFrame(preview['rows'],columns=preview['columns']),hide_index=True,width='stretch')
+                    except (UnicodeDecodeError,ValueError,csv.Error):st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import checks the complete source and retains rejected bytes.')
+        with st.form('universal-upload'):
+            sheet=st.text_input('Excel sheet name (blank = first sheet)')
+            synthetic=st.checkbox('These files are synthetic test data')
+            submitted=st.form_submit_button('Import tables')
         if submitted:
             messages=[]
             if not files: messages.append(('warning','Choose at least one file.'))
@@ -58,7 +58,8 @@ def data_hub(workspace):
                     with st.spinner(f'Importing {file.name}; checking all rows…'):
                         info=workspace.add_file(path,name,sheet=sheet or 0,delimiter=delimiter,provenance={
                             'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
-                    messages.append(('success',f'{name}: {info["rows"]:,} rows imported. Review meaning and quality before defining metrics.'))
+                    messages.append(('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.'))
+                    for warning in info.get('import_warnings',[]):messages.append(('warning',warning+' Source bytes were retained; re-import with the intended separator into a new table if needed.'))
                 except Exception as exc: messages.append(('error',f'{file.name}: {exc}. Other successful imports are retained; this file did not create a partial table.'))
                 finally: path.unlink(missing_ok=True)
             st.session_state[message_key]=messages
@@ -124,7 +125,7 @@ def data_hub(workspace):
     if tables:
         st.subheader('Table catalog')
         st.dataframe(pd.DataFrame([{'table':k,'rows':v['rows'],'fields':len(v['columns']),
-            'source':v['source']['origin'],'grain':v['grain'],'versions':len(v['versions'])} for k,v in tables.items()]),hide_index=True,width='stretch')
+            'source':v['source']['origin'],'grain':v['grain'],'versions':len(v['versions']),'original file':v['source']['filename'],'imported at':v['created_at']} for k,v in tables.items()]),hide_index=True,width='stretch')
     if len(tables)>=2: relationship_editor(workspace)
 
 
@@ -168,6 +169,7 @@ def quality_editor(workspace,table,report):
         if query.lower() in c['column'].lower()]
     st.dataframe(pd.DataFrame(catalog),hide_index=True,width='stretch')
     st.info(report['semantic_notice'])
+    for warning in info.get('import_warnings',[]):st.warning(warning+' Original bytes and this table remain intact; re-import with an explicit separator if appropriate.')
     col=st.selectbox('Inspect field meaning and statistics',info['columns'])
     detail=next(c for c in report['columns'] if c['column']==col)
     for hypothesis in detail['candidates']:
