@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from html import escape
 import io
 import json
+from urllib.parse import urlsplit
 
 import pandas as pd
 
@@ -15,6 +16,7 @@ def configuration(engine,metric):
     return {'format_version':1,'generated_at':datetime.now(timezone.utc).isoformat(),
         'table':engine.table,'version':engine.info['current'],'source':engine.info['source'],
         'grain':engine.info['grain'],'roles':engine.info['roles'],
+        'semantics':engine.info.get('semantics',{}),'context':engine.context.dictionary(),
         'transformations':engine.info['versions'],'filters':[asdict(f) for f in engine.filters],
         'metric':asdict(metric),'limitations':'Version-bound local analysis; user-supplied provenance is not authenticated.'}
 
@@ -29,6 +31,10 @@ def replay(workspace,config):
         roles=config['roles']
         if not isinstance(roles,dict) or set(roles)-set(engine.info['columns']): raise ValueError('Saved roles reference unavailable columns.')
         engine.info['roles']=roles; engine.info['grain']=config['grain']
+        engine.info['semantics']=config.get('semantics',{})
+        if config.get('context'):
+            from .context import AnalysisContext
+            engine.context=AnalysisContext(**config['context']).validate(engine.info)
         metric=Metric(**config['metric']); metric.compile(engine.info['columns'],roles)
         return engine,metric
     except (KeyError,TypeError) as exc: raise ValueError('Incomplete or invalid analysis manifest.') from exc
@@ -45,6 +51,13 @@ def html_report(engine,metric,findings=(),evidence=(),figures=(),title='InsightP
         '<p>'+escape(metric.description)+' Formula: <code>'+escape(metric.formula)+'</code></p>',
         '<p class="note">'+escape(metric.limitations)+'</p>',
         '<h2>Findings and investigations</h2>']
+    source_url=config['source'].get('url','')
+    parsed=urlsplit(source_url)
+    if parsed.scheme=='https' and parsed.hostname and not parsed.username and not parsed.password:
+        content.insert(-1,'<p>Source extract: <a href="'+escape(source_url,quote=True)+'">'+escape(source_url)+'</a></p>')
+    if metric.components:
+        content.insert(-1,'<p>Eligible denominator: '+escape(metric.denominator or metric.components['denominator'])+
+            '. Executed numerator: '+escape(str(row.get('numerator')))+'; executed denominator: '+escape(str(row.get('denominator')))+'. Zero denominators are unavailable.</p>')
     for finding in findings:
         for label,key in [('Finding','finding'),('Context','context'),('Limitations','limitations'),('Investigation','investigation'),('Possible action','possible_action')]:
             content.append('<p><strong>'+label+':</strong> '+escape(str(finding[key]))+'</p>')
@@ -65,7 +78,8 @@ def safe_spreadsheet_frame(frame):
     # Untrusted cell values must not turn into spreadsheet formulas on export.
     frame.columns=["'"+str(c) if str(c).lstrip().startswith(('=','+','-','@')) else c for c in frame.columns]
     for col in frame.columns:
-        frame[col]=frame[col].map(lambda v: "'"+v if isinstance(v,str) and v.lstrip().startswith(('=','+','-','@')) else v)
+        frame[col]=frame[col].map(lambda v: "'"+v if isinstance(v,str) and v.lstrip().startswith(('=','+','-','@')) else
+                                v.isoformat() if isinstance(v,datetime) and v.tzinfo is not None else v)
     return frame
 
 

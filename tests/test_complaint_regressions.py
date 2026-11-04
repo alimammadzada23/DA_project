@@ -122,34 +122,8 @@ def test_legacy_snapshot_with_all_null_dates_requires_reimport(timestamp_databas
         Complaints(timestamp_database)
 
 
-def test_dashboard_dates_and_source_quality_are_disclosed(timestamp_database, monkeypatch):
-    from streamlit.testing.v1 import AppTest
-    monkeypatch.setenv('INSIGHTPILOT_CFPB_DATABASE', str(timestamp_database))
-    monkeypatch.delenv('INSIGHTPILOT_DATABASE', raising=False)
-    app = AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=30)
-    app.selectbox(key='dataset_workspace').select('Customer Experience & Risk Intelligence').run(timeout=30)
-    assert not app.exception and app.metric[0].value == '10'
-    assert any('1 missing · 2 invalid' in caption.value for caption in app.caption)
-    next(box for box in app.checkbox if box.label == 'Filter by record date').check().run(timeout=30)
-    next(field for field in app.date_input if field.label == 'Record date · inclusive bounds').set_value((date(2026,9,1),date(2026,9,1))).run(timeout=30)
-    assert not app.exception and app.metric[0].value == '2'
-    assert any('0 records excluded from date trends' in caption.value for caption in app.caption)
 
 
-def test_invalid_legacy_snapshot_shows_visible_error_and_keeps_reimport_available(timestamp_database, monkeypatch):
-    from streamlit.testing.v1 import AppTest
-    with duckdb.connect(str(timestamp_database)) as con:
-        info = json.loads(con.execute('SELECT metadata FROM dataset_metadata').fetchone()[0])
-        info['quality']['missing']['record_date'] = info['rows']
-        con.execute('UPDATE dataset_metadata SET metadata=?', [json.dumps(info)])
-        con.execute('UPDATE complaints SET record_date=NULL')
-    monkeypatch.setenv('INSIGHTPILOT_CFPB_DATABASE', str(timestamp_database))
-    monkeypatch.delenv('INSIGHTPILOT_DATABASE', raising=False)
-    app = AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=30)
-    app.selectbox(key='dataset_workspace').select('Customer Experience & Risk Intelligence').run(timeout=30)
-    assert not app.exception and not app.metric
-    assert any('Reimport your original CSV' in error.value for error in app.error)
-    assert any(button.label == 'Import complaint CSV' for button in app.button)
 
 
 def test_donut_groups_small_categories_without_changing_the_denominator(tmp_path):

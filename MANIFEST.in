@@ -1,0 +1,16 @@
+include app.py
+include uv.lock
+include .streamlit/config.toml
+include docs/UNIFIED*.md
+include docs/UNIFICATION_MIGRATION.md
+include docs/unified-*.json
+include scripts/acquire_unified_sources.py
+include scripts/validate_unified.py
+include scripts/reproduce_public_cases.py
+include scripts/browser_unified.py
+include scripts/browser_heldout.py
+include scripts/prepare_heldout_evaluation.py
+include scripts/benchmark_universal.py
+prune data
+prune outputs
+global-exclude __pycache__ *.pyc .env

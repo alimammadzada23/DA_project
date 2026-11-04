@@ -1,180 +1,138 @@
-# InsightPilot — Evidence-led Data Intelligence
+# InsightPilot
 
-A local-first **Streamlit, DuckDB and Plotly** analytics application. Import
-unfamiliar data, inspect its quality, review its meaning, define explicit metrics,
-investigate differences and export reproducible evidence. Original procurement,
-CFPB and mapped-upload workspaces are preserved.
+One local-first analytics application built with Python 3.12, Streamlit, DuckDB,
+Plotly and SciPy. Import unfamiliar structured data, review its meaning, define
+metrics, explore comparisons, investigate with safe SQL, and export reproducible
+evidence. Deterministic analysis works without an account, model or API key.
 
-**Implemented:** eight Universal Intelligence pages, multi-table imports,
-conservative profiling, reversible preparation, safe metric expressions,
-relationship validation, statistical tools, interactive exploration and
-version-bound reports. Deterministic calculations need no AI connection.
+The application now has one catalog and navigation. The former procurement,
+complaint and mapped-upload front doors are retired. Existing databases, sources,
+reports and backend/CLI compatibility remain intact.
 
-[Implementation and acceptance status](docs/next-generation-validation.md) ·
-[Usage guide](docs/universal-intelligence-guide.md) ·
-[Technical audit](docs/next-generation-audit.md) ·
-[Measured benchmarks](docs/next-generation-benchmarks.json) ·
-[Real browser evidence](docs/next-generation-browser.json)
+[Acceptance and limitations](docs/UNIFIED_ACCEPTANCE.md) ·
+[Migration inventory](docs/UNIFICATION_MIGRATION.md) ·
+[Architecture and SQL security](docs/UNIFIED_ARCHITECTURE.md) ·
+[Measured scale](docs/unified-benchmarks.json) ·
+[Independent initial evaluations](docs/unified-initial-evaluation.json)
 
-This is a tested working upgrade, **not a claim that every master-assignment
-item is complete**. Two authentic cross-domain cases reconcile against independent
-calculations. CFPB acquisition is blocked by HTTP 403; the reported 81,915-record
-original file is absent. Live PostgreSQL/provider acceptance, native Mac and
-Windows Power BI acceptance, and specialized capabilities remain unverified or
-deferred. The status document gives the precise boundaries.
+## Run on your Mac
 
-![Authentic NYC flight data in the new workspace](docs/screenshots/next-generation/flights-executive.png)
+This refactor is on **`codex/unified-insightpilot`**, based on `156a116` from
+`codex/insightpilot-next`. It has not been pushed. Fetching the old remote branch
+alone will not install these local changes. Use the accompanying Git bundle until
+a new push is explicitly authorized. These commands use ordinary Mac paths:
 
-This screenshot uses the public NYC-2013 package extract. Screenshots beginning
-`SYNTHETIC-` show controlled software examples, not genuine business findings.
+```bash
+# If you do not already have a clone:
+git clone https://github.com/alimammadzada23/DA_project.git
+cd DA_project
 
-## Install and run
+# Otherwise cd into your existing DA_project checkout first.
+git status --short
+# Preserve any local edits before changing branches; do not reset or clean data.
+git bundle verify ~/Downloads/insightpilot-unified.bundle
+git fetch ~/Downloads/insightpilot-unified.bundle codex/unified-insightpilot:codex/unified-insightpilot
+git switch codex/unified-insightpilot
 
-From your existing checkout **containing these changes**, with
-[uv](https://docs.astral.sh/uv/) installed:
-
-```sh
+# Install uv first if needed: https://docs.astral.sh/uv/getting-started/installation/
 uv python install 3.12
-uv sync --frozen --extra test --python 3.12
-uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
+uv sync --locked --extra test
+uv run streamlit run app.py --server.address 127.0.0.1
 ```
 
-Choose **Universal Intelligence → Data Hub**. Import files, inspect **Data
-Quality**, approve roles, then define a metric in **Executive Intelligence**.
-Supply its meaning, units and limitations. The explicit **Records** metric also
-works immediately. Explore, investigate, inspect the underlying rows and report.
+Open **http://localhost:8501** in your Mac browser. No shared cloud desktop is
+required. Native macOS acceptance has not been executed in this Linux environment.
 
-Changes are local to the development branch; no push or deployment is automatic.
-Do not assume an older remote `feature/insightpilot` checkout has this upgrade.
-The [historical README](docs/pre-upgrade-readme.md) preserves earlier workspace
-documentation; the commands above supersede its branch-update advice.
+If you later authorize publication, the equivalent synchronization is
+`git fetch origin` followed by
+`git switch --track origin/codex/unified-insightpilot` in a clone without that
+local branch. Never merge into `main` just to launch the application. The remote
+repository is public; a local bundle does not change its visibility.
 
-Mac use is intended but the recorded execution evidence is Linux. No API key is
-required for local analysis. Stop with Control-C. Data, databases, environments
-and generated outputs are Git-ignored. Use the existing checkout in an isolated
-cloud task; do not create a worktree unless explicitly requested.
+## First minute
 
-## Eight analytical workspaces
+1. **Data Hub:** import a CSV/TSV/XLSX/Parquet/JSON/JSONL file or read-only database
+   snapshot. Original source bytes, SHA-256, row count and versions are retained.
+2. **Quality & Preparation:** search every field, inspect values and missingness,
+   and confirm row grain, field roles, units and each timestamp's purpose. Choose
+   a date basis explicitly. Reversible preparation retains rejected conversions.
+3. Define a metric using the ordinary metric builder. A record count is a
+   structural description; rates need an explicit eligible denominator.
+4. **Overview / Explore:** choose the shared metric and comparison field. Review
+   calculated interpretations, select a bar and inspect its supporting records.
+5. **SQL Lab:** generate a query or edit a read-only SELECT/CTE. Inspect its plan,
+   save it, chart the result or send executed evidence to Reports.
+6. **Reports:** download standalone HTML, replay a manifest, assemble saved chart
+   and query blocks, or export the current selection as CSV/XLSX with a Power
+   Query template and metric dictionary.
 
-| Workspace | Implemented workflow |
-|---|---|
-| Data Hub | CSV, TSV, XLSX, flat Parquet, JSON/JSON Lines; multiple tables; read-only SQLite/DuckDB extracts; configured page-number APIs; optional PostgreSQL |
-| Data Quality | Complete searchable catalog, full-data summaries, quality/duplicates, semantic uncertainty, reviewed roles, immutable preparation versions and error ledgers |
-| Executive Intelligence | Explicit KPIs, calendar trends, group comparisons, evidence-backed concentration/missingness/equal-window change findings |
-| Visual Explorer | Ranked bars, numeric histograms, scatterplots, calendar trends, group box summaries, complete bounded heatmaps and paginated records |
-| Advanced Analytics | Mean intervals, Welch/effect sizes, Pearson/OLS, categorical/Fisher association, rolling time analysis, gated baseline forecasts, IQR/MAD screens, RFM, cohorts, funnels, text frequencies and exploratory clustering |
-| Investigation Lab | Equal-period additive contributions, exact rate/mix decomposition, safe fact-to-dimension metrics and record drill-through |
-| AI Business Analyst | Local guided questions; optional schema-only model planning over a finite validated vocabulary; numerical answers calculated locally |
-| Reports and Exports | Standalone HTML, PNG/chart HTML, plotted CSV, paginated CSV/XLSX, evidence JSON, source/filter/metric manifests and retained-version replay |
+No industry wizard or demonstration filename controls the analytics. Multiple
+timestamps remain ambiguous until reviewed. Short observed date ranges suggest
+daily grain; a single period is not presented as a time trend. Shared sidebar
+filters, metric, comparison and date basis persist across pages. Saved views also
+retain the data version and chart preset.
 
-Original Procurement Intelligence, Customer Experience & Risk Intelligence and
-Analyze My Dataset remain available, including XES ingestion, process discovery,
-complaint definitions, optional legacy consent-controlled LLM tools and Power BI
-preparation. No native Power BI rendering or PDF engine is claimed.
+## Capabilities and boundaries
 
-## Architecture
+| Navigation | Working capability |
+| --- | --- |
+| Overview | Reviewed metric, data-specific charts, deterministic findings, SQL/provenance, supporting records |
+| Data Hub | Multi-table file imports, separator preview, SQLite/DuckDB snapshots, bounded configured HTTP APIs, optional PostgreSQL, structural XES import, relationship receipts |
+| Quality & Preparation | Full searchable catalog, summaries, reviewed roles/units/date purposes, reversible typing, locale parsing, null mapping, trim, date assembly, rename/select, deduplication and undo |
+| Explore | Ranked bars, histograms, scatterplots, calendar trends, group box summaries, bounded heatmaps, genuine bar-selection drill-through and paginated records |
+| SQL Lab | Guided builder, SQL-highlighted editor and accessible text alternative, SELECT/CTE validation, approved joins, time/memory/row limits, EXPLAIN, named queries, charts and report blocks |
+| Advanced | Statistical comparisons, regression, outliers, time analysis, guarded baseline forecasts, cohorts, funnels, RFM, text, clustering, contribution/rate-mix and event sequences |
+| AI Analyst | Finite deterministic questions; optional model selects a validated plan and never supplies executable SQL or numerical findings |
+| Reports | Version-bound replay, standalone escaped HTML, saved evidence blocks, chart/PNG/HTML downloads and bounded source-scope CSV/XLSX/Power Query preparation |
 
-```mermaid
-flowchart LR
-    F[Files / read-only sources] --> S[Versioned DuckDB workspace]
-    S --> P[Profiles and reviewed semantics]
-    P --> M[Explicit metrics and relationships]
-    M --> E[Filtered analytical engine]
-    E --> A[Statistics and investigations]
-    A --> V[Plotly charts and supporting records]
-    E --> R[Reports, evidence and replay manifests]
-    Q[Optional schema-only model plan] --> E
-    E --> U[Eight Streamlit pages]
-    L[Preserved procurement / complaint engines] --> U
+File imports: 512 MiB / 5 million rows / 150 columns; Excel 100 MiB / 500,000 rows.
+CSV and TSV require UTF-8. Delimiter is explicit; ambiguous slash dates and numeric
+locales require a reviewed transformation. Nested records must be flattened.
+SQL results are paged, at most 5,000 rows per page, with a 10-second default
+interruption budget and 768 MB connection memory budget. The ordinary records
+viewer sends 100 rows per page to the browser. Full-selection export packages
+are capped at 100,000 rows, with an explicit refusal rather than silent truncation.
+
+The SQL allowlist is intentionally conservative: joins must directly connect the
+active fact to one validated unique-key dimension with explicit equality.
+Join CTE/subquery results only after expressing the approved join in a CTE.
+CROSS/ASOF, recursive queries, arbitrary table functions, commands and external
+reads are unavailable. Unknown functions fail closed.
+
+Statistical assumptions remain visible; descriptive contributions are not causes.
+Forecasting is a guarded baseline with empirical holdout errors, not a calibrated
+production forecast. Full conversational AI, maps, native PDF rendering, live
+provider/PostgreSQL acceptance, and Power BI Desktop validation remain outside the
+verified scope. Browser printing can produce PDF; no native PDF engine is claimed.
+
+## Development and reproduction
+
+```bash
+uv sync --locked --extra test --extra browser
+uv run pytest -q
+uv run python scripts/acquire_unified_sources.py
+uv run python scripts/validate_unified.py
+uv run python scripts/browser_unified.py
+uv run python scripts/prepare_heldout_evaluation.py
+uv run python scripts/browser_heldout.py
+uv run python scripts/benchmark_universal.py --output outputs/local-benchmarks.json
+uv build --out-dir outputs/package
 ```
 
-Reusable calculations live in `src/insightpilot/universal/`; UI modules call the
-services. [Module map and design decisions](docs/next-generation-validation.md).
+Browser validation needs Chromium installed, or Playwright's Chromium installed
+with `uv run playwright install chromium`. Reports distinguish actual downloads
+and executions from untested integrations. Source URLs, licenses, exact hashes,
+reference methods and the held-out procedure are recorded in the acceptance
+receipts. Public sources stay under ignored `data/`; reports and workspaces stay
+under ignored `outputs/`. No private dataset, generated secret or credential is
+needed in Git.
 
-## Trust contracts
+Optional extras: `uv sync --extra postgres` installs the PostgreSQL client.
+Credentials are read from secure process configuration, never saved in receipts.
+The optional model uses `INSIGHTPILOT_LLM_API_KEY`, `INSIGHTPILOT_LLM_MODEL` and
+`INSIGHTPILOT_LLM_BASE_URL`; transmitting the question/schema/metric requires
+explicit UI consent. Source rows and calculated values are not sent by that planner.
 
-- Retain source bytes/hashes and immutable versions. No automatic deduplication,
-  revenue inference or destructive cleaning. Invalid conversions retain source
-  values and row IDs; missing differs from zero.
-- Ambiguous roles remain unapproved. IDs are excluded from automatic measures.
-  Rates need explicit denominators; zero denominators are unavailable.
-- Metric formulas use a small safe aggregate grammar, never `eval` or arbitrary
-  SQL. Analytical connections disable external file/network access.
-- Joins disclose cardinality, null/duplicate/unmatched keys and row multiplication.
-  Analytical fact joins require a unique right key.
-- Shared filters and chart selections govern records and calculations. Limits,
-  top-N truncation, time gaps and incomplete periods are disclosed.
-- The new optional AI planner receives only the question, column names and metric
-  definition after consent. It cannot execute SQL/code or write numerical claims.
-  Legacy live-AI modes have separate consent and may send query results.
-- CSV/XLSX exports escape formula-like text/headers. Reports escape imported text
-  and include source hashes, definitions, filters, queries and limitations.
-
-## Authentic cases
-
-| Case | Evidence | Status |
-|---|---|---|
-| [NYC flight operations](docs/case-study-flight-operations.md) | 336,776 flights + 16 airline rows, pinned nycflights13/Rdatasets extract, upstream CC0; independent count/mean/rate/group reconciliation and a safe join | Verified package extract, not an independently acquired BTS raw extract |
-| [Environmental field measurements](docs/case-study-penguin-measurements.md) | 344 Palmer LTER penguin measurements, pinned publisher CSV, CC0 with attribution/data-use expectations; independent within-species calculations | Verified; observational limitations disclosed |
-| [CFPB complaints](docs/case-study-cfpb-pending.md) | Original connector/validator/analysis preserved; current proxy returned 403 | Blocked; no genuine findings fabricated |
-
-```sh
-uv run --frozen python scripts/reproduce_public_cases.py --download
-```
-
-Pinned checksums are verified; existing source bytes are not replaced. New local
-workspaces, standalone reports and evidence are created per run. Set
-`INSIGHTPILOT_UNIVERSAL_WORKSPACE` to a printed workspace path before launching
-Streamlit to open a case. Source bytes are not committed or publicly deployed.
-
-## Testing and measured performance
-
-```sh
-uv run --frozen --extra test pytest -q
-uv run --frozen --extra test python powerbi/validate.py
-uv run --frozen python scripts/benchmark_universal.py
-```
-
-The independently established baseline is **182 passing tests**. Current counts,
-warnings, commands and source fingerprints are in the
-[validation report](docs/next-generation-validation.md). Tests include formats
-and failures, preservation, semantics, safe formulas, reference statistics,
-denominators, joins, rate/mix identities, forecast gates, injection attempts, API
-pagination, UI navigation, filters, exports and old-version replay.
-
-Optional browser tooling:
-
-```sh
-uv sync --frozen --extra test --extra browser
-# Start Streamlit with the verified flights workspace, then separately:
-uv run --frozen --extra browser python scripts/browser_universal.py
-```
-
-The browser script uses the validated Linux `/usr/bin/chromium` executable;
-adjust it for another machine. It checks rendered values, record scope,
-downloads, multiple-file uploads and a 768px layout. Native Mac, Power BI Desktop
-and live-provider acceptance are not implied.
-
-Benchmarks cover 10k, 100k and 1m synthetic rows in independent fresh processes,
-two DuckDB threads and a 768MB DuckDB memory setting. Arithmetic is reconciled to
-a generated reference. [Results](docs/next-generation-benchmarks.json) record
-actual import/profile/query/overview times, RSS, platform and methodology, not
-unlimited-scale or native Mac guarantees.
-
-## Limits and remaining work
-
-Native imports cap at 512 MiB, 5m rows and 150 fields; measured scale is 1m rows,
-not every possible input at the limits. Excel retains its 100 MiB/500k-row reader.
-Immutable versions consume disk. Numeric analytics use finite double precision,
-not ledger-grade decimal arithmetic. Statistical independence, observation
-completeness and business definitions still require review.
-
-HTTP pagination is a configurable page-number contract, not every API scheme.
-PostgreSQL needs the optional extra and a configured read-only source. Bounded
-text/sequence/clustering analyses disclose their selection. Forecast error bands
-are empirical, not calibrated guarantees. Maps/geocoding, embeddings/sentiment,
-composite keys, arbitrary many-to-many metrics, full conversational AI, native
-PDF generation and Power BI Desktop rendering are not claimed implemented.
-
-See [acceptance status and next priorities](docs/next-generation-validation.md)
-and the [factual CV/interview notes](docs/next-generation-portfolio.md).
+Earlier database formats remain usable through `uv run insightpilot --help` and
+read-only Data Hub snapshots. Earlier source-specific Power BI assets remain in
+`powerbi/`; the unified Reports page prepares the current dataset independently.

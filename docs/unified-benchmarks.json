@@ -1,0 +1,59 @@
+{
+  "scope": "Synthetic generated CSV, Linux only; not real-data throughput or native Mac performance.",
+  "python": "3.12.14",
+  "duckdb": "1.5.6",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "settings": {
+    "threads": 2,
+    "duckdb_memory_limit": "768MB",
+    "fresh_process_per_size": true
+  },
+  "method": "Fresh process per size; generated source and OS caches not cleared. Import/profile have no application-result cache; three new-connection aggregate queries; overview includes count/group/trend. RSS includes generation, Python and native libraries. Server calculations, not browser response.",
+  "results": [
+    {
+      "rows": 10000,
+      "source_bytes": 503047,
+      "import_seconds": 0.0726,
+      "full_profile_seconds": 0.0709,
+      "metric_query_seconds": [
+        0.0124,
+        0.0127,
+        0.0119
+      ],
+      "overview_calculations_seconds": 0.0499,
+      "peak_process_rss_mib": 113.1,
+      "reference_sum": 505000,
+      "verified": true
+    },
+    {
+      "rows": 100000,
+      "source_bytes": 5129947,
+      "import_seconds": 0.2382,
+      "full_profile_seconds": 0.2992,
+      "metric_query_seconds": [
+        0.0178,
+        0.0142,
+        0.0136
+      ],
+      "overview_calculations_seconds": 0.1591,
+      "peak_process_rss_mib": 135.7,
+      "reference_sum": 5050000,
+      "verified": true
+    },
+    {
+      "rows": 1000000,
+      "source_bytes": 52298947,
+      "import_seconds": 1.4298,
+      "full_profile_seconds": 1.5549,
+      "metric_query_seconds": [
+        0.0249,
+        0.024,
+        0.0239
+      ],
+      "overview_calculations_seconds": 0.632,
+      "peak_process_rss_mib": 281.6,
+      "reference_sum": 50500000,
+      "verified": true
+    }
+  ]
+}

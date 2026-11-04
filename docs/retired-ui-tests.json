@@ -1,0 +1,36 @@
+{
+  "reason": "Assertions for retired independent Streamlit applications; backend tests retained. Replaced by tests/test_unified_contract.py and updated tests/test_universal_ui.py.",
+  "retired_functions": {
+    "test_agent_app.py": [
+      "test_app_missing_data",
+      "test_app_loaded_data",
+      "test_app_executes_sql_and_preserves_evidence"
+    ],
+    "test_dashboard.py": [
+      "test_empty_dashboard_is_usable_and_date_filter_is_item_based",
+      "app_for",
+      "test_dashboard_widgets_change_metrics_queries_and_drilldown",
+      "test_guided_chat_works_without_credentials",
+      "test_missing_data_is_visible_without_breaking_dashboard",
+      "test_first_open_demo_loads_from_empty_configuration"
+    ],
+    "test_business_views.py": [
+      "test_all_four_pages_load_and_recalculate_the_same_selection",
+      "test_filter_change_clears_current_ai_answers_and_retains_audit_history",
+      "test_empty_selection_remains_usable_on_every_page",
+      "test_query_resource_error_has_a_business_empty_state"
+    ],
+    "test_complaint_regressions.py": [
+      "test_dashboard_dates_and_source_quality_are_disclosed",
+      "test_invalid_legacy_snapshot_shows_visible_error_and_keeps_reimport_available"
+    ]
+  },
+  "retired_workspace_ui_file": "Entire old front-door UI test file replaced by unified landing and read-only compatibility-import contracts.",
+  "replacement_suites": [
+    "tests/test_workspace_ui.py",
+    "tests/test_universal_ui.py",
+    "tests/test_unified_contract.py",
+    "scripts/browser_unified.py",
+    "scripts/browser_heldout.py"
+  ]
+}

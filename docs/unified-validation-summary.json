@@ -1,0 +1,28 @@
+{
+  "at": "2026-11-04T15:18:41.835184+00:00",
+  "branch": "codex/unified-insightpilot",
+  "base_commit": "156a1169fb982fd3af6de35f52a5fb31abf31c0a",
+  "tests": {
+    "tests": 294,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 71.36
+  },
+  "baseline": {
+    "tests": 271,
+    "failures": 0,
+    "warnings": 12
+  },
+  "runtime_fingerprint": "d3eb3122b4f2d270bc1d8015114ff43027eb39dfabf014ddb75eadba01d4a5f4",
+  "initial_reference_evaluation": "unified-initial-evaluation.json",
+  "real_browser": "unified-browser.json",
+  "heldout": "unified-heldout-evaluation.json",
+  "packages": "unified-packaging.json",
+  "remote_unchanged": {
+    "main": "c7a278345bff8f6d84e4848bb0a9f2052bccec1f",
+    "codex/insightpilot-next": "156a1169fb982fd3af6de35f52a5fb31abf31c0a",
+    "codex/unified-insightpilot": "not pushed"
+  },
+  "publication": "No new push, merge, deployment or environment publication."
+}

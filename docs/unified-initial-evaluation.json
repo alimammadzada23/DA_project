@@ -1,0 +1,367 @@
+{
+  "generated_at": "2026-11-04T15:10:11.539044+00:00",
+  "baseline_commit": "156a1169fb982fd3af6de35f52a5fb31abf31c0a",
+  "run_directory": "outputs/unified-evaluation/20261104T151000-4dc5a3",
+  "reference_method": "Independent Pandas imports and calculations; no production expression/parser reused by reference. Explicit human-reviewed evaluation definitions, not runtime mappings.",
+  "initial_cases": [
+    {
+      "workspace": "outputs/unified-evaluation/20261104T151000-4dc5a3/transactions",
+      "table": "observations",
+      "rows": 6433,
+      "selected_rows": 5451,
+      "source": {
+        "origin": "verified_public_source_extract",
+        "retrieved_at": "2026-11-04T15:10:00.326423+00:00",
+        "url": "https://raw.githubusercontent.com/mwaskom/seaborn-data/71e2436a092d714350de0fc409ca8a8714e7e78f/taxis.csv",
+        "sha256": "08d6d71784dbaa2651fee37fc03389754194c05d72d2d19cbc2c799dea6ac09d",
+        "rows": 6433,
+        "license": "NYC TLC public-use trip records; source usage terms apply. Seaborn mirror provides no separate dataset license. Not redistributed in this repository.",
+        "citation": "NYC Taxi & Limousine Commission, March 2019 sample distributed by seaborn-data. Sample selection and modifications are not fully documented; no population inference.",
+        "filename": "taxis.csv",
+        "bytes": 869349
+      },
+      "grain": "One sampled completed taxi trip, not one rider; repeated riders are not identifiable.",
+      "roles": {
+        "pickup": "date",
+        "dropoff": "date",
+        "total": "measure",
+        "fare": "measure",
+        "tip": "measure",
+        "distance": "measure",
+        "color": "category",
+        "payment": "category",
+        "pickup_borough": "geography"
+      },
+      "context": {
+        "date_basis": "pickup",
+        "time_grain": "day",
+        "comparison": "payment",
+        "objective": "Describe observed records"
+      },
+      "metric": {
+        "name": "Recorded trip total",
+        "formula": "sum(\"total\")",
+        "description": "Sum of recorded total charges for selected trips; components are not re-added.",
+        "units": "USD",
+        "limitations": "Sampled observed charges, not profit or city-wide revenue.",
+        "denominator": "",
+        "currency": "USD",
+        "dependencies": [
+          "total"
+        ],
+        "compiled_sql": "sum(CASE WHEN isfinite(try_cast(NULLIF(trim(CAST(\"total\" AS VARCHAR)),'') AS DOUBLE)) THEN try_cast(NULLIF(trim(CAST(\"total\" AS VARCHAR)),'') AS DOUBLE) END)",
+        "components": {},
+        "aggregation": "additive",
+        "validation": "reviewed definition",
+        "version": "t_526a219336144103b50b7cf8c06e4615"
+      },
+      "value": 102938.06000000461,
+      "independent_pandas_value": 102938.06,
+      "sql_value": 102938.06000000461,
+      "replay_value": 102938.06000000461,
+      "filter_consistency": true,
+      "chart_types": [
+        "trend",
+        "ranked",
+        "histogram"
+      ],
+      "findings": [
+        "Recorded trip total differs by 79,624 USD between credit card and None.",
+        "Recorded trip total ranges from 2,249.7 to 4,298.8 USD across observed day periods.",
+        "total: the middle half of finite values lies between 11.3 and 20.38."
+      ],
+      "report": "outputs/unified-evaluation/20261104T151000-4dc5a3/transactions-report.html",
+      "evidence": "outputs/unified-evaluation/20261104T151000-4dc5a3/transactions-evidence.json",
+      "status": "passed API/reference evaluation; browser evaluation recorded separately",
+      "histogram_reference": {
+        "field": "total",
+        "bins": 25,
+        "finite_values": 5451,
+        "reference": "Independent NumPy histogram with the documented separate exact-maximum boundary bin.",
+        "matched": true
+      },
+      "pearson_r": 0.9076507315140762,
+      "daily_reference_reconciled": 31,
+      "investigation_reference": {
+        "earlier": [
+          "2019-03-01",
+          "2019-03-07"
+        ],
+        "later": [
+          "2019-03-15",
+          "2019-03-21"
+        ],
+        "delta": 1129.3300000000186,
+        "independent_delta": 1129.329999999998,
+        "same_shared_filter": true
+      },
+      "exploratory_segmentation": {
+        "silhouette": 0.675895927939905,
+        "validation_sample_rows": 2000,
+        "complete_rows": 5451,
+        "excluded_incomplete_rows": 0,
+        "limitations": "Exploratory standardized Euclidean k-means, fixed seed; clusters are model-generated groups, not verified personas or business truth. The silhouette score uses at most 2,000 deterministically sampled fitted rows; it is an internal score, not external validation. Confirm one independent entity per row; repeated transactions can cluster activity instead of customers. Features, outliers and k affect results. The two-dimensional SVD view is a projection, not the full clustering geometry.",
+        "centroids": [
+          {
+            "cluster": 1,
+            "distance": 1.58730339588919,
+            "total": 13.906519213583557
+          },
+          {
+            "cluster": 2,
+            "distance": 16.415284552845527,
+            "total": 66.71451219512196
+          },
+          {
+            "cluster": 3,
+            "distance": 6.815473251028804,
+            "total": 33.30687242798354
+          }
+        ],
+        "causal_or_business_validation": false
+      },
+      "evaluation_seconds": 1.572
+    },
+    {
+      "workspace": "outputs/unified-evaluation/20261104T151000-4dc5a3/time-observations",
+      "table": "observations",
+      "rows": 153,
+      "selected_rows": 153,
+      "source": {
+        "origin": "verified_public_source_extract",
+        "retrieved_at": "2026-11-04T15:10:01.895806+00:00",
+        "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/airquality.csv",
+        "sha256": "666a403cbfc32cd2bfc070af1d90afe113fe34741bdc11ebe37938e73cabd567",
+        "rows": 153,
+        "license": "R datasets package: GPL-2 or GPL-3; source documentation and attribution retained locally. No raw data redistributed in repository.",
+        "citation": "R airquality, Chambers et al. (1983); daily New York observations May\u2013September 1973. Ozone Roosevelt Island, other measurements at different stations; no city-wide exposure estimate.",
+        "original_sha256": "65d2c4afd976c169af9bb0bd97e9e78e1e8a185f1b52e2e3153e30f90c7fb5f8",
+        "derived_sha256": "666a403cbfc32cd2bfc070af1d90afe113fe34741bdc11ebe37938e73cabd567",
+        "derivation": "Lossless Parquet conversion plus documented constant year 1973; original CSV preserved.",
+        "filename": "airquality-with-documented-year.parquet",
+        "bytes": 7749
+      },
+      "grain": "One calendar day with station-specific measurements; unavailable measurements are missing, not zero.",
+      "roles": {
+        "rownames": "identifier",
+        "Ozone": "measure",
+        "Solar.R": "measure",
+        "Wind": "measure",
+        "Temp": "measure",
+        "Month": "category",
+        "Day": "category",
+        "documented_year": "category",
+        "observation_day": "date"
+      },
+      "context": {
+        "date_basis": "observation_day",
+        "time_grain": "month",
+        "comparison": "Month",
+        "objective": "Describe observed records"
+      },
+      "metric": {
+        "name": "Mean observed ozone",
+        "formula": "avg(\"Ozone\")",
+        "description": "Arithmetic mean over finite available ozone measurements.",
+        "units": "ppb",
+        "limitations": "37 days lack ozone; stations differ by measure and source coverage is limited.",
+        "denominator": "",
+        "currency": "",
+        "dependencies": [
+          "Ozone"
+        ],
+        "compiled_sql": "avg(CASE WHEN isfinite(try_cast(NULLIF(trim(CAST(\"Ozone\" AS VARCHAR)),'') AS DOUBLE)) THEN try_cast(NULLIF(trim(CAST(\"Ozone\" AS VARCHAR)),'') AS DOUBLE) END)",
+        "components": {},
+        "aggregation": "non-additive; recompute from eligible rows",
+        "validation": "reviewed definition",
+        "version": "t_e66b1a7639024cb0bddbc65f4ca9ae90"
+      },
+      "value": 42.12931034482759,
+      "independent_pandas_value": 42.12931034482759,
+      "sql_value": 42.12931034482759,
+      "replay_value": 42.12931034482759,
+      "filter_consistency": true,
+      "chart_types": [
+        "trend",
+        "ranked",
+        "histogram"
+      ],
+      "findings": [
+        "Mean observed ozone differs by 36.346 ppb between 8 and 5.",
+        "Mean observed ozone ranges from 23.615 to 59.962 ppb across observed month periods.",
+        "Ozone: the middle half of finite values lies between 18 and 63.25.",
+        "Ozone: 24.2% of selected rows are missing."
+      ],
+      "report": "outputs/unified-evaluation/20261104T151000-4dc5a3/time-observations-report.html",
+      "evidence": "outputs/unified-evaluation/20261104T151000-4dc5a3/time-observations-evidence.json",
+      "status": "passed API/reference evaluation; browser evaluation recorded separately",
+      "histogram_reference": {
+        "field": "Ozone",
+        "bins": 25,
+        "finite_values": 116,
+        "reference": "Independent NumPy histogram with the documented separate exact-maximum boundary bin.",
+        "matched": true
+      },
+      "confidence_interval": {
+        "n": 116,
+        "mean": 42.12931034482759,
+        "lower": 36.062397562076086,
+        "upper": 48.19622312757909,
+        "confidence": 0.95,
+        "assumptions": "Independent observations, representative sampling and a reasonably well-behaved sampling distribution. Repeated entities, strong skew at small n and selection bias can invalidate this interval. It does not correct nonrepresentative data."
+      },
+      "monthly_reference_reconciled": 5,
+      "time_analysis_rows": 5,
+      "welch_reference": {
+        "first": 5,
+        "second": 8,
+        "n_first": 26,
+        "n_second": 26,
+        "mean_first": 23.615384615384617,
+        "mean_second": 59.96153846153846,
+        "mean_difference": -36.34615384615384,
+        "difference_ci95": [
+          -54.38357818601173,
+          -18.30872950629595
+        ],
+        "p_value": 0.00021685655919242332,
+        "degrees_freedom": 39.279159302765954,
+        "hedges_g": -1.1131305614362086,
+        "assumptions": "Welch two-sided independent-group mean comparison. Review independence, repeated entities, outliers, sampling bias and skew. A small p-value is not proof of practical importance or causality. This is one planned comparison; adjust p-values when screening many comparisons.",
+        "independent_scipy_p": 0.00021685655919242332,
+        "independence_verified": false
+      },
+      "forecast_guard": "Forecasting currently supports additive sum/count monthly metrics only.",
+      "evaluation_seconds": 0.956
+    },
+    {
+      "workspace": "outputs/unified-evaluation/20261104T151000-4dc5a3/relational",
+      "table": "events",
+      "rows": 336776,
+      "selected_rows": 336776,
+      "source": {
+        "origin": "verified_public_source_extract",
+        "retrieved_at": "2026-11-04T15:10:02.953044+00:00",
+        "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/nycflights13/flights.csv",
+        "sha256": "b791a2590c9167aa0bd3cb45af3f64101180878cf088c183eae4011e3a654f42",
+        "rows": 336776,
+        "license": "CC0, per upstream nycflights13 DESCRIPTION",
+        "documentation": "https://raw.githubusercontent.com/tidyverse/nycflights13/df98ef215aa8216fe0838a0b8ac5bada646d814c/DESCRIPTION",
+        "citation": "Wickham, nycflights13; source RITA/Bureau of Transportation Statistics, NYC departures in 2013. Rdatasets mirror, not an independently acquired BTS extract.",
+        "filename": "flights.csv",
+        "bytes": 33206996
+      },
+      "grain": "One scheduled NYC departure record in 2013; flight number alone is not unique.",
+      "roles": {
+        "rownames": "identifier",
+        "flight": "identifier",
+        "tailnum": "identifier",
+        "carrier": "company",
+        "origin": "geography",
+        "dest": "geography",
+        "arr_delay": "duration",
+        "dep_delay": "duration",
+        "distance": "measure",
+        "observed_day": "date",
+        "time_hour": "date"
+      },
+      "context": {
+        "date_basis": "observed_day",
+        "time_grain": "month",
+        "comparison": "carrier",
+        "objective": "Describe observed records"
+      },
+      "metric": {
+        "name": "Recorded arrival delay",
+        "formula": "avg(\"arr_delay\")",
+        "description": "Mean over finite recorded arrival delays; negative values are early arrivals.",
+        "units": "minutes",
+        "limitations": "Missing arrival delay is excluded; this is not a cancellation rate.",
+        "denominator": "",
+        "currency": "",
+        "dependencies": [
+          "arr_delay"
+        ],
+        "compiled_sql": "avg(CASE WHEN isfinite(try_cast(NULLIF(trim(CAST(\"arr_delay\" AS VARCHAR)),'') AS DOUBLE)) THEN try_cast(NULLIF(trim(CAST(\"arr_delay\" AS VARCHAR)),'') AS DOUBLE) END)",
+        "components": {},
+        "aggregation": "non-additive; recompute from eligible rows",
+        "validation": "reviewed definition",
+        "version": "t_1b3f68eb463141c9ac792039922c0490"
+      },
+      "value": 6.89537675731489,
+      "independent_pandas_value": 6.89537675731489,
+      "sql_value": 6.89537675731489,
+      "replay_value": 6.89537675731489,
+      "filter_consistency": true,
+      "chart_types": [
+        "trend",
+        "ranked",
+        "histogram"
+      ],
+      "findings": [
+        "Recorded arrival delay differs by 31.852 minutes between F9 and AS.",
+        "Recorded arrival delay ranges from -4.0184 to 16.711 minutes across observed month periods.",
+        "arr_delay: the middle half of finite values lies between -17 and 14."
+      ],
+      "report": "outputs/unified-evaluation/20261104T151000-4dc5a3/relational-report.html",
+      "evidence": "outputs/unified-evaluation/20261104T151000-4dc5a3/relational-evidence.json",
+      "status": "passed API/reference evaluation; browser evaluation recorded separately",
+      "histogram_reference": {
+        "field": "arr_delay",
+        "bins": 25,
+        "finite_values": 327346,
+        "reference": "Independent NumPy histogram with the documented separate exact-maximum boundary bin.",
+        "matched": true
+      },
+      "relationship": {
+        "left": "events",
+        "left_key": "carrier",
+        "right": "entities",
+        "right_key": "carrier",
+        "left_version": "t_1b3f68eb463141c9ac792039922c0490",
+        "right_version": "t_6878756394d0470ea58182f7a647ae73",
+        "cardinality": "many-to-one",
+        "left_rows": 336776,
+        "right_rows": 16,
+        "left_null_keys": 0,
+        "right_null_keys": 0,
+        "left_duplicate_keys": 336760,
+        "right_duplicate_keys": 0,
+        "left_unmatched_rows": 0,
+        "right_unmatched_rows": 0,
+        "inner_join_rows": 336776,
+        "left_join_rows": 336776,
+        "key_policy": "Exact text equality, no numeric coercion or trimming. NULL never matches NULL."
+      },
+      "joined_groups": 16,
+      "unmatched_relationship": {
+        "left": "events",
+        "left_key": "tailnum",
+        "right": "equipment",
+        "right_key": "tailnum",
+        "left_version": "t_1b3f68eb463141c9ac792039922c0490",
+        "right_version": "t_8b6b03b4b12f41a8bb093174909dbedb",
+        "cardinality": "many-to-one",
+        "left_rows": 336776,
+        "right_rows": 3322,
+        "left_null_keys": 2512,
+        "right_null_keys": 0,
+        "left_duplicate_keys": 330221,
+        "right_duplicate_keys": 0,
+        "left_unmatched_rows": 52606,
+        "right_unmatched_rows": 0,
+        "inner_join_rows": 284170,
+        "left_join_rows": 336776,
+        "key_policy": "Exact text equality, no numeric coercion or trimming. NULL never matches NULL."
+      },
+      "equipment_join_reference": {
+        "groups": 36,
+        "source_rows_retained": 336776,
+        "unmatched_left": 52606,
+        "reference": "Pandas left merge and grouped means, retaining missing manufacturer."
+      },
+      "invalid_join_guard": "Join keys or cardinality are unapproved. Validate a unique-right-key relationship in Data Hub first; multiplication is blocked.",
+      "evaluation_seconds": 8.713
+    }
+  ]
+}

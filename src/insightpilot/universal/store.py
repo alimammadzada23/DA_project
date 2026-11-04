@@ -80,7 +80,7 @@ class Workspace:
     def _save_info(self, con, name, info):
         con.execute('INSERT OR REPLACE INTO _catalog VALUES (?,?)', [name, json.dumps(info,default=str)])
 
-    def add_file(self, source, name, *, sheet=0, provenance=None):
+    def add_file(self, source, name, *, sheet=0, provenance=None, delimiter=None):
         source = Path(source).resolve()
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,62}', name):
             raise ValueError('Table names need 1–63 letters, digits or underscores, starting with a letter.')
@@ -101,7 +101,8 @@ class Workspace:
                 suffix = retained.suffix
                 if suffix in ('.csv','.tsv'):
                     import csv
-                    delimiter = '\t' if suffix == '.tsv' else ','
+                    delimiter = delimiter or ('\t' if suffix == '.tsv' else ',')
+                    if delimiter not in (',','\t',';','|'): raise ValueError('Choose comma, tab, semicolon or pipe delimiter.')
                     with retained.open(encoding='utf-8-sig', newline='') as stream:
                         header = next(csv.reader(stream, delimiter=delimiter), [])
                     if not header or any(not n.strip() for n in header) or len({n.casefold() for n in header}) != len(header):
@@ -141,7 +142,7 @@ class Workspace:
                                   'filename':(provenance or {}).get('filename',source.name),
                                   'retained':str(retained.relative_to(self.directory)),
                                   'sha256':digest(retained),'bytes':retained.stat().st_size},
-                        'versions':[{'table':table,'parent':None,'operation':{'kind':'import','sheet':sheet},
+                        'versions':[{'table':table,'parent':None,'operation':{'kind':'import','sheet':sheet,'delimiter':delimiter,'encoding':'UTF-8'},
                                      'rows':count,'created_at':now(),'errors':0}]}
                 self._save_info(con, name, info)
                 con.execute('COMMIT')
@@ -167,6 +168,51 @@ class Workspace:
         if not grain.strip(): raise ValueError('Describe what one row represents.')
         info.update(roles=roles, grain=grain[:500])
         with self.connect(write=True) as con: self._save_info(con,name,info)
+
+    def approve_semantics(self, name, roles, grain, *, units=None, date_purposes=None, date_basis=None):
+        """Explicit user review; names never silently establish a date basis or units."""
+        info = self.info(name)
+        units, date_purposes = units or {}, date_purposes or {}
+        if (set(units) | set(date_purposes)) - set(info['columns']):
+            raise ValueError('Definitions reference unavailable columns.')
+        if date_basis is not None and (date_basis not in info['columns'] or roles.get(date_basis) != 'date'):
+            raise ValueError('The date basis needs an approved date role.')
+        if date_basis and not str(date_purposes.get(date_basis, '')).strip():
+            raise ValueError('Describe what the selected date measures (for example, observation or completion).')
+        if not grain.strip() or grain.startswith('Unconfirmed'):
+            raise ValueError('Confirm what one row represents.')
+        self.approve_roles(name, roles, grain)
+        info = self.info(name)
+        info['semantics'] = {'reviewed':True, 'units':units, 'date_purposes':date_purposes,
+                             'date_basis':date_basis, 'reviewed_at':now()}
+        info.setdefault('semantic_versions', {})[info['current']] = {
+            'roles':info['roles'], 'grain':grain, 'semantics':info['semantics']}
+        with self.connect(write=True) as con: self._save_info(con, name, info)
+
+    def save_object(self, kind, name, payload):
+        if kind not in ('query','view','block','layout') or not name.strip() or len(name)>100:
+            raise ValueError('Choose a saved-object type and a name of 1–100 characters.')
+        encoded=json.dumps(payload, default=str)
+        if len(encoded)>5_000_000: raise ValueError('Saved object exceeds 5 MB; narrow the result first.')
+        with self.connect(write=True) as con:
+            con.execute('CREATE TABLE IF NOT EXISTS _saved_objects(kind VARCHAR,name VARCHAR,payload JSON,PRIMARY KEY(kind,name))')
+            con.execute('INSERT OR REPLACE INTO _saved_objects VALUES (?,?,?)',[kind,name,encoded])
+
+    def save_analysis_defaults(self, name, context, metric_name):
+        """Remember explicit analytical intent for this immutable data version."""
+        from .context import AnalysisContext
+        info=self.info(name)
+        AnalysisContext(**context).validate(info)
+        preferences={'version':info['current'],'context':context,'metric_name':metric_name}
+        if info.get('analysis_defaults')!=preferences:
+            info['analysis_defaults']=preferences
+            with self.connect(write=True) as con: self._save_info(con,name,info)
+
+    def saved_objects(self, kind):
+        with self.connect() as con:
+            if not con.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='_saved_objects'").fetchone()[0]:
+                return {}
+            return {n:json.loads(p) for n,p in con.execute('SELECT name,payload FROM _saved_objects WHERE kind=? ORDER BY name',[kind]).fetchall()}
 
     def transform(self, name, operation):
         info = self.info(name); parent = info['current']; cols = info['columns']
@@ -247,8 +293,12 @@ class Workspace:
         info['current'] = table
         info['columns'] = [r[0] for r in con.execute(f'DESCRIBE {quote(table)}').fetchall() if r[0] != '_row_id']
         info['rows'] = con.execute(f'SELECT count(*) FROM {quote(table)}').fetchone()[0]
-        # Roles are version-dependent; require review after schema/preparation changes.
-        info['roles'] = {}
+        # A saved review belongs to its immutable version. New preparation needs a
+        # fresh review, while undo restores the original approved definitions.
+        restored = info.get('semantic_versions', {}).get(table)
+        info['roles'] = restored['roles'] if restored else {}
+        info['semantics'] = restored['semantics'] if restored else {'reviewed':False}
+        if restored: info['grain'] = restored['grain']
         self._save_info(con,name,info)
 
     def activate(self, name, version):

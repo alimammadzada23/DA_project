@@ -22,11 +22,12 @@ def style(fig,title,x=None,y=None):
 def ranked(result,title,unit,scope=''):
     data=frame_of(result)
     if data.empty: return style(go.Figure(),title)
-    data['display']=data.category.map(lambda v:'Missing' if v is None else str(v))
+    categories=[r[result['columns'].index('category')] for r in result['rows']]
+    data['display']=['Missing' if v is None else str(v) for v in categories]
     fig=px.bar(data,x='value',y='display',orientation='h',color_discrete_sequence=[TEAL],
         custom_data=['category'],hover_data={'records':True,'display':False})
     fig.update_yaxes(categoryorder='total ascending',tickfont={'size':12})
-    fig.data[0].customdata=[[row.category,scope] for row in data.itertuples()]
+    fig.data[0].customdata=[[value,scope] for value in categories]
     fig.update_traces(hovertemplate='%{y}<br>%{x:,.3g} '+unit+'<extra></extra>')
     fig=style(fig,title,unit,None)
     if scope: fig.update_layout(dragmode='select',selectionrevision=scope)
@@ -48,7 +49,9 @@ def trend(result,title,unit):
 def histogram(result,title):
     data=frame_of(result)
     fig=go.Figure(go.Bar(x=data.get('bin_start',[]),y=data.get('records',[]),marker_color=TEAL))
-    return style(fig,title,'Bin lower boundary','Finite records')
+    metadata=result.get('method',{})
+    units=metadata.get('units','units unconfirmed') if isinstance(metadata,dict) else 'units unconfirmed'
+    return style(fig,title,'Bin lower boundary · '+units,'Finite source rows')
 
 
 def contribution(result,title,unit):

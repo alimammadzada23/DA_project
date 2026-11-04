@@ -19,6 +19,7 @@ dependencies = [
     "pyarrow>=18,<24",
     "numpy>=2,<3",
     "scipy>=1.14,<2",
+    "streamlit-ace>=0.1.1,<0.2",
 ]
 
 [project.optional-dependencies]

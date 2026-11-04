@@ -1,0 +1,50 @@
+{
+  "at": "2026-11-04T15:14:01.593652+00:00",
+  "after_heldout_selection_changes": {
+    "src/insightpilot/universal/engine.py": {
+      "before": "8bb9823ff36b07fd9cb10851a8794fb8a8f55d74cb6873d8a4ac1d5d111786b8",
+      "after": "9e0fdd8a018cceb5a2bce7a53a808719dc3c4ba2b7da00311d5d3b519d2f89f2"
+    },
+    "src/insightpilot/universal/metrics.py": {
+      "before": "9048c30d3cea21966f0259263b598fb75260c805bc266c2ec275e16e86b72da1",
+      "after": "306d9d135278902e5f0d6bfd7e1d136b2f55c719a0d6ae30ca77827fcdb636fc"
+    },
+    "src/insightpilot/universal/process.py": {
+      "before": "060e2fc5da011f993c4a110ec7765b11bfacc463192953e33fbfdf348976c799",
+      "after": "4f6fc473756027395a532933d17c32f6b4047acceb8805f609f578258926ef16"
+    },
+    "src/insightpilot/universal/sql_lab.py": {
+      "before": "f00a82a1bb353b37d6a93b4ae2e7fba1919d12abb83b3286f2e0ca11dd5a0de6",
+      "after": "eafe1702b992b0bd501ca2a772f88ee9ba0b0e90bb95a4c0a2c166ee1e56c693"
+    },
+    "src/insightpilot/universal/store.py": {
+      "before": "c6fe5983ecf4d7636b0104603d6726beaacbf06ca6525e6c95cb5210f2f8d21a",
+      "after": "56908023e68937ea81a7057987be9fd8d9f7d065544a52ee857b44ff235a3269"
+    },
+    "src/insightpilot/universal/ui.py": {
+      "before": "69381e0690a5a9bb2fb0b353d4499b5d39376e94ddcd7bb44c3ccf867b1cf54b",
+      "after": "faf3b3eb68a37c803404c79fb723960a33fe0557533469a53f2f1f7c12aefafa"
+    },
+    "src/insightpilot/universal/ui_data.py": {
+      "before": "8333ea18ae644cbe82f1da241ebaca101f354c8aba76fe0a8bd2feb46b3492e4",
+      "after": "28e760df65d107a8256971d6db6fb7ac00f8b026c42ece7ebacf3d1cf31e6370"
+    },
+    "src/insightpilot/universal/visuals.py": {
+      "before": "795812bf7e1d96d13c9e7c7390e30ebff42d2402773641954feb76365b4638b7",
+      "after": "bb1d4fba725a5cfbca5d83c604aa52d7af3402cf8e535242065deda3b14a627d"
+    }
+  },
+  "explanation": [
+    "Scalar ratio components and negative comparison literals: general metric edge cases caught by synthetic regression tests.",
+    "Approved numeric roles override name hypotheses; unavailable time charts explain their gating.",
+    "NULL chart categories retain raw NULL identity for drill-through.",
+    "SQL source catalog now includes immutable versions and hashes, including replayed versions.",
+    "Stale SQL results are labeled; report artifacts persist across reruns and successive downloads.",
+    "Numeric distribution axes display reviewed field units.",
+    "Explicit metric/date/grouping intent persists between sessions; a sole reviewed saved metric becomes the starting metric, while obsolete definitions are disclosed rather than blocking Quality.",
+    "Supporting-record drill-through carries the complete active date context and immutable version.",
+    "XES projects only structural case identity and complete raw attributes, preserving the compatibility parser database without imposing its normalized domain fields."
+  ],
+  "dataset_specific_runtime_paths_added": false,
+  "heldout_analytic_vocabulary": "Same preselection aggregate/ratio language and chart planner; no held-out field or filename recognition."
+}

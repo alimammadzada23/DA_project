@@ -1,0 +1,22 @@
+{
+  "verified_at": "2026-11-04T15:17:31.214818+00:00",
+  "build": "source distribution and wheel succeeded",
+  "wheel_installed_to_isolated_target": true,
+  "import_location": "outputs/unified-wheel-smoke/insightpilot/universal/sql_lab.py",
+  "installed_sql_aggregate_smoke": 6,
+  "sdist_includes_streamlit_entry_lock_and_theme": true,
+  "raw_inputs_outputs_credentials_in_sdist": false,
+  "artifacts": [
+    {
+      "path": "outputs/unified-delivery-package/insightpilot-0.1.0-py3-none-any.whl",
+      "bytes": 146577,
+      "sha256": "699edf9ff06df48622b73774acbd9b3ec00c545b921852ead73dbdf4a93aa09e"
+    },
+    {
+      "path": "outputs/unified-delivery-package/insightpilot-0.1.0.tar.gz",
+      "bytes": 383060,
+      "sha256": "0eb5932086b63db46a8cee524d44792a419766994e17a1aac9601cc2f03456e3"
+    }
+  ],
+  "wheel_source_files_verified_byte_for_byte": 39
+}

@@ -1,0 +1,79 @@
+{
+  "completed_at": "2026-11-04T15:09:16.683961+00:00",
+  "source": {
+    "selected_at": "2026-11-04T14:38:19.829203+00:00",
+    "filename": "esoph.csv",
+    "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/esoph.csv",
+    "sha256": "140e94cc9beca332888a19eddcb99fabccb380cf1862d025641643a4cae6349d",
+    "rows": 88,
+    "documentation": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/doc/datasets/esoph.html",
+    "license": "R datasets package distributed under GPL-2 or GPL-3. Source/citation preserved locally; raw data not redistributed in Git.",
+    "citation": "Breslow and Day (1980), Statistical Methods in Cancer Research, vol 1, table 4.17. Ille-et-Vilaine, France case-control study; 200 cases and 775 controls in 88 age/alcohol/tobacco strata.",
+    "caveat": "Case-control sample counts, not a representative cohort. Case share is a sample composition statistic; it is not incidence, population risk or a causal alcohol effect.",
+    "engine_freeze": "docs/unified-engine-freeze.json",
+    "preset_policy": "No runtime mappings or presets; ordinary field approval and metric creation performed through the UI."
+  },
+  "workspace": "outputs/unified-heldout/20261104T144010-90b29/workspace-f8af05",
+  "upload_sha256": "5c993f628038c548cb4810afbf4f46e5dd8dc03c404cecabbe248831bce0d5f8",
+  "rows": 88,
+  "independent_counts": {
+    "cases": 200,
+    "controls": 775,
+    "denominator": 975
+  },
+  "value": 0.20512820512820512,
+  "generic_runtime_mapping_added": false,
+  "ordinary_UI_semantic_review": true,
+  "steps": [
+    {
+      "ordinary_browser_upload": true,
+      "format": "JSONL",
+      "rows": 88,
+      "origin_label": "user_upload; authenticity not automatically asserted"
+    },
+    {
+      "field_approvals_through_UI": true,
+      "grain": "One joint age, alcohol and tobacco stratum, with aggregated sampled cases and controls; not one person.",
+      "date_basis": null,
+      "no_date_guessed": true
+    },
+    {
+      "overview_value": 0.20512820512820512,
+      "numerator": 200,
+      "eligible_denominator": 975,
+      "charts": [
+        "ranked rate by age group",
+        "distribution of sampled stratum counts"
+      ]
+    },
+    {
+      "independent_group_rates": 6,
+      "reference": "Pandas sums over original CSV; no production parser or formula evaluator reused."
+    },
+    {
+      "pointer_drill_through": true
+    },
+    {
+      "advanced_ace_sql_value": 0.20512820512820512,
+      "matches_overview_and_reference": true
+    },
+    {
+      "inapplicable_time_analysis_gated": true
+    },
+    {
+      "zero_token_answer": true
+    },
+    {
+      "browser_report_download": true,
+      "denominator_and_sampling_caveat_visible": true,
+      "manifest_replay": true
+    },
+    {
+      "tablet_width": 768,
+      "horizontal_overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "screenshots": "outputs/unified-heldout/20261104T144010-90b29/browser-workspace-f8af05",
+  "status": "passed"
+}

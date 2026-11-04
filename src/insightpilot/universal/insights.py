@@ -26,7 +26,28 @@ def discover(engine,dimension=None,metric=None,date_column=None,config=Discovery
     findings=[]
     if not total: return findings
     metric=metric or Metric('Records')
-    if dimension:
+    if dimension and metric.formula!='count()':
+        result=engine.groups(dimension,metric,top=100)
+        eligible=[r for r in result['rows'] if r[1] is not None and r[2]>=5]
+        if len(eligible)>=2:
+            high,low=max(eligible,key=lambda r:r[1]),min(eligible,key=lambda r:r[1])
+            if high[1]!=low[1]:
+                findings.append({'finding':f'{metric.name} differs by {high[1]-low[1]:,.5g} {metric.units} between {high[0]} and {low[0]}.',
+                    'magnitude':.9,'context':f'{high[1]:,.5g} versus {low[1]:,.5g}; {high[2]:,} and {low[2]:,} source rows. Up to 100 groups screened; groups need at least five rows.',
+                    'evidence':result,'limitations':'Descriptive comparison, not a significance or causal claim. Additive totals also depend on group size. Rates use the metric’s explicit eligible denominator, not the displayed source-row count.',
+                    'investigation':'Inspect supporting records and eligible inputs, then use a suitable group comparison in Advanced.',
+                    'possible_action':'Check whether the observed difference matters for the stated objective before proposing an intervention.'})
+    _,required=metric.compile(engine.info['columns'],engine.info['roles'])
+    for column in required[:3]:
+        if engine.info['roles'].get(column) not in ('measure','quantity','duration','price','revenue','expense'): continue
+        summary=engine.numeric_summary(column); row=dict(zip(summary['columns'],summary['rows'][0]))
+        if row['valid']>=8 and row['q1'] is not None and row['q3']>row['q1']:
+            findings.append({'finding':f'{column}: the middle half of finite values lies between {row["q1"]:,.5g} and {row["q3"]:,.5g}.',
+                'magnitude':.6,'context':f'Median {row["median"]:,.5g}; {row["valid"]:,} eligible of {total:,} selected rows. Units: '+engine.info.get('semantics',{}).get('units',{}).get(column,'unconfirmed'),
+                'evidence':summary,'limitations':'An observed distribution summary; skew, selection, repeated entities and missingness can limit comparisons.',
+                'investigation':'Inspect the distribution and compare compatible segments rather than relying on the mean alone.',
+                'possible_action':'Use the observed range to frame a review question; no target or threshold is implied.'})
+    if dimension and metric.formula=='count()':
         evidence=engine.groups(dimension,Metric('Records'),top=1)
         if evidence['rows']:
             category,value,records=evidence['rows'][0]
@@ -44,6 +65,17 @@ def discover(engine,dimension=None,metric=None,date_column=None,config=Discovery
                 'limitations':'Missingness can reflect legitimate inapplicability or collection problems; its cause is unknown.',
                 'investigation':'Compare missing-value coverage across time and segments before interpreting this field.',
                 'possible_action':'Confirm collection rules and disclose unavailable inputs in downstream metrics.'})
+    if date_column:
+        trend=engine.trend(date_column,metric,engine.context.time_grain)
+        periods=[r for r in trend['rows'] if r[1] is not None and r[2]>=5]
+        if len(periods)>=3:
+            peak=max(periods,key=lambda r:r[1]);low=min(periods,key=lambda r:r[1])
+            if peak[1]!=low[1]:
+                findings.append({'finding':f'{metric.name} ranges from {low[1]:,.5g} to {peak[1]:,.5g} {metric.units} across observed {engine.context.time_grain} periods.',
+                    'magnitude':.7,'context':f'Lowest: {low[0]}; highest: {peak[0]}. Date meaning: '+engine.info.get('semantics',{}).get('date_purposes',{}).get(date_column,'unconfirmed'),
+                    'evidence':trend,'limitations':'Extremes are selected after screening, not a statistical test. Edge periods, seasonality, missing inputs and unequal exposure can explain differences. At least five source rows per displayed eligible period.',
+                    'investigation':'Compare complete, equally defined windows and inspect source coverage in Advanced before interpreting change.',
+                    'possible_action':'Use the observed periods to prioritize a data review; no trend persistence or intervention effect is implied.'})
     if date_column and metric.additive:
         engine.column(date_column); dt=date_expression(date_column)
         bounds=engine.run(f'SELECT min({dt}) AS first_date,max({dt}) AS last_date FROM selected')['rows'][0]
@@ -53,7 +85,7 @@ def discover(engine,dimension=None,metric=None,date_column=None,config=Discovery
             later=(end-timedelta(days=27),end)
             results=[]
             for start,finish in (earlier,later):
-                scoped=Engine(engine.workspace,engine.table,[*engine.filters,Filter(date_column,'from',start),Filter(date_column,'through',finish)],version=engine.info['current'])
+                scoped=Engine(engine.workspace,engine.table,[*engine.filters,Filter(date_column,'from',start),Filter(date_column,'through',finish)],version=engine.info['current'],context=engine.context)
                 scoped.info['roles']=engine.info['roles']
                 results.append(scoped.metric(metric))
             before,after=[r['rows'][0][0] for r in results]

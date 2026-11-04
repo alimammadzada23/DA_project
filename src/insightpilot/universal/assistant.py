@@ -14,6 +14,8 @@ import httpx
 
 def plan_question(question):
     text=question.lower()
+    if re.search(r'\b(rate|percentage|proportion)\b',text) and not metric.components and 'weighted_avg(' not in metric.formula:
+        raise ValueError('Define the requested numerator and eligible denominator, then select that rate metric. A record count is not a rate.')
     if any(word in text for word in ('cause','profit','roi','lifetime value','guarantee','best company')):
         raise ValueError('This question needs additional definitions or causal evidence. Choose a descriptive calculation.')
     if re.search(r'\b(trend|monthly|over time|by month)\b',text): return {'analysis':'trend'}
@@ -72,8 +74,8 @@ def answer(engine,question,metric,*,dimension=None,date_column=None,use_provider
         text=f'{metric.name} grouped by {dimension}: {len(result["rows"])} displayed groups, ranked by the executed metric. Inspect the result table and supporting records.'
     else:
         if not date_column: raise ValueError('Select a date column before calculating a time trend.')
-        result=engine.trend(date_column,metric)
-        text=f'{metric.name}: {len(result["rows"])} observed monthly periods. First/last periods may be incomplete; missing periods are not treated as zero.'
+        result=engine.trend(date_column,metric,engine.context.time_grain)
+        text=f'{metric.name}: {len(result["rows"])} observed {engine.context.time_grain} periods. First/last periods may be incomplete; missing periods are not treated as zero.'
     return {'answer':text,'evidence':result,'plan':plan,'usage':usage,
             'mode':'Optional model plan + deterministic calculation' if use_provider else 'Deterministic guided analyst; no model or tokens used',
             'limitations':metric.limitations+' The selected metric definition governs this answer. No causal or population claim is made.'}

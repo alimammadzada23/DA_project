@@ -11,6 +11,7 @@ import pandas as pd
 from ..datasets import quote
 from .metrics import Metric
 from .profile import date_expression, numeric_expression
+from .context import AnalysisContext
 
 
 @dataclass(frozen=True)
@@ -21,17 +22,22 @@ class Filter:
 
 
 class Engine:
-    def __init__(self, workspace, table, filters=(), *, version=None):
+    def __init__(self, workspace, table, filters=(), *, version=None, context=None):
         self.workspace, self.table = workspace, table
         self.info = workspace.info(table)
         if version is not None:
             if version not in {v['table'] for v in self.info['versions']}: raise ValueError('The requested analysis version is not retained.')
             if version!=self.info['current']:
                 self.info['roles']={}
+                self.info['semantics']={'reviewed':False}
                 self.info['current']=version
                 with workspace.connect() as con:
                     self.info['columns']=[r[0] for r in con.execute(f'DESCRIBE {quote(version)}').fetchall() if r[0]!='_row_id']
                     self.info['rows']=con.execute(f'SELECT count(*) FROM {quote(version)}').fetchone()[0]
+                restored=self.info.get('semantic_versions',{}).get(version,{})
+                self.info.update(restored)
+        self.context=context or AnalysisContext(date_basis=self.info.get('semantics',{}).get('date_basis'))
+        self.context.validate(self.info)
         self.filters = tuple(filters)
         self.where, self.parameters = self._predicate()
 
@@ -54,12 +60,13 @@ class Engine:
             else: raise ValueError('Unsupported filter operator.')
         return ' AND '.join(clauses) or 'true', params
 
-    def run(self, sql, params=(), *, limit=1000, method=None):
+    def run(self, sql, params=(), *, limit=1000, method=None, explain=False, timeout=20):
         if not 1 <= limit <= 50_001: raise ValueError('Result limit exceeded.')
         full = f'WITH selected AS (SELECT * FROM {quote(self.info["current"])} WHERE {self.where}) ' + sql
+        if explain: full='EXPLAIN '+full
         started = time.perf_counter()
         with self.workspace.connect() as con:
-            timer = threading.Timer(20, con.interrupt); timer.start()
+            timer = threading.Timer(min(20,max(.01,timeout)), con.interrupt); timer.start()
             try:
                 result = con.execute(full,[*self.parameters,*params])
                 columns = [c[0] for c in result.description]
@@ -67,11 +74,12 @@ class Engine:
             finally:
                 timer.cancel(); timer.join()
         signature = json.dumps({'table':self.table,'version':self.info['current'],'filters':[asdict(f) for f in self.filters],
-                                'sql':full,'parameters':[*self.parameters,*params]},default=str,sort_keys=True)
+                                'sql':full,'parameters':[*self.parameters,*params], 'context':self.context.dictionary()},default=str,sort_keys=True)
         return {'columns':columns,'rows':rows[:limit],'truncated':len(rows)>limit,
                 'sql':full,'parameters':[*self.parameters,*params], 'filters':[asdict(f) for f in self.filters],
                 'source_sha256':self.info['source']['sha256'],'table':self.table,'version':self.info['current'],
                 'evidence_id':hashlib.sha256(signature.encode()).hexdigest(),
+                'context':self.context.dictionary(), 'row_grain':self.info['grain'],
                 'elapsed_seconds':round(time.perf_counter()-started,4), 'method':method or 'Full selected-table DuckDB calculation'}
 
     def count(self): return self.run('SELECT count(*) AS records FROM selected')['rows'][0][0]
@@ -87,6 +95,9 @@ class Engine:
     def metric(self, metric=Metric('Records')):
         expr, required = metric.compile(self.info['columns'],self.info['roles'])
         coverage = ''.join(f',count(NULLIF(trim(CAST({quote(c)} AS VARCHAR)),\'\')) AS {quote("present_"+c)},count({numeric_expression(c)}) AS {quote("finite_numeric_"+c)}' for c in required)
+        for component,formula in metric.components.items():
+            compiled,_=Metric(component,formula).compile(self.info['columns'],self.info['roles'],allow_scalar=True)
+            coverage+=f',{compiled} AS {quote(component)}'
         return self.run(f'SELECT {expr} AS value,count(*) AS records{coverage} FROM selected',method=asdict(metric))
 
     def groups(self, dimension, metric=Metric('Records'), top=15):
@@ -103,7 +114,9 @@ class Engine:
         return self.run(f'''SELECT CASE WHEN hi=lo THEN lo ELSE lo+floor((x-lo)/NULLIF(hi-lo,0)*{bins})
             * (hi-lo)/{bins} END AS bin_start,count(*) AS records FROM
             (SELECT {expr} x,min({expr}) OVER () lo,max({expr}) OVER () hi FROM selected)
-            WHERE x IS NOT NULL GROUP BY 1 ORDER BY 1''',method='Equal-width bins; NULL and nonfinite values excluded; exact maximum may occupy the final boundary bin.')
+            WHERE x IS NOT NULL GROUP BY 1 ORDER BY 1''',method={'field':column,
+                'units':self.info.get('semantics',{}).get('units',{}).get(column) or 'units unconfirmed',
+                'rule':'Equal-width bins; NULL and nonfinite values excluded; exact maximum may occupy the final boundary bin.'})
 
     def numeric_summary(self, column):
         self.column(column)

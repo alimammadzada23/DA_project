@@ -1,5 +1,7 @@
 """General-purpose analytics workspace, extending the existing Streamlit shell."""
 from datetime import date, timedelta
+from dataclasses import asdict
+import duckdb
 import hashlib
 import json
 import os
@@ -13,6 +15,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from . import advanced, assistant, visuals
+from .context import AnalysisContext, coverage
+from .story import interpretation, plan, label, format_value, calendar_grain
+from .sql_lab import SQLLab
 from .engine import Engine, Filter, frame_of
 from .insights import discover
 from .investigation import proportion_change
@@ -25,8 +30,12 @@ from .segmentation import cluster
 from .store import Workspace
 from .ui_data import data_hub, metric_editor, quality_editor
 
-PAGES=['Data Hub','Data Quality','Executive Intelligence','Visual Explorer','Advanced Analytics',
-       'Investigation Lab','AI Business Analyst','Reports and Exports']
+PAGES=['Overview','Data Hub','Quality & Preparation','Explore','SQL Lab','Advanced','AI Analyst','Reports']
+
+
+def download(*args,**kwargs):
+    # Exporting one artifact must not erase the other artifacts on a rerun.
+    return st.download_button(*args,on_click='ignore',**kwargs)
 
 
 @st.cache_data(max_entries=24,show_spinner=False)
@@ -34,17 +43,25 @@ def cached_profile(path,table,version):
     return Workspace(path).profile(table)
 
 
-def draw(figure,key,*,select=False):
+def draw(figure,key,*,select=False,result=None):
     kwargs={'on_select':'rerun','selection_mode':('points','box')} if select else {}
     event=st.plotly_chart(figure,width='stretch',key=key,theme=None,config={'displaylogo':False,
         'toImageButtonOptions':{'format':'png','scale':2}},**kwargs)
-    with st.expander('Chart data and image export',expanded=False):
+    st.caption(st.session_state.get('analysis-caption',''))
+    with st.expander('Chart data, save and export',expanded=False):
         data=visuals.plotted_data(figure)
-        st.download_button('Download plotted values · CSV (formula-safe text)',safe_spreadsheet_frame(data).to_csv(index=False),
+        download('Download plotted values · CSV (formula-safe text)',safe_spreadsheet_frame(data).to_csv(index=False),
                            key='data-'+key,file_name='chart-values.csv',mime='text/csv')
-        st.download_button('Download interactive HTML',figure.to_html(include_plotlyjs=True),key='html-'+key,
+        download('Download interactive HTML',figure.to_html(include_plotlyjs=True),key='html-'+key,
                            file_name='insightpilot-chart.html',mime='text/html')
         st.caption('Use the chart’s camera button for a PNG image. Expand with the Plotly toolbar; box-select supported bars to inspect records.')
+        active=st.session_state.get('_active-analysis')
+        if active and result:
+            name=st.text_input('Finding or chart name',key='block-name-'+key,value=str(figure.layout.title.text or 'Chart'))
+            if st.button('Save chart and evidence to Reports',key='block-save-'+key):
+                engine,metric=active
+                engine.workspace.save_object('block',name,{'analysis':configuration(engine,metric),'figure':figure.to_json(),'evidence':result})
+                st.success('Saved this chart, executed evidence and analytical context.')
     return event
 
 
@@ -52,7 +69,7 @@ def evidence(result):
     with st.expander('Inspect calculations and provenance'):
         st.code(result['sql'],language='sql')
         st.json(result)
-        st.download_button('Download evidence JSON',json.dumps(result,default=str,indent=2),
+        download('Download evidence JSON',json.dumps(result,default=str,indent=2),
                            file_name='analysis-evidence.json',mime='application/json',key='ev-'+result['evidence_id'])
 
 
@@ -63,7 +80,9 @@ def sidebar_filters(workspace,table,report):
         epoch_key='universal-filter-epoch-'+tag
         epoch=st.session_state.get(epoch_key,0)
         if st.button('Reset analysis filters'):
-            st.session_state[epoch_key]=epoch+1; st.rerun()
+            st.session_state[epoch_key]=epoch+1
+            st.session_state.pop('restored-analysis-'+report.get('state_key',''),None)
+            st.rerun()
         suffix=tag+str(epoch)
         cols=[None]+workspace.columns(table)
         for index in range(2):
@@ -77,9 +96,9 @@ def sidebar_filters(workspace,table,report):
                 else: value=st.text_input(f'Exact category {index+1}',key=f'uf-literal-{index}-'+suffix)
                 if options or mode=='Type exact value': filters.append(Filter(col,'eq',value))
                 if categories['truncated']: st.caption('1,000 most frequent choices shown; type an exact value for other categories.')
-        dates=[c for c in report['columns'] if c['recognized_dates']]
+        dates=[c for c in report['columns'] if c['column']==report.get('date_basis')]
         if dates and st.checkbox('Apply a date window',key='uf-date-enabled-'+suffix):
-            col=st.selectbox('Filter date field',[c['column'] for c in dates],key='uf-date-col-'+suffix)
+            col=report['date_basis']; st.caption('Date window uses '+col)
             bounds=next(c['date_range'] for c in dates if c['column']==col)
             chosen=st.date_input('Inclusive date window',value=tuple(bounds),key='uf-range-'+suffix+'-'+col)
             if len(chosen)==2:
@@ -103,81 +122,95 @@ def record_view(engine,key):
     result=engine.records(int(page)-1)
     st.dataframe(frame_of(result),hide_index=True,width='stretch')
     st.caption(f'{total:,} matching rows · at most 100 per page. _row_id traces to the imported source row, including after preparation.')
-    st.download_button('Download this page · Excel (formula-safe text)',excel_export(result),file_name='filtered-records.xlsx',
+    download('Download this page · Excel (formula-safe text)',excel_export(result),file_name='filtered-records.xlsx',
                        key='ur-xlsx-'+key,mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    st.download_button('Download this page · CSV (formula-safe text)',csv_export(result),file_name='filtered-records.csv',
+    download('Download this page · CSV (formula-safe text)',csv_export(result),file_name='filtered-records.csv',
                        key='ur-csv-'+key,mime='text/csv')
     evidence(result)
 
 
 def fields(report):
     approved=report.get('approved_roles',{})
-    numeric=[c['column'] for c in report['columns'] if c['numeric_values'] and c['inferred_type']!='identifier'
-             and approved.get(c['column']) not in ('identifier','date','customer','product','transaction','geography')
-             and not any(r['role'] in ('date','identifier','customer','product','transaction','geography') for r in c['candidates'])]
+    numeric=[c['column'] for c in report['columns'] if c['numeric_values'] and (c['inferred_type']!='identifier' or approved.get(c['column']) in ('measure','revenue','expense','quantity','price','duration'))
+             and approved.get(c['column']) not in ('identifier','date','customer','product','transaction','geography','category','status','text')
+             and not c['recognized_dates']]
     numeric.sort(key=lambda c:0 if approved.get(c) in ('measure','revenue','expense','quantity','price','duration') else 1)
-    dates=[c['column'] for c in report['columns'] if c['recognized_dates']]
-    dates.sort(key=lambda c:0 if approved.get(c)=='date' else 1)
-    dimensions=[c['column'] for c in report['columns'] if c['inferred_type'] in ('category','text') and 1<=c['distinct']<=100]
+    dates=[report['date_basis']] if report.get('date_basis') else []
+    dimensions=[c['column'] for c in report['columns'] if 1<=c['distinct']<=100 and
+                (approved.get(c['column']) in ('category','status','geography','company','product') or c['inferred_type']=='category')]
     return numeric,dates,dimensions
 
 
 def executive(engine,report,metric,scope):
-    st.subheader('What matters in this selection?')
+    st.subheader(metric.name+' · '+engine.table)
     result=engine.metric(metric); values=dict(zip(result['columns'],result['rows'][0]))
     a,b,c=st.columns(3)
     a.metric('Selected rows',f'{values["records"]:,}')
-    b.metric(metric.name,'Unavailable' if values['value'] is None else f'{values["value"]:,.4g}',help=metric.description)
-    c.metric('Fields',len(engine.info['columns']))
-    st.caption(f'{metric.units} · {metric.description} · {metric.limitations}')
-    st.write('**Row meaning:** '+engine.info['grain'])
-    numeric,dates,dims=fields(report)
-    left,right=st.columns([1.3,1])
-    dimension=None; dt=None
-    with left:
-        if dates:
-            dt=st.selectbox('Executive time field',dates)
-            draw(visuals.trend(engine.trend(dt,metric),f'How does {metric.name} change over time?',metric.units),'ue-time-'+scope)
-            st.caption('First and last observed periods may be incomplete. Missing periods are gaps, not zero.')
-    with right:
-        if dims:
-            dimension=st.selectbox('Executive comparison field',dims)
-            draw(visuals.ranked(engine.groups(dimension,metric),f'Which {dimension} groups lead?',metric.units),'ue-groups-'+scope)
-            st.caption('Top 15 displayed; this view does not include an invented Other category.')
-    st.subheader('Findings worth investigating')
-    findings=discover(engine,dimension,metric,dt)
-    if not findings: st.info('No concentration or missingness finding meets the current discovery rules. Use the explorer for more specific questions.')
+    b.metric(metric.name,format_value(values['value']),help=metric.description)
+    c.metric('Defined fields',f'{sum(v!="unassigned" for v in engine.info["roles"].values())} / {len(engine.info["columns"])}')
+    st.write(metric.description)
+    st.caption(metric.units+' · '+metric.limitations)
+    st.caption('Row grain: '+engine.info['grain'])
+    if metric.components:
+        components=[]
+        for part,formula in metric.components.items():
+            components.append({'Component':part,'Formula':formula,'Value':values[part]})
+        st.dataframe(pd.DataFrame(components),hide_index=True,width='stretch')
+        st.caption('Eligible denominator: '+(metric.denominator or 'Review the denominator formula above. Zero denominators are unavailable.'))
+    charts=plan(engine,report,metric)
+    if engine.context.date_basis and not any(c['kind']=='trend' for c in charts):
+        st.info('Time view withheld: this date basis has fewer than two observed periods at the chosen grain, or has no usable ISO dates. Choose a finer calendar grain or review date conversion in Quality & Preparation.')
+    if not engine.info.get('semantics',{}).get('reviewed'):
+        st.info('Review what one row represents, field roles, units and timestamp purposes in Quality & Preparation. Record counts describe structure; they do not establish business KPIs.')
+    if not charts:
+        st.info('Choose a comparison field or a reviewed date basis in the sidebar, or define a measure in the metric dictionary. InsightPilot does not infer a business objective from column order.')
+        st.dataframe(pd.DataFrame([{'Field':x['column'],'Type':x['inferred_type'],'Distinct':x['distinct'],'Missing':x['missing']} for x in report['columns']]),hide_index=True,width='stretch')
+    for index,chart in enumerate(charts):
+        field=chart['field']
+        if chart['kind']=='trend':
+            item=engine.trend(field,metric,engine.context.time_grain); figure=visuals.trend(item,chart['title'],metric.units)
+        elif chart['kind']=='ranked':
+            item=engine.groups(field,metric); figure=visuals.ranked(item,chart['title'],metric.units)
+        else:
+            item=engine.distribution(field); figure=visuals.histogram(item,chart['title'])
+        draw(figure,'overview-'+scope+str(index),result=item)
+        st.write(interpretation(item,metric,field)); evidence(item)
+    findings=discover(engine,engine.context.comparison,metric,engine.context.date_basis)
+    if findings:
+        st.subheader('Evidence to investigate')
     for item in findings:
         with st.container(border=True):
             st.write('**'+item['finding']+'**'); st.caption(item['context'])
             st.write(item['investigation']); st.caption(item['limitations'])
             with st.expander('Finding evidence'): st.json(item['evidence'])
     evidence(result)
-    with st.expander('Recommended analytical questions'):
-        for choice in visuals.recommendations(report):
-            st.write('**'+choice['question']+'** — '+choice['reason'])
+    record_view(engine,scope)
 
 
 def explorer(engine,report,metric,scope):
     numeric,dates,dims=fields(report)
     options=['Ranked groups','Numeric distribution','Numeric relationship','Calendar trend','Distribution by group','Two-dimensional counts','Records']
-    choice=st.selectbox('What would you like to understand?',options)
+    choice=st.selectbox('What would you like to understand?',options,key='explore-chart-type')
     if choice=='Ranked groups':
-        dimension=st.selectbox('Group by',engine.info['columns'])
-        top=st.slider('Top categories',5,30,15)
+        choices=[None]+engine.info['columns']
+        dimension=st.selectbox('Group by',choices,index=choices.index(engine.context.comparison) if engine.context.comparison in choices else 0,
+                               format_func=lambda x:'Choose a grouping field' if x is None else x,key='explore-groupby')
+        if dimension is None: st.info('Choose a field to compare. The shared comparison field supplies the default when selected.'); return
+        top=st.slider('Top categories',5,30,15,key='explore-top')
         result=engine.groups(dimension,metric,top)
         selection_epoch=st.session_state.get('ue-selection-epoch',0)
         if st.button('Reset chart selection'):
             st.session_state['ue-selection-epoch']=selection_epoch+1; st.rerun()
         event=draw(visuals.ranked(result,f'{metric.name} by {dimension}',metric.units,scope),
-                   'ux-bars-'+scope+str(selection_epoch),select=True)
+                   'ux-bars-'+scope+str(selection_epoch),select=True,result=result)
         st.caption(f'Top {top} categories displayed. Choose Box Select in the chart toolbar, then drag around a bar to filter its distribution and supporting records. All shared filters remain active.')
         points=event.selection.points
         drilled=engine
         if points:
             custom=points[-1].get('customdata',[])
             if len(custom)==2 and custom[1]==scope:
-                value=custom[0]; drilled=Engine(engine.workspace,engine.table,[*engine.filters,Filter(dimension,'eq',value)])
+                value=custom[0]; drilled=Engine(engine.workspace,engine.table,[*engine.filters,Filter(dimension,'eq',value)],
+                                               version=engine.info['current'],context=engine.context)
                 st.info(f'Chart selection: {dimension} = {value if value is not None else "Missing"}')
                 if numeric:
                     column=st.selectbox('Selected-segment numeric field',numeric)
@@ -187,20 +220,22 @@ def explorer(engine,report,metric,scope):
         if not numeric: st.info('No finite numeric fields are available. Review type conversions in Data Quality.'); return
         col=st.selectbox('Numeric field',numeric); bins=st.slider('Distribution bins',5,80,25)
         result=engine.distribution(col,bins)
-        draw(visuals.histogram(result,'How is '+col+' distributed?'),'ux-hist-'+scope)
+        draw(visuals.histogram(result,'Distribution of '+label(col)),'ux-hist-'+scope,result=result)
+        st.write(interpretation(result,metric))
         st.dataframe(frame_of(engine.numeric_summary(col)),hide_index=True,width='stretch'); evidence(result)
     elif choice=='Numeric relationship':
         if len(numeric)<2: st.info('Two numeric fields are required.'); return
         x=st.selectbox('Horizontal field',numeric); y=st.selectbox('Vertical field',numeric,index=1)
         result=engine.scatter(x,y); data=frame_of(result)
         fig=px.scatter(data,x='x',y='y',hover_data=['_row_id'],opacity=.6,color_discrete_sequence=[visuals.TEAL])
-        draw(visuals.style(fig,f'How do {x} and {y} relate?',x,y),'ux-scatter-'+scope)
+        draw(visuals.style(fig,label(y)+' against '+label(x),x,y),'ux-scatter-'+scope,result=result)
         st.caption(str(result['method'])); evidence(result)
     elif choice=='Calendar trend':
         if not dates: st.info('A usable date field is required. Convert explicit slash dates in Data Quality.'); return
-        col=st.selectbox('Time field',dates); grain=st.selectbox('Time grain',['day','week','month','quarter','year'],index=2)
+        col=engine.context.date_basis; grain=engine.context.time_grain; st.caption('Shared date basis: '+col+' · '+grain)
         result=engine.trend(col,metric,grain)
-        draw(visuals.trend(result,f'{metric.name} over time',metric.units),'ux-trend-'+scope)
+        draw(visuals.trend(result,f'{metric.name} by {grain} · {label(col)}',metric.units),'ux-trend-'+scope,result=result)
+        st.write(interpretation(result,metric))
         st.caption('Missing/invalid dates are excluded. Edge periods may be incomplete. Gaps remain missing.'); evidence(result)
     elif choice=='Distribution by group':
         if not numeric or not dims: st.info('A numeric field and a categorical grouping are required.'); return
@@ -215,7 +250,7 @@ def explorer(engine,report,metric,scope):
         data=frame_of(result)
         fig=go.Figure(go.Box(q1=data.q1,median=data['median'],q3=data.q3,lowerfence=data.minimum,upperfence=data.maximum,
             x=data.category.map(str),name=col,marker_color=visuals.TEAL))
-        draw(visuals.style(fig,'How do group distributions differ?',group,col),'ux-box-'+scope)
+        draw(visuals.style(fig,label(col)+' distribution by '+label(group),group,col),'ux-box-'+scope,result=result)
         st.caption('Full-data quartiles; whiskers show observed min/max, not Tukey fences. Top 15 groups by finite count.'); evidence(result)
     elif choice=='Two-dimensional counts':
         if len(dims)<2: st.info('Two grouping dimensions are required.'); return
@@ -243,7 +278,7 @@ def advanced_page(engine,report,metric,scope):
         col=st.selectbox('Text field' if method=='Text frequencies' else 'Analysis value field',columns if method=='Text frequencies' else numeric,key='ua-value-'+method)
     if method in ('Time-series changes','Monthly baseline forecast','Time anomaly screening','Customer RFM','Monthly retention cohorts','Ordered event funnel'):
         if not dates: st.info('A recognized date field is required; review explicit date parsing in Data Quality.'); return
-        dt=st.selectbox('Analysis time field',dates,key='ua-time-'+method)
+        dt=engine.context.date_basis; st.caption('Shared date basis: '+dt)
     if method in ('Welch group comparison','Customer RFM','Monthly retention cohorts','Ordered event funnel'):
         group=st.selectbox('Analysis grouping / entity',dims+[c for c in columns if c not in dims],key='ua-group-'+method)
     extra={}
@@ -325,7 +360,7 @@ def advanced_page(engine,report,metric,scope):
                 return str(value)
             st.dataframe(pd.DataFrame([{'Result':k.replace('_',' ').capitalize(),'Value':display(v)} for k,v in facts.items()]),hide_index=True,width='stretch')
     evidence(result['evidence'])
-    st.download_button('Download analysis results and evidence',json.dumps(result,default=lambda v:v.to_dict('records') if isinstance(v,pd.DataFrame) else str(v),indent=2),
+    download('Download analysis results and evidence',json.dumps(result,default=lambda v:v.to_dict('records') if isinstance(v,pd.DataFrame) else str(v),indent=2),
                        file_name='advanced-analysis.json',mime='application/json')
 
 
@@ -334,7 +369,7 @@ def investigation(engine,report,metric,scope):
     st.subheader('Which segments explain the recorded change?')
     st.caption('Additive contribution accounting, not a causal explanation. Use equal, nonoverlapping periods with verified reporting coverage.')
     if dates and dims:
-        dim=st.selectbox('Contribution grouping',dims); dt=st.selectbox('Contribution time field',dates)
+        dim=engine.context.comparison or st.selectbox('Contribution grouping',dims); dt=engine.context.date_basis
         a,b=st.columns(2)
         earlier=a.date_input('Earlier inclusive period',(date(2025,1,1),date(2025,1,31)))
         later=b.date_input('Later inclusive period',(date(2025,3,1),date(2025,3,31)))
@@ -373,8 +408,9 @@ def analyst(engine,report,metric,scope):
     st.subheader('Ask a question, inspect the calculation')
     st.caption('The selected explicit metric governs every answer. The optional model only chooses a validated analysis plan; numerical answers are produced by the local engine.')
     numeric,dates,dims=fields(report)
-    dimension=st.selectbox('Analyst grouping',[None]+dims)
-    dt=st.selectbox('Analyst date field',[None]+dates)
+    dimension=engine.context.comparison
+    dt=engine.context.date_basis
+    st.caption('Shared grouping: '+str(dimension)+' · date basis: '+str(dt))
     question=st.text_input('Your analytical question','Summarize the selected metric')
     provider=st.checkbox('Use optional external model for planning')
     consent=st.checkbox('I authorize sending this question, column names and selected metric definition. No source records or calculated values will be sent.',disabled=not provider)
@@ -393,82 +429,146 @@ def reports(engine,report,metric,scope):
             if saved.size>1024*1024: raise ValueError('Analysis manifests must be smaller than 1 MiB.')
             restored,definition=replay(engine.workspace,json.loads(saved.getvalue()))
             st.dataframe(frame_of(restored.metric(definition)),hide_index=True,width='stretch')
-            st.download_button('Download reproduced report',html_report(restored,definition),file_name='reproduced-report.html',mime='text/html')
+            download('Download reproduced report',html_report(restored,definition),file_name='reproduced-report.html',mime='text/html')
             st.caption('Reproduction uses the saved source hash, immutable version, metric and filters. The currently active table version is not changed.')
     title=st.text_input('Report title',engine.table+' — analytical findings')
     _,dates,dims=fields(report)
-    dimension=st.selectbox('Report grouping',[None]+dims)
-    dt=st.selectbox('Report date field',[None]+dates)
+    dimension=engine.context.comparison
+    dt=engine.context.date_basis
+    report_key='report-artifacts-'+scope
     if st.button('Build report from this selection',type='primary'):
         results=[]; figures=[]
         if dimension:
             item=engine.groups(dimension,metric); results.append(item)
             figures.append(visuals.ranked(item,metric.name+' by '+dimension,metric.units))
         if dt:
-            item=engine.trend(dt,metric); results.append(item)
-            figures.append(visuals.trend(item,metric.name+' over time',metric.units))
+            item=engine.trend(dt,metric,engine.context.time_grain); results.append(item)
+            figures.append(visuals.trend(item,metric.name+' by '+engine.context.time_grain+' · '+dt,metric.units))
         findings=discover(engine,dimension,metric,dt)
-        html=html_report(engine,metric,findings,results,figures,title)
-        manifest=configuration(engine,metric)
-        st.download_button('Download standalone HTML report',html,file_name='insightpilot-report.html',mime='text/html')
-        st.download_button('Download reusable analysis manifest',json.dumps(manifest,default=str,indent=2),file_name='analysis-manifest.json',mime='application/json')
-        summary=engine.metric(metric)
-        st.download_button('Download KPI table · CSV',frame_of(summary).to_csv(index=False),file_name='kpi.csv',mime='text/csv')
-        st.download_button('Download KPI table · Excel',excel_export(summary),file_name='kpi.xlsx')
+        st.session_state[report_key]={'html':html_report(engine,metric,findings,results,figures,title),
+            'manifest':configuration(engine,metric),'summary':engine.metric(metric)}
+    built=st.session_state.get(report_key)
+    if built:
+        download('Download standalone HTML report',built['html'],file_name='insightpilot-report.html',mime='text/html')
+        download('Download reusable analysis manifest',json.dumps(built['manifest'],default=str,indent=2),file_name='analysis-manifest.json',mime='application/json')
+        download('Download KPI table · CSV',frame_of(built['summary']).to_csv(index=False),file_name='kpi.csv',mime='text/csv')
+        download('Download KPI table · Excel',excel_export(built['summary']),file_name='kpi.xlsx')
         st.success('Report calculated from the current filters and immutable source version. It includes definitions, queries, source hash, transformations, findings, charts and limitations.')
-    st.caption('HTML is self-contained and can be printed to PDF in your browser. No native PDF renderer or native Power BI report generation is claimed. Existing Power BI preparation remains available in its original workspaces.')
+    st.caption('HTML is self-contained and can be printed to PDF in your browser. No native PDF renderer or native Power BI report generation is claimed. Power BI preparation exports the current selection and its metric dictionary below.')
 
 
 def _main():
-    st.title('Universal Intelligence')
-    st.write('Understand unfamiliar data. Define what matters. Follow each finding to its evidence.')
+    pending=st.session_state.pop('pending-view-layout',None)
+    if pending:
+        st.session_state['universal-page']=pending['page']
+        for key,value in pending.get('presets',{}).items(): st.session_state[key]=value
+    st.title('InsightPilot')
     configured=os.environ.get('INSIGHTPILOT_UNIVERSAL_WORKSPACE')
     directory=Path(configured) if configured else Path(st.session_state.get('universal-directory','data/universal/default'))
-    if not (directory/'workspace.duckdb').is_file(): workspace=Workspace.create(directory)
-    else: workspace=Workspace(directory)
+    workspace=Workspace(directory) if (directory/'workspace.duckdb').is_file() else Workspace.create(directory)
     if not configured:
-        directories=sorted(Path('data/universal').glob('*/workspace.duckdb'))
-        options=[str(p.parent) for p in directories]
+        options=sorted(str(p.parent) for p in Path('data/universal').glob('*/workspace.duckdb'))
         selected=st.sidebar.selectbox('Analytics workspace',options,index=options.index(str(directory)) if str(directory) in options else 0)
-        directory=Path(selected); workspace=Workspace(directory)
+        workspace=Workspace(selected); directory=Path(selected)
         st.session_state['universal-directory']=str(directory)
         if st.sidebar.button('Create independent workspace'):
             path=Path('data/universal')/uuid.uuid4().hex[:12]; Workspace.create(path)
-            st.session_state['universal-directory']=str(path); st.session_state['universal-page']=PAGES[0]; st.rerun()
-    page=st.sidebar.radio('Universal analytics',PAGES,key='universal-page')
-    if page==PAGES[0]: data_hub(workspace); return
+            st.session_state['universal-directory']=str(path); st.session_state['universal-page']='Data Hub'; st.rerun()
     names=list(workspace.tables())
-    if not names: st.info('Import one or more tables in Data Hub to begin. No sample data or findings are silently substituted.'); return
-    table=st.sidebar.selectbox('Analysis table',names,key='universal-table-'+hashlib.sha256(str(directory).encode()).hexdigest()[:8])
+    if 'universal-page' not in st.session_state:
+        st.session_state['universal-page']='Overview' if names else 'Data Hub'
+    page=st.sidebar.radio('Navigate',PAGES,key='universal-page')
+    if page=='Data Hub' and not names: data_hub(workspace); return
+    if not names: st.info('Import a dataset in Data Hub to begin. Your source files and original versions are retained.'); return
+    tag=hashlib.sha256(str(workspace.directory).encode()).hexdigest()[:8]
+    table=st.sidebar.selectbox('Analysis table',names,key='universal-table-'+tag)
     info=workspace.info(table)
-    with st.spinner('Profiling the current table version…'):
+    with st.spinner('Profiling the active data version…'):
         report=cached_profile(str(workspace.directory),table,info['current'])
-    report=report|{'approved_roles':info['roles']}
-    if info['source']['origin']=='synthetic': st.warning('SYNTHETIC DATA · Software validation only; no genuine business findings are implied.')
-    else:
-        label={'verified_public_source_extract':'Public source extract with pinned source hash',
-               'user_upload':'User-uploaded data · source authenticity unverified',
-               'database_extract':'Local read-only database snapshot','postgres_extract':'Read-only PostgreSQL snapshot',
-               'api_extract':'Configured API extract'}.get(info['source']['origin'],'Imported source')
-        st.caption(label+' · Review source provenance, coverage and field definitions in Data Quality.')
-    if page==PAGES[1]:
-        st.caption('Data Quality describes the full current table version. Shared analysis filters apply to the analytical pages.')
-        quality_editor(workspace,table,report); return
-    filters=sidebar_filters(workspace,table,report); engine=Engine(workspace,table,filters)
-    metrics=[Metric('Records')]+load_metrics(workspace,table)
-    index=st.sidebar.selectbox('Analysis metric',list(range(len(metrics))),format_func=lambda i:metrics[i].name,
-        key='universal-metric-'+hashlib.sha256(str(workspace.directory).encode()).hexdigest()[:8]+'-'+table)
-    metric=metrics[index]
-    metric.compile(info['columns'],info['roles'])
-    st.caption(f'{table} · {engine.count():,} selected / {info["rows"]:,} rows · {page} · metric: {metric.name} ({metric.units})')
-    scope=hashlib.sha256((str(workspace.directory)+info['current']+repr(filters)+repr(metric)).encode()).hexdigest()[:16]
-    if page==PAGES[2]:
-        metric_editor(workspace,table); executive(engine,report,metric,scope)
-    elif page==PAGES[3]: explorer(engine,report,metric,scope)
-    elif page==PAGES[4]: advanced_page(engine,report,metric,scope)
-    elif page==PAGES[5]: investigation(engine,report,metric,scope)
-    elif page==PAGES[6]: analyst(engine,report,metric,scope)
-    else: reports(engine,report,metric,scope)
+    semantics=info.get('semantics',{})
+    report=report|{'approved_roles':info['roles'],'date_basis':semantics.get('date_basis')}
+    if info['source']['origin']=='synthetic': st.warning('SYNTHETIC DATA · Software validation only; no business findings are implied.')
+    else: st.caption('Source: '+info['source']['origin']+' · '+info['source']['filename']+' · '+info['source']['sha256'][:12])
+    state=tag+'-'+table+'-'+info['current']
+    saved=workspace.saved_objects('view')
+    with st.sidebar.expander('Saved analyses'):
+        view=st.selectbox('Saved view',[None]+list(saved),format_func=lambda v:'Choose a view' if v is None else v,key='view-picker-'+state)
+        if view and st.button('Restore saved view'):
+            restored,m=replay(workspace,saved[view]['analysis'])
+            if restored.table!=table or restored.info['current']!=info['current']:
+                st.warning('Select the saved table and version in Quality & Preparation before restoring the visible dashboard. Reports can replay older versions directly.')
+            else:
+                st.session_state['restored-analysis-'+state]=saved[view]['analysis']
+                st.session_state['view-epoch-'+state]=st.session_state.get('view-epoch-'+state,0)+1
+                st.session_state['universal-filter-epoch-'+info['current']]=st.session_state.get('universal-filter-epoch-'+info['current'],0)+1
+                st.session_state['pending-view-layout']=saved[view]['layout']; st.rerun()
+    restored=st.session_state.get('restored-analysis-'+state)
+    epoch=str(st.session_state.get('view-epoch-'+state,0)); widget=state+'-'+epoch
+    preferred=info.get('analysis_defaults',{})
+    if preferred.get('version')!=info['current']: preferred={}
+    current=AnalysisContext(**restored['context']) if restored else AnalysisContext(**preferred['context']) if preferred else AnalysisContext(date_basis=semantics.get('date_basis'),time_grain=calendar_grain(report,semantics.get('date_basis')))
+    dates=[None]+[c for c,r in info['roles'].items() if r=='date' and semantics.get('reviewed') and semantics.get('date_purposes',{}).get(c)]
+    date_basis=st.sidebar.selectbox('Date basis',dates,index=dates.index(current.date_basis) if current.date_basis in dates else 0,
+        key='basis-'+widget,format_func=lambda x:'No time analysis' if x is None else x+' · '+semantics['date_purposes'][x])
+    _,_,dims=fields(report)
+    comparison=st.sidebar.selectbox('Comparison field',[None]+dims,index=([None]+dims).index(current.comparison) if current.comparison in dims else 0,
+        key='comparison-'+widget,format_func=lambda x:'No grouping selected' if x is None else x)
+    grain=st.sidebar.selectbox('Calendar grain',['day','week','month','quarter','year'],index=['day','week','month','quarter','year'].index(current.time_grain),key='grain-'+widget)
+    context=AnalysisContext(date_basis,grain,comparison).validate(info)
+    report['date_basis']=date_basis
+    if coverage(info,report)['date_ambiguity'] and not date_basis: st.info(coverage(info,report)['notice'])
+    report['state_key']=state
+    filters=sidebar_filters(workspace,table,report)
+    if restored:
+        st.sidebar.caption('Saved-view filters are active: '+json.dumps(restored['filters'],default=str))
+        filters=tuple(Filter(**f) for f in restored['filters'])+filters
+        if st.sidebar.button('Clear restored view and filters'):
+            st.session_state.pop('restored-analysis-'+state,None); st.rerun()
+    engine=Engine(workspace,table,filters,context=context)
+    metrics=[Metric('Records')];invalid=[]
+    for definition in load_metrics(workspace,table):
+        try: definition.compile(info['columns'],info['roles']); metrics.append(definition)
+        except ValueError as exc: invalid.append(definition.name+': '+str(exc))
+    default=next((i for i,m in enumerate(metrics) if restored and asdict(m)==restored['metric'] or not restored and m.name==preferred.get('metric_name')),
+                 1 if len(metrics)==2 and semantics.get('reviewed') else 0)
+    pending=st.session_state.pop('select-new-metric-'+str(workspace.directory)+'-'+table,None)
+    if pending:
+        st.session_state['metric-'+widget]=next((i for i,m in enumerate(metrics) if m.name==pending),default)
+    index=st.sidebar.selectbox('Analysis metric',list(range(len(metrics))),index=default,format_func=lambda i:metrics[i].name,key='metric-'+widget)
+    metric=metrics[index]; metric.compile(info['columns'],info['roles'])
+    workspace.save_analysis_defaults(table,context.dictionary(),metric.name)
+    if invalid: st.warning('Saved definitions need review after schema/role changes: '+'; '.join(invalid))
+    if len(metrics)>2 and index==0 and not preferred:
+        st.info('Several metric definitions are available. Choose the one that answers your question; record counts describe structure.')
+    description=f'{table} · {engine.count():,} selected / {info["rows"]:,} rows · {metric.name} ({metric.units})'
+    st.caption(description)
+    st.session_state['analysis-caption']=description+' · date: '+str(date_basis)+' · filters: '+(repr([(f.column,f.operator,f.value) for f in filters]) if filters else 'all rows')
+    st.session_state['_active-analysis']=(engine,metric)
+    with st.sidebar.expander('Save this analysis'):
+        name=st.text_input('View name',key='view-name-'+state)
+        if st.button('Save view and layout'):
+            presets={key:st.session_state[key] for key in ('explore-chart-type','explore-groupby','explore-top') if key in st.session_state}
+            workspace.save_object('view',name,{'analysis':configuration(engine,metric),'layout':{'page':page,'comparison':comparison,'presets':presets}})
+            st.success('Saved metric, date basis, filters, grouping, source version and page.')
+    scope=hashlib.sha256((str(workspace.directory)+info['current']+repr(filters)+repr(metric)+repr(context)).encode()).hexdigest()[:16]
+    if page=='Data Hub': data_hub(workspace); return
+    if page=='Quality & Preparation':
+        quality_editor(workspace,table,report); metric_editor(workspace,table)
+        dictionary=[]
+        for definition in [Metric('Records')]+load_metrics(workspace,table):
+            try: dictionary.append(definition.dictionary(info))
+            except ValueError as exc: dictionary.append(asdict(definition)|{'validation':'Needs review: '+str(exc),'components':{}})
+        st.subheader('Metric dictionary'); st.dataframe(pd.DataFrame(dictionary).drop(columns=['components']),hide_index=True,width='stretch'); return
+    if page=='Overview': executive(engine,report,metric,scope)
+    elif page=='Explore': explorer(engine,report,metric,scope)
+    elif page=='SQL Lab': sql_page(engine,report,metric,scope)
+    elif page=='Advanced':
+        mode=st.selectbox('Advanced workflow',['Statistical and analytical methods','Investigate a change','Event sequence and process'])
+        if mode=='Investigate a change': investigation(engine,report,metric,scope)
+        elif mode=='Event sequence and process': process_page(engine,scope)
+        else: advanced_page(engine,report,metric,scope)
+    elif page=='AI Analyst': analyst(engine,report,metric,scope)
+    else: reports(engine,report,metric,scope); saved_reports(engine,metric,scope)
 
 
 def main():
@@ -476,4 +576,122 @@ def main():
     except ValueError as exc: st.warning(str(exc))
     except httpx.HTTPError as exc:
         status=f'HTTP {exc.response.status_code}' if isinstance(exc,httpx.HTTPStatusError) else type(exc).__name__
-        st.warning(f'The external service request could not complete ({status}). Check the configured endpoint, network access and credentials. Local datasets and deterministic analysis remain available.')
+        st.warning(f'The external service request could not complete ({status}). Local deterministic analysis remains available.')
+    except (OSError, duckdb.Error) as exc:
+        st.error('The local data operation could not complete: '+str(exc)[:600])
+
+
+def sql_page(engine,report,metric,scope):
+    from streamlit_ace import st_ace
+    lab=SQLLab(engine)
+    st.subheader('SQL Lab')
+    st.caption('One read-only SELECT or CTE over the sources below. Active filters are applied before SQL. Unique-key relationships are required for joins. 768 MB memory, 10-second execution budget, bounded result pages.')
+    with st.expander('Available sources and columns',expanded=True): st.json(lab.catalog())
+    if st.session_state.get('sql-next-mode'):
+        st.session_state['sql-mode']=st.session_state.pop('sql-next-mode')
+    mode=st.radio('Query mode',['Guided builder','SQL editor'],horizontal=True,key='sql-mode')
+    seed='SELECT * FROM "'+engine.table.replace('"','""')+'" LIMIT 100'
+    loaded=st.session_state.get('sql-loaded-'+engine.table,seed)
+    saved=engine.workspace.saved_objects('query')
+    with st.expander('Saved queries'):
+        name=st.selectbox('Named query',[None]+list(saved))
+        if name and st.button('Reopen query with its saved context'):
+            restored,query=lab.reopen(name)
+            st.session_state['sql-loaded-'+engine.table]=query
+            st.session_state['sql-reopened-'+engine.table]=saved[name]
+            st.session_state['sql-next-mode']='SQL editor'; st.rerun()
+    if mode=='Guided builder':
+        rel=st.selectbox('Join a validated dimension',[None]+list(lab.relationships),format_func=lambda x:'Single table' if x is None else x)
+        columns=list(engine.info['columns'])
+        if rel:
+            right=lab.relationships[rel]['right']; columns += [right+'.'+c for c in engine.workspace.columns(right)]
+            st.caption(json.dumps(lab.relationships[rel]))
+        default=[engine.context.comparison] if engine.context.comparison else []
+        groups=st.multiselect('Group by dimensions',columns,default=default,max_selections=3)
+        by_time=st.checkbox('Group by shared date basis',disabled=not engine.context.date_basis)
+        limit=st.number_input('Result limit',1,5000,100)
+        descending=st.checkbox('Order metric descending',True)
+        query=lab.guided(metric,groups,date=engine.context.date_basis if by_time else None,
+                         grain=engine.context.time_grain,relationship=rel,top=int(limit),descending=descending)
+        st.code(query,language='sql'); st.caption('Metric: '+metric.formula+' · filters: '+repr(engine.filters))
+        if st.button('Edit generated SQL'):
+            st.session_state['sql-loaded-'+engine.table]=query; st.session_state['sql-next-mode']='SQL editor'; st.rerun()
+    else:
+        query=st_ace(value=loaded,language='sql',theme='tomorrow_night',font_size=15,wrap=True,auto_update=True,key='sql-ace-'+hashlib.sha256(loaded.encode()).hexdigest()[:10]) or loaded
+        with st.expander('Accessible plain-text editor'):
+            use_plain=st.checkbox('Use plain-text input')
+            plain=st.text_area('SQL query',value=query,height=200,key='sql-plain-'+engine.table)
+            if use_plain: query=plain
+        st.caption('Syntax highlighting, line numbers and keyboard editing. Unknown functions, table functions, recursive queries, cross-workspace reads and writes are rejected.')
+    reopened=st.session_state.get('sql-reopened-'+engine.table)
+    use_saved=st.checkbox('Run using reopened query’s saved filters and version',value=True) if reopened else False
+    active=SQLLab(replay(engine.workspace,reopened['analysis'])[0]) if use_saved else lab
+    if use_saved: st.caption('Saved query context: '+json.dumps(reopened['analysis']['filters'],default=str)+' · '+reopened['analysis']['version'])
+    page=st.number_input('SQL result page',min_value=1,max_value=1001,value=1)
+    size=st.selectbox('Rows per page',[100,500,1000,5000])
+    run,explain=st.columns(2)
+    if explain.button('Explain validated query'):
+        item=active.execute(query,explain=True)
+        st.code('\n'.join(str(r[-1]) for r in item['rows'])); evidence(item)
+    if run.button('Run query',type='primary'):
+        item=active.execute(query,page=int(page)-1,size=size)
+        st.session_state['sql-result-'+scope]=item
+    result=st.session_state.get('sql-result-'+scope)
+    if result:
+        if result.get('user_sql')!=query.strip().removesuffix(';'):
+            st.warning('These results belong to the previously executed query. Run the current SQL to refresh its table, chart and evidence.')
+        st.dataframe(frame_of(result),hide_index=True,width='stretch')
+        st.caption(f'{len(result["rows"]):,} displayed rows · more rows: {result["truncated"]} · {result["elapsed_seconds"]:.3f} s. Pagination needs a stable ORDER BY for repeatable pages.')
+        download('Download query result page CSV',csv_export(result),file_name='query-results.csv')
+        download('Download query result page Excel',excel_export(result),file_name='query-results.xlsx')
+        evidence(result)
+        data=frame_of(result)
+        if len(data.columns)>=2 and len(data):
+            x=st.selectbox('Result chart dimension',list(data.columns))
+            numeric=list(data.select_dtypes(include='number').columns)
+            if numeric:
+                y=st.selectbox('Result chart value',numeric)
+                kind=st.selectbox('Result chart type',['Bar','Line','Scatter'])
+                fig={'Bar':px.bar,'Line':px.line,'Scatter':px.scatter}[kind](data,x=x,y=y,color_discrete_sequence=[visuals.TEAL])
+                draw(visuals.style(fig,y+' by '+x+' · SQL result',x,y),'sql-chart-'+scope,result=result)
+        block_name=st.text_input('Report table block name')
+        if st.button('Save query result to Reports'):
+            engine.workspace.save_object('block',block_name,{'analysis':configuration(active.engine,metric),'evidence':result})
+            st.success('Saved query result and execution evidence.')
+    name=st.text_input('Save query as')
+    if st.button('Validate and save named query'):
+        active.save(name,query,metric); st.success('Saved validated SQL and its version-bound filter context.')
+
+
+def process_page(engine,scope):
+    from .process import analyze_events
+    st.subheader('Observed event sequences')
+    st.caption('Select an entity and activity field. The shared date basis supplies event time; timestamp ties use source-row order. No process completion rule or causality is inferred.')
+    entity=st.selectbox('Event entity identifier',engine.info['columns'])
+    activity=st.selectbox('Event activity field',engine.info['columns'],index=min(1,len(engine.info['columns'])-1))
+    if st.button('Analyze event sequences'):
+        results=analyze_events(engine,entity,activity)
+        for name,item in results.items():
+            st.write('**'+name.capitalize()+'**'); st.dataframe(frame_of(item),hide_index=True,width='stretch'); evidence(item)
+
+
+def saved_reports(engine,metric,scope):
+    from .exports import selection_package
+    st.subheader('Saved findings, charts and query results')
+    blocks=engine.workspace.saved_objects('block')
+    chosen=st.multiselect('Report blocks',list(blocks))
+    if chosen and st.button('Build report from saved evidence'):
+        figures=[]; results=[]
+        for name in chosen:
+            block=blocks[name]
+            replay(engine.workspace,block['analysis'])  # Validate retained source and definitions.
+            if block.get('figure'): figures.append(go.Figure(json.loads(block['figure'])))
+            results.append(block['evidence'])
+        html=html_report(engine,metric,evidence=results,figures=figures,title='InsightPilot · saved analytical evidence')
+        download('Download assembled report',html,file_name='saved-findings.html')
+        st.caption('Each block retains its original SQL, filters, version and source hash. Blocks can represent different selections; inspect their individual evidence.')
+    with st.expander('Power BI and full-selection exports'):
+        st.caption('Export the active filtered table, metric dictionary, manifest and Power Query template. CSV formula-like text is escaped. Maximum 100,000 rows per package; narrow filters for larger sources. This does not generate or validate a native PBIX file.')
+        if st.button('Prepare current selection package'):
+            payload=selection_package(engine,metric)
+            download('Download selection and Power BI preparation ZIP',payload,file_name='insightpilot-selection.zip',mime='application/zip')

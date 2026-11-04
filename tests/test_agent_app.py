@@ -77,37 +77,10 @@ def test_scoped_live_mode_cannot_switch_to_unfiltered_sql(database,tmp_path,monk
         Analyst(database).chat('How many?',dashboard=Dashboard(database,Filters(categories=('2-way synthetic',))),audit_path=tmp_path/'rejected.json')
 
 
-def test_app_missing_data(monkeypatch,tmp_path):
-    monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(tmp_path/'missing.duckdb'))
-    app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run()
-    assert not app.exception
-    assert any('No analytical database' in info.value for info in app.info)
 
 
-def test_app_loaded_data(database,monkeypatch):
-    monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(database))
-    app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=20)
-    assert not app.exception
-    assert any('SYNTHETIC' in w.value for w in app.warning)
-    assert app.radio(key='page').options==['Executive Overview','Process Explorer','Root-Cause Investigation','AI Business Analyst']
-    app.radio(key='page').set_value('Process Explorer').run(timeout=30)
-    next(b for b in app.button if b.label=='Discover directly-follows graph with PM4Py').click().run(timeout=30)
-    assert not app.exception
 
 
-def test_app_executes_sql_and_preserves_evidence(database,monkeypatch):
-    monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(database))
-    app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=20)
-    app.text_area[0].set_value('SELECT count(*) AS items FROM selected_cases')
-    next(b for b in app.button if b.label=='Execute SQL').click().run(timeout=20)
-    assert not app.exception
-    assert app.session_state['sql_evidence']['rows']==[(4,)]
-    app.run(timeout=20)
-    assert app.session_state['sql_evidence']['rows']==[(4,)]
-    app.text_area[0].set_value('DELETE FROM cases')
-    next(b for b in app.button if b.label=='Execute SQL').click().run(timeout=20)
-    assert app.error and not app.exception
-    assert 'sql_evidence' not in app.session_state
 
 
 def test_parameterized_category_filter(database):

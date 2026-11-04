@@ -5,27 +5,25 @@ from ..datasets import quote
 
 
 ROLE_NAMES = {
-    'date': {'date', 'timestamp', 'order_date', 'event_time', 'date_received', 'year','month','day','hour','minute',
-             'dep_time','arr_time','sched_dep_time','sched_arr_time','time_hour'},
+    'date': {'date', 'timestamp', 'order_date', 'event_time', 'year','month','day','hour','minute'},
     'customer': {'customer', 'customer_id', 'user_id', 'client_id'},
     'product': {'product', 'product_id', 'product_name', 'sku'},
     'transaction': {'order_id', 'transaction_id', 'invoice_id'},
-    'revenue': {'revenue', 'sales', 'sales_amount', 'net_sales'},
+    'revenue': {'revenue'},
     'expense': {'cost', 'expense', 'expenses', 'cost_amount'},
     'quantity': {'quantity', 'qty', 'units'},
     'price': {'price', 'unit_price'},
     'geography': {'country', 'state', 'city', 'region', 'latitude', 'longitude'},
     'company': {'company', 'company_name', 'supplier', 'vendor'},
-    'status': {'status', 'outcome', 'response', 'timely_response'},
-    'duration': {'duration', 'elapsed_time', 'delay', 'arr_delay', 'dep_delay'},
+    'status': {'status', 'outcome', 'response'},
+    'duration': {'duration', 'elapsed_time'},
     'text': {'description', 'comment', 'narrative', 'notes', 'text'},
     'activity': {'activity','event','event_name'},
-    'issue': {'issue','complaint_type'},
 }
 
 
 def identifier_name(name):
-    return bool(re.search(r'(^id$|_id$|^id_|identifier|^zip|^postal|^code$|^rownames$|^index$|^flight$|^tailnum$)',
+    return bool(re.search(r'(^id$|_id$|^id_|identifier|^zip|^postal|^code$|^rownames$|^index$)',
                           re.sub(r'\W+', '_', name.lower())))
 
 
@@ -107,6 +105,8 @@ def profile(con, table):
     distinct = con.execute(f'SELECT count(*) FROM (SELECT DISTINCT {cols} FROM {quote(table)})').fetchone()[0]
     result['exact_duplicate_rows'] = count - distinct
     result['possible_analyses'] = ['quality, category comparisons, records']
+    if {'year','month','day'} <= {c.lower() for c in names}:
+        result['possible_analyses'].append('Split year/month/day fields are present: review their meaning, then assemble a date in reversible preparation. They do not establish an event timestamp by themselves.')
     if any(c['inferred_type'] == 'numeric' for c in result['columns']):
         result['possible_analyses'].append('distributions, numeric comparisons; approve metric definitions first')
     if any(c['recognized_dates'] for c in result['columns']):
@@ -119,8 +119,6 @@ def profile(con, table):
     roles={hypothesis['role'] for col in result['columns'] for hypothesis in col['candidates']}
     if {'activity','date'}<=roles and 'identifier' in roles:
         dataset_type='Possible event records: activity, date and identifier-like fields are present. Confirm event identities and sequences.'
-    elif {'company','issue'}<=roles:
-        dataset_type='Possible service/complaint observations. Confirm whether each row is a complaint, event or aggregated count.'
     elif {'customer','product'}<=roles and roles & {'revenue','quantity','price'}:
         dataset_type='Possible transactional observations. Confirm order/line-item grain, refunds, units and amount definitions.'
     else:

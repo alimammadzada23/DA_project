@@ -1,0 +1,13 @@
+{
+  "selected_at": "2026-11-04T14:38:19.829203+00:00",
+  "filename": "esoph.csv",
+  "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/esoph.csv",
+  "sha256": "140e94cc9beca332888a19eddcb99fabccb380cf1862d025641643a4cae6349d",
+  "rows": 88,
+  "documentation": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/doc/datasets/esoph.html",
+  "license": "R datasets package distributed under GPL-2 or GPL-3. Source/citation preserved locally; raw data not redistributed in Git.",
+  "citation": "Breslow and Day (1980), Statistical Methods in Cancer Research, vol 1, table 4.17. Ille-et-Vilaine, France case-control study; 200 cases and 775 controls in 88 age/alcohol/tobacco strata.",
+  "caveat": "Case-control sample counts, not a representative cohort. Case share is a sample composition statistic; it is not incidence, population risk or a causal alcohol effect.",
+  "engine_freeze": "docs/unified-engine-freeze.json",
+  "preset_policy": "No runtime mappings or presets; ordinary field approval and metric creation performed through the UI."
+}

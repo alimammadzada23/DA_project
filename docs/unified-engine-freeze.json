@@ -1,0 +1,32 @@
+{
+  "at": "2026-11-04T14:38:13.332242+00:00",
+  "phase": "General engine, initial authentic reference evaluations and generic UI implemented before held-out selection.",
+  "initial_evaluation": "docs/unified-initial-evaluation.json",
+  "runtime_fingerprint": "49d8ef187e828e9ac043df91bc2ba43fd63c5c5f53faf4f2f3517437386e6564",
+  "files": {
+    "src/insightpilot/universal/__init__.py": "80434310a40250846cece36ff4ef9b13d08de5dea79ed595bcdc97bb921a0fab",
+    "src/insightpilot/universal/advanced.py": "d9acd6e12759ef3e20ae328368708020d36d14de8a4e3184165c67da1bc5ff3f",
+    "src/insightpilot/universal/assistant.py": "f2fa89130e3c291c62bba7b994613bb957f1037bef1d444aaa2a6327a19cc675",
+    "src/insightpilot/universal/connectors.py": "516664fd6c392c64505ae7cd897f15d7e5c82f3c75b7ea1bf449033ccec1d07a",
+    "src/insightpilot/universal/context.py": "0267c37efc4642f2cbcc3a1e80f86d34ab38e236ab63f49c48303402581ecb97",
+    "src/insightpilot/universal/engine.py": "8bb9823ff36b07fd9cb10851a8794fb8a8f55d74cb6873d8a4ac1d5d111786b8",
+    "src/insightpilot/universal/exports.py": "a680c0625ed2791a71d933a66ef71c9577fdfceee284cb007989e0361e42c21d",
+    "src/insightpilot/universal/insights.py": "003755cc9be266e8c98e2ca829693abfdf0f2f90505be49b4e94f0eb40358db9",
+    "src/insightpilot/universal/investigation.py": "23601af7510213337cb574a8fc73ca71148f4b8bdaa374f8891c09f5a1bf2e56",
+    "src/insightpilot/universal/metrics.py": "9048c30d3cea21966f0259263b598fb75260c805bc266c2ec275e16e86b72da1",
+    "src/insightpilot/universal/process.py": "060e2fc5da011f993c4a110ec7765b11bfacc463192953e33fbfdf348976c799",
+    "src/insightpilot/universal/profile.py": "91ad9c7c1b9d1bcbfc332b3c00941a7be7c3008b6326d0dc3963c044c8905ea0",
+    "src/insightpilot/universal/relationships.py": "47b27fcb2dfc695285088b68f820e08c39acac7c0cb3bd2129ad83633f4e7fc2",
+    "src/insightpilot/universal/report.py": "f90bdd57d3c298e74557eff7b51b49ac5d29b4907b0c51ebca33bb9ac67759dd",
+    "src/insightpilot/universal/segmentation.py": "187fc35e254d4198e13d7ef3380c51e02bc283bea8eba51318b0324c77bcdb5f",
+    "src/insightpilot/universal/sql_lab.py": "f00a82a1bb353b37d6a93b4ae2e7fba1919d12abb83b3286f2e0ca11dd5a0de6",
+    "src/insightpilot/universal/statistics.py": "390c639d0756cf6c4522bf9b543192ed09d5d66db4768244710881325f51e4a8",
+    "src/insightpilot/universal/store.py": "c6fe5983ecf4d7636b0104603d6726beaacbf06ca6525e6c95cb5210f2f8d21a",
+    "src/insightpilot/universal/story.py": "5006168f15e0cda5f389c159ebc740a1a5979d96cbb38ebfbab599351b4fc9fd",
+    "src/insightpilot/universal/ui.py": "69381e0690a5a9bb2fb0b353d4499b5d39376e94ddcd7bb44c3ccf867b1cf54b",
+    "src/insightpilot/universal/ui_data.py": "8333ea18ae644cbe82f1da241ebaca101f354c8aba76fe0a8bd2feb46b3492e4",
+    "src/insightpilot/universal/visuals.py": "795812bf7e1d96d13c9e7c7390e30ebff42d2402773641954feb76365b4638b7",
+    "src/insightpilot/workspace_ui.py": "eb6bccaa7892e4da1307e393ff6d58623835f61a6edca6e5a7074c4b4f0a9e3a"
+  },
+  "boundary": "No dataset-specific runtime mappings or presets may be added for held-out evaluation. Generic defect fixes, if any, must be disclosed."
+}

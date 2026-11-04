@@ -1,3 +1,5 @@
+> Historical documentation for commit 156a116. The current unified application and instructions are in [UNIFIED_ACCEPTANCE.md](UNIFIED_ACCEPTANCE.md) and the root README.
+
 # Universal Intelligence workflow
 
 ## Import and understand

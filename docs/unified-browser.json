@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-11-04T15:10:20.513778+00:00",
+  "browser": "System Chromium via Playwright, headless Linux",
+  "checks": [
+    {
+      "dataset": "transactions",
+      "status": "passed",
+      "events": [
+        {
+          "overview_value": 102938.06000000461,
+          "selected_rows": 5451,
+          "shared_date_basis": "pickup"
+        },
+        {
+          "png_download": true
+        },
+        {
+          "full_catalog_search": "total"
+        },
+        {
+          "metric_and_filters_survive_quality": true
+        },
+        {
+          "pointer_box_selection_to_supporting_records": true
+        },
+        {
+          "guided_query_and_saved_block": true,
+          "ace_editor_query_value": 102938.06000000461,
+          "independent_reference": 102938.06
+        },
+        {
+          "zero_token_answer": true
+        },
+        {
+          "real_data_mean_interval": true
+        },
+        {
+          "report_download_source_context_sql": true
+        },
+        {
+          "tablet_width": 768,
+          "horizontal_overflow": false,
+          "keyboard_focus": "INPUT",
+          "labelled_controls_present": true
+        }
+      ],
+      "javascript_errors": [],
+      "screenshots": "outputs/unified-browser/20261104T150817-6bc71/transactions",
+      "http_status": 200
+    },
+    {
+      "dataset": "time-observations",
+      "status": "passed",
+      "events": [
+        {
+          "overview_value": 42.12931034482759,
+          "selected_rows": 153,
+          "shared_date_basis": "observation_day"
+        },
+        {
+          "png_download": true
+        },
+        {
+          "full_catalog_search": "Ozone"
+        },
+        {
+          "metric_and_filters_survive_quality": true
+        },
+        {
+          "pointer_box_selection_to_supporting_records": true
+        },
+        {
+          "guided_query_and_saved_block": true,
+          "ace_editor_query_value": 42.12931034482759,
+          "independent_reference": 42.12931034482759
+        },
+        {
+          "zero_token_answer": true
+        },
+        {
+          "real_data_mean_interval": true
+        },
+        {
+          "report_download_source_context_sql": true
+        },
+        {
+          "tablet_width": 768,
+          "horizontal_overflow": false,
+          "keyboard_focus": "INPUT",
+          "labelled_controls_present": true
+        }
+      ],
+      "javascript_errors": [],
+      "screenshots": "outputs/unified-browser/20261104T150817-6bc71/time-observations",
+      "http_status": 200
+    },
+    {
+      "dataset": "relational",
+      "status": "passed",
+      "events": [
+        {
+          "overview_value": 6.89537675731489,
+          "selected_rows": 336776,
+          "shared_date_basis": "observed_day"
+        },
+        {
+          "png_download": true
+        },
+        {
+          "full_catalog_search": "arr_delay"
+        },
+        {
+          "metric_and_filters_survive_quality": true
+        },
+        {
+          "pointer_box_selection_to_supporting_records": true
+        },
+        {
+          "guided_query_and_saved_block": true,
+          "ace_editor_query_value": 6.89537675731489,
+          "independent_reference": 6.89537675731489
+        },
+        {
+          "zero_token_answer": true
+        },
+        {
+          "real_data_mean_interval": true
+        },
+        {
+          "report_download_source_context_sql": true
+        },
+        {
+          "tablet_width": 768,
+          "horizontal_overflow": false,
+          "keyboard_focus": "INPUT",
+          "labelled_controls_present": true
+        }
+      ],
+      "javascript_errors": [],
+      "screenshots": "outputs/unified-browser/20261104T150817-6bc71/relational",
+      "http_status": 200
+    }
+  ]
+}

@@ -71,15 +71,6 @@ def test_parameterization_and_filtered_sql_boundaries(database):
     assert injection.overview()[0]['item_count']==0
 
 
-def test_empty_dashboard_is_usable_and_date_filter_is_item_based(database,monkeypatch):
-    app=app_for(database,monkeypatch)
-    app.multiselect(key='filter_categories').set_value(['3-way synthetic']).run(timeout=30)
-    app.selectbox(key='filter_repeats').select('Without repeats').run(timeout=30)
-    assert app.metric[0].value=='0' and not app.exception
-    next(b for b in app.button if b.label=='Reset filters').click().run(timeout=30)
-    app.checkbox(key='filter_dates').check().run(timeout=30)
-    app.date_input(key='filter_date_range').set_value((date(2018,1,1),date(2018,1,1))).run(timeout=30)
-    assert app.metric[0].value=='3' and any('· 9 events ·' in caption.value for caption in app.caption) and not app.exception
 
 
 def test_guided_questions_have_actual_scoped_evidence(database):
@@ -111,49 +102,12 @@ def test_documented_none_resource_is_missing_but_raw_is_preserved(tmp_path):
     assert reconcile(source,target)['passed']
 
 
-def app_for(database,monkeypatch):
-    monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(database))
-    app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=30)
-    assert not app.exception
-    return app
 
 
-def test_dashboard_widgets_change_metrics_queries_and_drilldown(database,monkeypatch):
-    app=app_for(database,monkeypatch)
-    assert app.metric[0].value=='4'
-    app.multiselect(key='filter_categories').set_value(['2-way synthetic']).run(timeout=30)
-    assert not app.exception
-    assert app.metric[0].value=='1' and any('· 2 events ·' in caption.value for caption in app.caption)
-    app.text_area[0].set_value('SELECT count(*) AS items FROM selected_cases')
-    next(b for b in app.button if b.label=='Execute SQL').click().run(timeout=30)
-    assert app.session_state['sql_evidence']['rows']==[(1,)]
-    app.multiselect(key='filter_categories').set_value(['3-way synthetic']).run(timeout=30)
-    assert 'sql_evidence' not in app.session_state
-    assert app.metric[0].value=='1' and any('· 4 events ·' in caption.value for caption in app.caption)
-    next(b for b in app.button if b.label=='Reset filters').click().run(timeout=30)
-    assert app.metric[0].value=='4' and not app.exception
 
 
-def test_guided_chat_works_without_credentials(database,monkeypatch):
-    monkeypatch.delenv('INSIGHTPILOT_LLM_API_KEY',raising=False)
-    app=app_for(database,monkeypatch)
-    app.multiselect(key='filter_categories').set_value(['2-way synthetic']).run(timeout=30)
-    app.radio(key='page').set_value('AI Business Analyst').run(timeout=30)
-    app.chat_input[0].set_value('How many items?').run(timeout=30)
-    assert not app.exception
-    result=app.session_state['investigations'][-1]['result']
-    assert result['evidence'][0]['rows']==[(1,)]
-    assert result['mode']=='Guided SQL analyst (no LLM)'
 
 
-def test_missing_data_is_visible_without_breaking_dashboard(tmp_path,monkeypatch):
-    source=tmp_path/'missing.xes';write_xes(source,[('A','PO',None,[('',None,'NONE')])])
-    target=tmp_path/'missing.duckdb';ingest(source,target,synthetic=True)
-    app=app_for(target,monkeypatch)
-    assert app.metric[0].value=='1'
-    assert any('missing timestamps' in w.value for w in app.warning)
-    assert any('no activity name' in w.value for w in app.warning)
-    assert not app.exception
 
 
 def test_cli_guided_analysis_is_available_without_credentials(database):
@@ -163,15 +117,3 @@ def test_cli_guided_analysis_is_available_without_credentials(database):
     result=json.loads(process.stdout)
     assert result['mode']=='Guided SQL analyst (no LLM)'
     assert result['evidence'][0]['rows']==[[1]]
-
-
-def test_first_open_demo_loads_from_empty_configuration(tmp_path,monkeypatch,caplog):
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv('INSIGHTPILOT_DATABASE',str(tmp_path/'missing.duckdb'))
-    app=AppTest.from_file(str(Path(__file__).parents[1]/'app.py')).run(timeout=30)
-    assert not app.metric
-    next(button for button in app.button if button.label=='Open labeled synthetic demo').click().run(timeout=30)
-    assert not app.exception
-    assert app.metric[0].value=='4'
-    assert any('SYNTHETIC' in warning.value for warning in app.warning)
-    assert not any('created with a default value' in record.message for record in caplog.records)

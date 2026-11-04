@@ -64,7 +64,7 @@ def main():
     report={'scope':'Synthetic generated CSV, Linux only; not real-data throughput or native Mac performance.',
         'python':platform.python_version(),'duckdb':duckdb.__version__,'platform':platform.platform(),
         'settings':{'threads':2,'duckdb_memory_limit':'768MB','fresh_process_per_size':True},
-        'method':'Cold import/profile; three new-connection aggregate queries; overview includes count/group/trend. '
+        'method':'Fresh process, generated source and OS caches not cleared; import/profile without application cache; three new-connection aggregate queries; overview includes count/group/trend. '
                  'RSS includes generation, Python and native libraries. Overview timings are server calculations, not browser response.',
         'results':results}
     args.output.parent.mkdir(parents=True,exist_ok=True); args.output.write_text(json.dumps(report,indent=2)+'\n')

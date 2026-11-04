@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-04T15:18:41.836285+00:00",
+  "scanner": "Gitleaks 8.24.3; redacted reports remain in ignored outputs/",
+  "snapshot_leaks": 0,
+  "base_history_leaks": 0,
+  "known_secret_pattern_matches": 0,
+  "unapproved_dataset_or_database_files": 0,
+  "retained_test_inputs": "Three explicitly SYNTHETIC CSV fixtures are unchanged from 156a116, not user datasets.",
+  "new_data_in_git": "Public-source derived numerical receipts and real public-evaluation screenshots only; raw datasets, local databases, environment files and generated secrets excluded.",
+  "scope": "All intended files inspected; exact staged snapshot rescanned before commit. No credentials inspected or printed."
+}

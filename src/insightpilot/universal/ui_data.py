@@ -1,5 +1,7 @@
 """Streamlit data management; analytical implementation lives in independent services."""
 import json
+import csv
+import io
 from pathlib import Path
 import re
 import uuid
@@ -21,13 +23,26 @@ def data_hub(workspace):
     message_key='universal-import-messages-'+str(workspace.directory)
     for level,message in st.session_state.pop(message_key,[]):
         getattr(st,level)(message)
-    tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL'])
+    tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL','Event logs'])
     with tabs[0]:
         with st.form('universal-upload'):
             files=st.file_uploader('Dataset files',type=['csv','tsv','xlsx','parquet','json','jsonl','ndjson'],accept_multiple_files=True,key=message_key+'-files')
             sheet=st.text_input('Excel sheet name (blank = first sheet)')
+            delimiter=st.selectbox('Delimited text separator',[None,',','\t',';','|'],format_func=lambda v:'By extension: comma for CSV, tab for TSV' if v is None else repr(v))
             synthetic=st.checkbox('These files are synthetic test data')
             submitted=st.form_submit_button('Import tables')
+        if files:
+            with st.expander('Preview source parsing',expanded=True):
+                for upload in files:
+                    if Path(upload.name).suffix.lower() not in ('.csv','.tsv'): continue
+                    sep=delimiter or ('\t' if upload.name.lower().endswith('.tsv') else ',')
+                    try:
+                        sample=upload.getvalue()[:65536].decode('utf-8-sig')
+                        rows=list(csv.reader(io.StringIO(sample),delimiter=sep))[:6]
+                        st.caption(upload.name+' · UTF-8 · delimiter '+repr(sep)+' · ISO dates recognized; slash dates require explicit conversion. Empty cells are missing; NA-like markers are flagged for review.')
+                        if rows and len(rows[0])==1: st.warning('Only one field was detected. Review the separator before importing.')
+                        st.dataframe(pd.DataFrame(rows[1:],columns=rows[0]),hide_index=True,width='stretch')
+                    except (UnicodeDecodeError,ValueError,csv.Error): st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import validates the complete source and retains rejected bytes.')
         if submitted:
             messages=[]
             if not files: messages.append(('warning','Choose at least one file.'))
@@ -41,7 +56,7 @@ def data_hub(workspace):
                 while name in workspace.tables(): name=base+'_'+str(index); index+=1
                 try:
                     with st.spinner(f'Importing {file.name}; checking all rows…'):
-                        info=workspace.add_file(path,name,sheet=sheet or 0,provenance={
+                        info=workspace.add_file(path,name,sheet=sheet or 0,delimiter=delimiter,provenance={
                             'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
                     messages.append(('success',f'{name}: {info["rows"]:,} rows imported. Review meaning and quality before defining metrics.'))
                 except Exception as exc: messages.append(('error',f'{file.name}: {exc}. Other successful imports are retained; this file did not create a partial table.'))
@@ -92,6 +107,19 @@ def data_hub(workspace):
                 raise ValueError(f'PostgreSQL import could not finish ({type(exc).__name__}). Verify the configured read-only connection, schema/table, network access and source permissions.') from exc
             st.rerun()
         st.caption('Optional postgres extra and a configured reachable database are required. Server cursor, read-only transaction and statement timeout are enforced. No credentials are entered here.')
+    with tabs[4]:
+        st.caption('Import XES/XES.GZ using the existing streaming parser. The original log and parser database are retained. Cases and events enter the same catalog as all other datasets; review their definitions before analysis.')
+        xes=st.file_uploader('XES event log',type=['xes','gz'])
+        prefix=st.text_input('Event table prefix','eventlog')
+        if st.button('Import event log'):
+            if xes is None: st.warning('Choose an event log first.')
+            else:
+                from .process import import_xes
+                incoming=workspace.directory/'incoming'; incoming.mkdir(exist_ok=True)
+                suffix='.xes.gz' if xes.name.lower().endswith('.gz') else '.xes'
+                path=incoming/(uuid.uuid4().hex+suffix); path.write_bytes(xes.getvalue())
+                import_xes(workspace,path,prefix)
+                path.unlink(); st.success('Imported cases and events into the shared catalog.'); st.rerun()
     tables=workspace.tables()
     if tables:
         st.subheader('Table catalog')
@@ -147,6 +175,22 @@ def quality_editor(workspace,table,report):
     if detail['key_candidate']: st.caption('Values are unique and nonmissing in this version; business key identity still needs confirmation.')
     if detail['statistics']:
         st.dataframe(pd.DataFrame(detail['statistics'].items(),columns=['Statistic','Value']),hide_index=True,width='stretch')
+    with st.expander('Review this field and row grain'):
+        sem=info.get('semantics',{})
+        with st.form('field-review-'+table+'-'+col):
+            role=st.selectbox('Field role',ROLES,index=ROLES.index(info['roles'].get(col,'unassigned')))
+            unit=st.text_input('Field units / currency',sem.get('units',{}).get(col,''))
+            purpose=st.text_input('Timestamp purpose',sem.get('date_purposes',{}).get(col,''))
+            grain=st.text_input('Reviewed row grain',info['grain'])
+            basis=st.checkbox('Use this field as the shared date basis',value=sem.get('date_basis')==col)
+            reviewed=st.checkbox('I confirm these field definitions and row grain')
+            apply=st.form_submit_button('Approve field definition')
+        if apply:
+            if not reviewed: st.warning('Confirm the definitions before approval.')
+            else:
+                roles=info['roles']|{col:role}; units=sem.get('units',{})|{col:unit}; purposes=sem.get('date_purposes',{})|{col:purpose}
+                selected=col if basis else None if sem.get('date_basis')==col else sem.get('date_basis')
+                workspace.approve_semantics(table,roles,grain,units=units,date_purposes=purposes,date_basis=selected); st.rerun()
     with st.expander('Dataset understanding report',expanded=True):
         st.write(report['understanding']['type_hypothesis'])
         st.write(report['understanding']['row_grain_hypothesis'])
@@ -160,15 +204,24 @@ def quality_editor(workspace,table,report):
     with st.expander('Review and correct semantic roles'):
         with st.form('universal-roles-'+str(workspace.directory)+'-'+table):
             grain=st.text_input('What does one row represent?',info['grain'])
-            frame=pd.DataFrame({'column':info['columns'],'role':[info['roles'].get(c,'unassigned') for c in info['columns']]})
+            semantics=info.get('semantics',{})
+            frame=pd.DataFrame({'column':info['columns'],'role':[info['roles'].get(c,'unassigned') for c in info['columns']],
+                'units':[semantics.get('units',{}).get(c,'') for c in info['columns']],
+                'date purpose':[semantics.get('date_purposes',{}).get(c,'') for c in info['columns']]})
             changed=st.data_editor(frame,hide_index=True,disabled=['column'],width='stretch',
                 column_config={'role':st.column_config.SelectboxColumn('Approved role',options=ROLES,required=True)})
+            date_options=[None]+[c['column'] for c in report['columns'] if c['recognized_dates']]
+            basis=st.selectbox('Default analytical date basis',date_options,
+                index=date_options.index(semantics.get('date_basis')) if semantics.get('date_basis') in date_options else 0,
+                format_func=lambda x:'No date basis selected' if x is None else x)
+            st.caption('Describe each timestamp separately: observation, transaction, completion, ingestion, scheduled or another event. A trend never silently chooses the first timestamp.')
             approved=st.checkbox('I have reviewed the row grain, field definitions and units.')
             submitted=st.form_submit_button('Save reviewed definitions')
         if submitted:
             if not approved: st.warning('Review the definitions before approval.')
             else:
-                workspace.approve_roles(table,dict(zip(changed.column,changed.role)),grain); st.rerun()
+                workspace.approve_semantics(table,dict(zip(changed.column,changed.role)),grain,
+                    units=dict(zip(changed.column,changed.units)),date_purposes=dict(zip(changed.column,changed['date purpose'])),date_basis=basis); st.rerun()
     with st.expander('Prepare data reversibly'):
         operation=st.selectbox('Preparation operation',['numeric','date','date_parts','trim','nullify','deduplicate','rename','select'])
         col=st.selectbox('Preparation column',info['columns'],key='prepare-column-'+table)
@@ -208,6 +261,12 @@ def metric_editor(workspace,table):
             description=st.text_input('Metric definition / interpretation')
             unit=st.text_input('Units or currency','records')
             limitations=st.text_input('Known metric limitations','Review source coverage, missing inputs, row grain and double counting.')
+            denominator=st.text_input('Eligible denominator / missing-value policy','')
+            currency=st.text_input('Currency code (optional)','')
             submitted=st.form_submit_button('Validate and save metric')
         if submitted:
-            save_metric(workspace,table,Metric(name,formula,description,unit,limitations)); st.rerun()
+            save_metric(workspace,table,Metric(name,formula,description,unit,limitations,denominator,currency))
+            st.session_state['select-new-metric-'+str(workspace.directory)+'-'+table]=name
+            st.rerun()
+        st.code('quantile("value", 0.9)\nsum_if("amount", "status", "==", "eligible")\nsum("quantity" * "price")\ncount_if("outcome", "==", "Yes") / count("outcome")\nweighted_avg("rate", "eligible")',language='python')
+        st.caption('Derived row arithmetic is compiled safely. Quantiles and weighted averages are recomputed from eligible rows; rates are never summed. Use an explicit eligible denominator and reviewed currency/units.')
