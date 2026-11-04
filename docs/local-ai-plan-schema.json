@@ -1,90 +1,192 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "version",
-    "action",
-    "table"
-  ],
-  "properties": {
-    "version": {
-      "const": 1
-    },
-    "action": {
-      "enum": [
-        "analyze",
-        "clarify",
-        "refuse"
-      ]
-    },
-    "table": {
-      "type": "string",
-      "maxLength": 63
-    },
-    "operation": {
-      "enum": [
-        "aggregate",
-        "schema",
-        "missing",
-        "summary",
-        "distribution",
-        "group_distribution",
-        "scatter",
-        "trend",
-        "compare_periods",
-        "outliers"
-      ]
-    },
-    "group_by": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "maxLength": 256
-      },
-      "maxItems": 2,
-      "uniqueItems": true
-    },
-    "measures": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "aggregation"
-        ],
-        "properties": {
-          "aggregation": {
-            "enum": [
-              "records",
-              "count",
-              "distinct",
-              "sum",
-              "avg",
-              "median",
-              "min",
-              "max",
-              "quantile",
-              "saved",
-              "share",
-              "rate"
-            ]
-          },
-          "column": {
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "operation"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "action": {
+          "const": "analyze"
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "operation": {
+          "enum": [
+            "aggregate",
+            "records",
+            "schema",
+            "missing",
+            "summary",
+            "distribution",
+            "group_distribution",
+            "scatter",
+            "trend",
+            "compare_periods",
+            "outliers"
+          ]
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 256
           },
-          "metric": {
-            "type": "string",
-            "maxLength": 100
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "aggregation"
+            ],
+            "properties": {
+              "aggregation": {
+                "enum": [
+                  "records",
+                  "count",
+                  "distinct",
+                  "sum",
+                  "avg",
+                  "median",
+                  "min",
+                  "max",
+                  "quantile",
+                  "saved",
+                  "share",
+                  "rate"
+                ]
+              },
+              "column": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "metric": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "quantile": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "numerator": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "column",
+                  "operator"
+                ],
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "operator": {
+                    "enum": [
+                      "eq",
+                      "ne",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "is_missing",
+                      "not_missing",
+                      "from",
+                      "through"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                }
+              },
+              "denominator": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "selected",
+                      "nonmissing",
+                      "condition"
+                    ]
+                  },
+                  "column": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "condition": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "column",
+                      "operator"
+                    ],
+                    "properties": {
+                      "column": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "operator": {
+                        "enum": [
+                          "eq",
+                          "ne",
+                          "gt",
+                          "gte",
+                          "lt",
+                          "lte",
+                          "is_missing",
+                          "not_missing",
+                          "from",
+                          "through"
+                        ]
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ],
+                        "maxLength": 200
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          "quantile": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "numerator": {
+          "maxItems": 4
+        },
+        "filters": {
+          "type": "array",
+          "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -122,193 +224,143 @@
               }
             }
           },
-          "denominator": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "kind"
-            ],
-            "properties": {
-              "kind": {
-                "enum": [
-                  "selected",
-                  "nonmissing",
-                  "condition"
-                ]
-              },
-              "column": {
-                "type": "string",
-                "maxLength": 256
-              },
-              "condition": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "column",
-                  "operator"
-                ],
-                "properties": {
-                  "column": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  },
-                  "operator": {
-                    "enum": [
-                      "eq",
-                      "ne",
-                      "gt",
-                      "gte",
-                      "lt",
-                      "lte",
-                      "is_missing",
-                      "not_missing",
-                      "from",
-                      "through"
-                    ]
-                  },
-                  "value": {
-                    "type": [
-                      "string",
-                      "number",
-                      "boolean",
-                      "null"
-                    ],
-                    "maxLength": 200
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "maxItems": 4
-    },
-    "filters": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "column",
-          "operator"
-        ],
-        "properties": {
-          "column": {
+          "maxItems": 8
+        },
+        "fields": {
+          "type": "array",
+          "items": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 256
           },
-          "operator": {
-            "enum": [
-              "eq",
-              "ne",
-              "gt",
-              "gte",
-              "lt",
-              "lte",
-              "is_missing",
-              "not_missing",
-              "from",
-              "through"
-            ]
+          "maxItems": 40,
+          "uniqueItems": true
+        },
+        "sort_by": {
+          "enum": [
+            "records",
+            "group",
+            "m0",
+            "m1",
+            "m2",
+            "m3",
+            "period"
+          ]
+        },
+        "descending": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "bins": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 80
+        },
+        "date_basis": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "grain": {
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "quarter",
+            "year"
+          ]
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date"
           },
-          "value": {
-            "type": [
-              "string",
-              "number",
-              "boolean",
-              "null"
-            ],
-            "maxLength": 200
-          }
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "relationship": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "inherit": {
+          "type": "boolean"
+        },
+        "chart": {
+          "enum": [
+            "auto",
+            "table",
+            "bar",
+            "histogram",
+            "line",
+            "scatter",
+            "box",
+            "pie"
+          ]
         }
-      },
-      "maxItems": 8
+      }
     },
-    "fields": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "maxLength": 256
-      },
-      "maxItems": 40,
-      "uniqueItems": true
-    },
-    "sort_by": {
-      "enum": [
-        "records",
-        "group",
-        "m0",
-        "m1",
-        "m2",
-        "m3",
-        "period"
-      ]
-    },
-    "descending": {
-      "type": "boolean"
-    },
-    "limit": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 100
-    },
-    "bins": {
-      "type": "integer",
-      "minimum": 5,
-      "maximum": 80
-    },
-    "date_basis": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "maxLength": 256
-    },
-    "grain": {
-      "enum": [
-        "day",
-        "week",
-        "month",
-        "quarter",
-        "year"
-      ]
-    },
-    "periods": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "format": "date"
-      },
-      "minItems": 4,
-      "maxItems": 4
-    },
-    "relationship": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "maxLength": 200
-    },
-    "inherit": {
-      "type": "boolean"
-    },
-    "chart": {
-      "enum": [
-        "auto",
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
         "table",
-        "bar",
-        "histogram",
-        "line",
-        "scatter",
-        "box",
-        "pie"
-      ]
+        "message"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "action": {
+          "const": "clarify"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
     },
-    "message": {
-      "type": "string",
-      "maxLength": 400
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "message"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "action": {
+          "const": "refuse"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
     }
-  }
+  ]
 }

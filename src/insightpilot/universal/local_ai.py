@@ -20,8 +20,9 @@ MAX_RESPONSE=262_144
 
 
 class LocalAIError(ValueError):
-    def __init__(self,code,message):
+    def __init__(self,code,message,*,repair_feedback=None):
         self.code=code
+        self.repair_feedback=repair_feedback
         super().__init__(message)
 
 
@@ -131,7 +132,9 @@ class OllamaClient:
         if not isinstance(message,dict) or message.get('tool_calls') or not isinstance(message.get('content'),str):
             raise LocalAIError('invalid_output','The model returned tools or an invalid message; no analysis was executed.')
         try:plan=decode_plan(message['content'])
-        except PlanError as exc:raise LocalAIError('invalid_output',str(exc)) from exc
+        except PlanError as exc:
+            feedback='Missing required property: operation for action analyze. Return a complete plan with a supported operation; preserve the original question and context.' if exc.reason=='missing_operation' else None
+            raise LocalAIError('invalid_output',str(exc),repair_feedback=feedback) from exc
         stats={}
         for key in ('load_duration','total_duration','eval_duration','prompt_eval_count','eval_count'):
             v=response.get(key)

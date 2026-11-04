@@ -80,17 +80,35 @@ def recommendations(profile):
 def plotted_data(figure):
     """Export exactly the displayed trace values, including precomputed box summaries."""
     rows=[]
-    def values(value): return [] if value is None else list(value)
+    def values(value):
+        if value is None:return []
+        if isinstance(value,dict):
+            # Plotly 6 serializes numeric arrays as typed base64 data. Python
+            # Figure(JSON) leaves this encoding intact; iterating its keys would
+            # export "dtype"/"bdata" instead of the actual plotted numbers.
+            import base64
+            import numpy as np
+            if set(value)-{'dtype','bdata','shape'} or value.get('dtype') not in ('i1','u1','i2','u2','i4','u4','f4','f8'):
+                raise ValueError('Unsupported plotted numeric encoding.')
+            encoded=value.get('bdata')
+            if not isinstance(encoded,str) or len(encoded)>8*1024*1024:raise ValueError('Plotted numeric array exceeds its export limit.')
+            array=np.frombuffer(base64.b64decode(encoded,validate=True),dtype=value['dtype'])
+            if 'shape' in value:
+                shape=tuple(int(n.strip()) for n in value['shape'].split(','))
+                if not shape or len(shape)>3 or any(n<0 for n in shape):raise ValueError('Invalid plotted numeric shape.')
+                array=array.reshape(shape)
+            return array.tolist()
+        return list(value)
     for number,trace in enumerate(figure.data):
         name=trace.name or f'Series {number+1}'
         x,y=values(getattr(trace,'x',None)),values(getattr(trace,'y',None))
         if trace.type=='heatmap':
-            for i,row in enumerate(trace.z):
+            for i,row in enumerate(values(trace.z)):
                 for j,value in enumerate(row): rows.append({'series':name,'x':x[j] if j<len(x) else j,'y':y[i] if i<len(y) else i,'value':value})
         elif trace.type=='box' and trace.q1 is not None:
-            for i,q1 in enumerate(trace.q1):
-                rows.append({'series':name,'group':x[i] if i<len(x) else i,'q1':q1,'median':trace.median[i],
-                             'q3':trace.q3[i],'lower_whisker':trace.lowerfence[i],'upper_whisker':trace.upperfence[i]})
+            for i,q1 in enumerate(values(trace.q1)):
+                rows.append({'series':name,'group':x[i] if i<len(x) else i,'q1':q1,'median':values(trace.median)[i],
+                             'q3':values(trace.q3)[i],'lower_whisker':values(trace.lowerfence)[i],'upper_whisker':values(trace.upperfence)[i]})
         else:
             for i in range(max(len(x),len(y))):
                 rows.append({'series':name,'x':x[i] if i<len(x) else None,'y':y[i] if i<len(y) else None})

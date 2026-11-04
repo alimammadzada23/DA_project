@@ -24,10 +24,9 @@ MEASURE={'type':'object','additionalProperties':False,'required':['aggregation']
     'properties':{'aggregation':{'enum':['records','count','distinct','sum','avg','median','min','max','quantile','saved','share','rate']},
         'column':{'type':'string','minLength':1,'maxLength':256},'metric':{'type':'string','maxLength':100},
         'quantile':{'type':'number','minimum':0,'maximum':1},'numerator':CONDITION,'denominator':DENOMINATOR}}
-PLAN_SCHEMA={'$schema':'https://json-schema.org/draft/2020-12/schema','type':'object','additionalProperties':False,
-    'required':['version','action','table'], 'properties':{
+ANALYSIS_PROPERTIES={
         'version':{'const':1},'action':{'enum':['analyze','clarify','refuse']},'table':{'type':'string','maxLength':63},
-        'operation':{'enum':['aggregate','schema','missing','summary','distribution','group_distribution','scatter','trend','compare_periods','outliers']},
+        'operation':{'enum':['aggregate','records','schema','missing','summary','distribution','group_distribution','scatter','trend','compare_periods','outliers']},
         'group_by':{'type':'array','items':{'type':'string','maxLength':256},'maxItems':2,'uniqueItems':True},
         'measures':{'type':'array','items':MEASURE,'maxItems':4},
         'filters':{'type':'array','items':CONDITION,'maxItems':8},
@@ -37,14 +36,28 @@ PLAN_SCHEMA={'$schema':'https://json-schema.org/draft/2020-12/schema','type':'ob
         'date_basis':{'type':['string','null'],'maxLength':256},'grain':{'enum':['day','week','month','quarter','year']},
         'periods':{'type':'array','items':{'type':'string','format':'date'},'minItems':4,'maxItems':4},
         'relationship':{'type':['string','null'],'maxLength':200},'inherit':{'type':'boolean'},
-        'chart':{'enum':['auto','table','bar','histogram','line','scatter','box','pie']},
-        'message':{'type':'string','maxLength':400}}}
+        'chart':{'enum':['auto','table','bar','histogram','line','scatter','box','pie']}}
+# Use disjoint, complete object variants. Ollama's grammar receives the same
+# contract as the runtime validator; no optional-operation analysis branch.
+ANALYSIS_SCHEMA={'type':'object','additionalProperties':False,
+    'required':['version','action','table','operation'],
+    'properties':ANALYSIS_PROPERTIES|{'action':{'const':'analyze'}}}
+PLAN_SCHEMA={'$schema':'https://json-schema.org/draft/2020-12/schema','oneOf':[
+    ANALYSIS_SCHEMA,
+    *[{'type':'object','additionalProperties':False,'required':['version','action','table','message'],
+       'properties':{k:v for k,v in ANALYSIS_PROPERTIES.items() if k in ('version','table')}|
+       {'action':{'const':action},'message':{'type':'string','minLength':1,'maxLength':400}}}
+      for action in ('clarify','refuse')]]}
 VALIDATOR=Draft202012Validator(PLAN_SCHEMA)
+INCOMPLETE_VALIDATOR=Draft202012Validator(ANALYSIS_SCHEMA|{'required':['version','action','table']})
 
 
 class PlanError(ValueError):
     """Invalid or unauthorized model data; never an executable program."""
     code='invalid_plan'
+
+    def __init__(self,message,*,reason=None):
+        super().__init__(message);self.reason=reason
 
 
 class ClarificationRequired(ValueError):
@@ -90,6 +103,8 @@ def validate_structure(value):
         error=next(VALIDATOR.iter_errors(value),None)
     except (TypeError,RecursionError) as exc:raise PlanError('The plan contains invalid data types or excessive nesting.') from exc
     if error:
+        if isinstance(value,dict) and value.get('action')=='analyze' and 'operation' not in value and INCOMPLETE_VALIDATOR.is_valid(value):
+            raise PlanError('An analysis plan must include a supported operation. No calculation was run.',reason='missing_operation')
         location='.'.join(map(str,error.absolute_path)) or 'plan'
         raise PlanError('Invalid structured plan at '+location+'. Unknown keys, types or operations are not accepted.')
 
@@ -165,7 +180,7 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     if 'periods' in data and op!='compare_periods':raise PlanError('Period windows are only valid for period comparisons.')
     if data['relationship'] and op!='aggregate':raise PlanError('Related dimensions are available for grouped aggregate analysis only.')
     if op in ('aggregate','trend','compare_periods') and not measures:
-        data['measures']=[{'aggregation':'saved','metric':selected_metric.name}];measures=data['measures']
+        raise PlanError('An aggregate or time plan must name its measures explicitly; no different calculation was substituted.')
     approval=False
     saved={m.name:m for m in load_metrics(engine.workspace,engine.table)}|{selected_metric.name:selected_metric,'Records':Metric('Records')}
     for m in measures:
@@ -217,6 +232,7 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     if data['chart']=='histogram' and op!='distribution':raise PlanError('A histogram requires calculated numeric bins.')
     if data['chart']=='scatter' and op!='scatter':raise PlanError('A scatter plot requires a paired numeric calculation.')
     if data['chart']=='box' and op!='group_distribution':raise PlanError('A box plot requires calculated group quantiles.')
+    if op=='records' and data['chart'] not in ('auto','table'):raise PlanError('Source records use a table; request a separate aggregate for a chart.')
     if data['chart']=='pie' and (op!='aggregate' or len(groups)!=1 or len(measures)!=1 or measures[0]['aggregation'] not in ('records','share') or data['limit']>6):
         raise PlanError('Composition charts need one count/share, one group and at most six categories.')
     data['inherit']=False  # Canonical plans can be independently revalidated/replayed.

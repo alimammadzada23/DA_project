@@ -1,6 +1,6 @@
 """Bounded, per-browser analytical conversation. No automatic disk persistence."""
 from copy import deepcopy
-from dataclasses import asdict,dataclass,field
+from dataclasses import asdict,dataclass,field,replace
 import hashlib
 import json
 import time
@@ -74,12 +74,12 @@ def validate_stored_plan(data):
 
 
 def analyze_question(engine,profile,metric,question,conversation,*,mode='standard',config=None,client=None,field_scope=None):
-    config=config or LocalConfig();mode_key=mode+(':'+_digest(asdict(config)) if mode=='local' else '')
+    config=config or getattr(client,'config',None) or LocalConfig();mode_key=mode+(':'+_digest(asdict(config)) if mode=='local' else '')
     conversation.bind(engine,metric,mode_key)
     if conversation.entries and conversation.entries[-1]['question']==question and conversation.entries[-1]['response']['status']=='ok':
         response=deepcopy(conversation.entries[-1]['response']);response['cache_hit']=True
         return response
-    started=time.perf_counter();backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False}
+    started=time.perf_counter();backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False,'model_attempts':0,'repair_attempted':False}
     try:
         assert_current(engine)
         guarded=guard_question(question,engine.table)
@@ -90,8 +90,23 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
                 effective='Previous clarification: '+json.dumps(conversation.clarification,ensure_ascii=False)+'\nUser reply: '+question
                 if len(effective)>2000:raise ClarificationRequired('Restate the complete question in fewer than 2,000 characters.')
             messages=planning_messages(engine,profile,metric,effective,conversation.last_plan,field_scope=field_scope)
-            raw,backend=(client or OllamaClient(config)).plan(messages)
-            backend['model_request_completed']=True
+            planner=client or OllamaClient(config)
+            backend.update(backend='Ollama local REST',model=config.model,model_attempts=1)
+            try:
+                raw,metadata=planner.plan(messages)
+            except LocalAIError as exc:
+                if not exc.repair_feedback:raise
+                assert_current(engine)
+                if context_signature(engine,metric)!=conversation.signature:raise PlanError('The analytical context changed before repair. Ask again in the new context.')
+                remaining=config.timeout_seconds-(time.perf_counter()-started)
+                if remaining<5:raise LocalAIError('timeout','No planning time remains for a repair. Ask again explicitly; no calculation ran.') from exc
+                backend.update(model_attempts=2,repair_attempted=True)
+                if isinstance(planner,OllamaClient):planner=OllamaClient(replace(config,timeout_seconds=remaining),transport=planner.transport)
+                repair_messages=messages+[{'role':'user','content':'Validation feedback: '+exc.repair_feedback}]
+                try:raw,metadata=planner.plan(repair_messages)
+                except (LocalAIError,PlanError) as repaired:
+                    raise LocalAIError(getattr(repaired,'code','invalid_output'),'The local model could not produce a valid plan after one repair attempt. No calculation ran. '+str(repaired)) from repaired
+            backend.update(metadata);backend['model_request_completed']=True
         elif mode=='standard':
             effective=question
             if conversation.clarification and len(question.split())<12:effective=conversation.clarification['question']+' '+question
@@ -103,7 +118,8 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
         cohort=()
         if validated.inherited and conversation.last_response:
             old=conversation.last_response
-            if validated.data.get('operation')=='aggregate' and validated.data.get('group_by')==old['plan'].get('group_by') and validated.data.get('measures')!=old['plan'].get('measures'):
+            changed=any(validated.data.get(k)!=old['plan'].get(k) for k in ('measures','sort_by','descending','chart'))
+            if validated.data.get('operation')=='aggregate' and validated.data.get('group_by')==old['plan'].get('group_by') and (changed or old.get('applied_cohort')):
                 cohort=old.get('cohort',())
         response=execute_plan(engine,profile,validated,metric,cohort=cohort)
         response.update(backend=backend,cache_hit=False,elapsed_seconds=round(time.perf_counter()-started,4),context_signature=conversation.signature,applied_cohort=list(cohort))

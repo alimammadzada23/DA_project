@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-04T23:54:47.800944+01:00",
+  "scanner": "Gitleaks 8.24.3, default rules, redacted reports in ignored outputs/reliability-security",
+  "intended_snapshot_leaks": 0,
+  "base_history_leaks": 0,
+  "base_history_commits": 14,
+  "known_credential_pattern_matches": 0,
+  "raw_or_private_dataset_paths_in_intended_files": 0,
+  "csv_fixtures": "Only the three existing explicitly SYNTHETIC CSV fixtures; byte-identical to b8d562e. New fixture sources stay under ignored outputs/ or pytest temporary directories.",
+  "new_tracked_evidence": "Public/synthetic validation receipts and unmodified synthetic browser screenshots only.",
+  "final_gate": "Exact staged snapshot rescanned before local commit. No push, merge or deployment authorized.",
+  "limits": "Scanner results plus path/provenance review; not a proof about every possible secret."
+}

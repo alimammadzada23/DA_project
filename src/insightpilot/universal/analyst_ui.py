@@ -80,6 +80,7 @@ def render_result(response,entry_id,workspace,*,question=None):
     if backend.get('model'):st.caption('Model proposed the plan. Every number and chart below comes from executed local calculations.')
     else:st.caption('Deterministic guided analyst; no model or tokens used')
     if response.get('cache_hit'):st.caption('Reused the existing verified result in the unchanged context; no repeated inference.')
+    if backend.get('repair_attempted'):st.caption('One incomplete model plan was corrected and fully revalidated before calculation.')
     primary=response['primary']
     st.caption(primary['table']+' · version '+primary['version'][-10:]+' · source '+primary['source_sha256'][:12])
     st.caption('Applied filters: '+json.dumps(primary['filters'],default=str,ensure_ascii=False)+' · date basis: '+str(primary['context']['date_basis']))
@@ -145,11 +146,12 @@ def render(engine,profile,metric,scope):
     if conversation.bind(engine,metric,mode_key):st.info('The data or analytical context changed. Started a new conversation; previous results are not reused.')
     if st.button('Start new conversation'):
         conversation.clear();st.session_state.pop('analyst-current-response',None);st.session_state['analyst-question']='';st.rerun()
+    st.session_state.setdefault('analyst-question','Summarize the selected metric')
     with st.expander('Suggested questions'):
         for index,question in enumerate(examples(engine,profile)):
             if st.button(question,key='ai-example-'+str(index)):
                 st.session_state['analyst-question']=question
-    question=st.text_input('Your analytical question','Summarize the selected metric',key='analyst-question',placeholder='Ask a question or follow up on the last validated analysis')
+    question=st.text_input('Your analytical question',key='analyst-question',placeholder='Ask a question or follow up on the last validated analysis')
     st.caption('Shared grouping: '+str(engine.context.comparison)+' · date basis: '+str(engine.context.date_basis)+' · sidebar metric: '+metric.name+'. Explicit question-specific measures are labeled separately.')
     if st.button('Calculate evidence-backed answer',type='primary',disabled=mode=='Local AI Analyst' and not available):
         if external:

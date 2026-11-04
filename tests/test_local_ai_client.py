@@ -20,7 +20,7 @@ def transport_for(response=None,*,tags=None,show=None,fail=None,calls=None):
         if request.url.path=='/api/show':return httpx.Response(200,json=show if show is not None else {'capabilities':['completion','thinking'],'details':{'family':'test-double','quantization_level':'TEST'}})
         assert request.url.path=='/api/chat'
         payload=json.loads(request.content)
-        assert payload['stream'] is False and payload['format']['additionalProperties'] is False
+        assert payload['stream'] is False and all(v['additionalProperties'] is False for v in payload['format']['oneOf'])
         assert payload['options']['num_ctx']<=8192 and payload['options']['num_predict']<=1536
         return response(request) if callable(response) else httpx.Response(200,json=response if response is not None else {'model':MODEL,'message':{'role':'assistant','content':json.dumps(PLAN)},'done':True,'done_reason':'stop','load_duration':100,'eval_count':20})
     return httpx.MockTransport(handler)

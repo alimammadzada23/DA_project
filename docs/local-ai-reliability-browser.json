@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "platform": "Real Linux Streamlit processes and Chromium; native Finder not executed",
+  "model": "Explicit HTTP test double; no actual Qwen/model weights",
+  "run_directory": "outputs/reliability-browser/20261104T223912-bfa76e",
+  "events": [
+    {
+      "repaired_original_top_five": true,
+      "exact_counts": [
+        13,
+        11,
+        9,
+        8,
+        7
+      ],
+      "chart_download_numeric_values_verified": true,
+      "duplicate_inference_prevented": true,
+      "followup_top_three": true
+    },
+    {
+      "occupied_port_preserved": true,
+      "second_launch_reuses_same_server": true,
+      "bound_address": "127.0.0.1"
+    },
+    {
+      "clean_stop_and_restart": true,
+      "datasets_roles_name_and_saved_analysis_preserved": true,
+      "saved_chart_replay_without_model": true,
+      "offline_standard_correct": 70
+    }
+  ],
+  "javascript_errors": [],
+  "question_widget_duplication_warning": false
+}

@@ -1,0 +1,10 @@
+{
+  "base_commit": "b8d562ee7b1517ec98e34971f72e3244db7b0150",
+  "schema_sha256": "b61520223a7bb56e209de72947d70c65bda72e5c27c8aa4d56896542c9c05058",
+  "system_prompt_sha256": "480fb3fc8644448c47ce49fbddd4ce18b6e8c0d740b1627e62fd715c0ebccdd2",
+  "action_contract": "Disjoint complete object variants. Analyze requires operation; clarify/refuse require message and prohibit executable arguments. All variants prohibit extra properties.",
+  "repair": "One extra request for a structurally otherwise valid missing-operation response only; same local model, minimum constant feedback, remaining time budget, full semantic validation.",
+  "persistence": "Stored canonical plans already contain operation; no workspace migration or schema rewrite.",
+  "actual_qwen_executed": false,
+  "native_macos_executed": false
+}

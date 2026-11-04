@@ -36,7 +36,7 @@ def mock_model(monkeypatch,calls):
     monkeypatch.setattr('insightpilot.universal.analyst_ui.OllamaClient.inspect_model',lambda self:{'status':'available','name':'test-double:latest'})
     def propose(self,messages):
         q=json.loads(messages[-1]['content'])['question'];calls.append(q)
-        root={'version':1,'action':'analyze','table':'facts'}
+        root={'version':1,'action':'analyze','table':'facts','operation':'aggregate'}
         if q.startswith('Now'):p=root|{'inherit':True,'limit':2}
         elif 'average' in q:p=root|{'inherit':True,'measures':[{'aggregation':'avg','column':'value'}]}
         else:p=root|{'operation':'aggregate','group_by':['group'],'measures':[{'aggregation':'records'}],'sort_by':'records'}

@@ -1,0 +1,13 @@
+{
+  "model": "qwen3.5:4b",
+  "endpoint": "http://127.0.0.1:11434",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "actual_model_test": true,
+  "data": "Isolated SYNTHETIC fixture; existing user workspaces are never selected or changed.",
+  "status": "model_unavailable",
+  "results": [],
+  "cases_run": 0,
+  "reason": "Ollama is not reachable. It may not be installed or running. Start the Ollama app on this computer, then refresh; Standard analysis works without it.",
+  "actual_model_executed": false,
+  "actual_model_quality_measured": false
+}

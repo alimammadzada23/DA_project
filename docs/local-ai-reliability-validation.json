@@ -1,0 +1,50 @@
+{
+  "at": "2026-11-04T23:48:06.311641+01:00",
+  "base_commit": "b8d562ee7b1517ec98e34971f72e3244db7b0150",
+  "branch": "codex/insightpilot-local-ai",
+  "baseline": {
+    "passed": 416,
+    "failed": 0,
+    "seconds": 110.93
+  },
+  "final": {
+    "tests": 448,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 448,
+    "seconds": 115.09
+  },
+  "final_junit": "outputs/reliability-final.xml",
+  "old_missing_operation_error_reproduced": true,
+  "old_widget_warning_pattern_reproduced": true,
+  "mock_acceptance_cases": {
+    "passed": 16,
+    "total": 16,
+    "actual_qwen": false
+  },
+  "existing_benchmarks": {
+    "standard_passed": 48,
+    "standard_total": 51,
+    "remaining_standard_failures": [
+      "s18",
+      "s19",
+      "s22"
+    ],
+    "mock_integration_passed": 51,
+    "mock_integration_total": 51,
+    "all_expected_results_unchanged": true,
+    "expected_tables_sha256": "a71bcefb84f24aea3d6d951d3af68265af02e99b2c7263d908b1369e3c05b1b7"
+  },
+  "real_browser": "passed; see local-ai-reliability-browser.json",
+  "actual_qwen_executed": false,
+  "native_macos_executed": false,
+  "native_macos_test_scope": "Bash syntax/quoting and portable process/server workflows on Linux; Finder, open and launchctl interactions mocked.",
+  "publication": "Local commit only; no new push, merge, or deployment authorized.",
+  "last_focused_check": {
+    "passed": 32,
+    "failed": 0,
+    "seconds": 12.91,
+    "scope": "Acceptance-report stage fields and portable launcher checks after the full suite; no engine or planner changes."
+  }
+}

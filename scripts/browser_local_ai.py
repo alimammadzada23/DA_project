@@ -56,8 +56,9 @@ def select(page,label,value):
 
 
 @contextmanager
-def mock_ollama():
-    plans={c['question']:c['oracle_plan'] for c in catalog()};state={'requests':[],'bad_next':False}
+def mock_ollama(overrides=None):
+    plans={c['question']:c['oracle_plan'] for c in catalog()};plans.update(overrides or {})
+    state={'requests':[],'bad_next':False,'missing_operation_next':False}
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
         def send(self,body,code=200):
@@ -69,9 +70,12 @@ def mock_ollama():
             body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))))
             if self.path=='/api/show':self.send({'capabilities':['completion'],'details':{'family':'TEST DOUBLE — NO QWEN EXECUTION'}});return
             assert self.path=='/api/chat'
-            request=json.loads(body['messages'][-1]['content']);state['requests'].append(request)
+            request=json.loads(body['messages'][1]['content']);state['requests'].append(request)
             if state['bad_next']:content='not JSON';state['bad_next']=False
-            else:content=json.dumps(plans.get(request['question'],{'version':1,'action':'clarify','table':'facts','message':'This explicit test double has no fixture for that question.'}))
+            else:
+                plan=dict(plans.get(request['question'],{'version':1,'action':'clarify','table':'facts','message':'This explicit test double has no fixture for that question.'}))
+                if state['missing_operation_next']:plan.pop('operation',None);state['missing_operation_next']=False
+                content=json.dumps(plan)
             self.send({'model':MODEL,'done':True,'message':{'role':'assistant','content':content}})
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     stopped=False

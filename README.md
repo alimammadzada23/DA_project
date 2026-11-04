@@ -10,7 +10,8 @@ complaint and mapped-upload front doors are retired. Existing databases, sources
 reports and backend/CLI compatibility remain intact.
 
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
-[Mac local AI setup](docs/LOCAL_AI_MAC_GUIDE.md) ·
+[Mac launcher and updates](docs/MAC_EVERYDAY_USE.md) ·
+[Reliability repair](docs/LOCAL_AI_RELIABILITY.md) ·
 [Local AI architecture](docs/LOCAL_AI_ARCHITECTURE.md) ·
 [Unified baseline acceptance](docs/UNIFIED_ACCEPTANCE.md) ·
 [Migration inventory](docs/UNIFICATION_MIGRATION.md) ·
@@ -20,39 +21,33 @@ reports and backend/CLI compatibility remain intact.
 
 ## Run on your Mac
 
-The local AI upgrade is on **`codex/insightpilot-local-ai`**, based on the published
-unified baseline `e3874ee`. **This new branch has not been pushed.** Transfer its
-source archive or Git bundle; fetching the baseline alone does not install this
-upgrade. These commands use ordinary Mac paths:
+Keep your existing **`~/DA_project`** clone. The published local AI baseline is
+`b8d562e` on **`codex/insightpilot-local-ai`**. The reliability repair and permanent
+launcher in this revision are local until a new push is explicitly authorized.
+After publication, update that clone; no new ZIP or clone is needed.
 
 ```bash
-# If you do not already have a clone:
-git clone https://github.com/alimammadzada23/DA_project.git
-cd DA_project
-
-# Otherwise cd into your existing DA_project checkout first.
+cd ~/DA_project
 git status --short
-# Preserve any local edits before changing branches; do not reset or clean data.
-git bundle verify ~/Downloads/insightpilot-local-ai.bundle
-git fetch ~/Downloads/insightpilot-local-ai.bundle codex/insightpilot-local-ai:codex/insightpilot-local-ai
-git switch codex/insightpilot-local-ai
-
-# Install uv first if needed: https://docs.astral.sh/uv/getting-started/installation/
-uv python install 3.12
-uv sync --locked --extra test
-uv run streamlit run app.py --server.address 127.0.0.1
+git branch --show-current
+# Confirm codex/insightpilot-local-ai and preserve any edits before pulling.
+git pull --ff-only origin codex/insightpilot-local-ai
 ```
 
-Open **http://localhost:8501** in your Mac browser. No shared cloud desktop is
-required. Native macOS acceptance has not been executed in this Linux environment.
+For everyday use, double-click **Start InsightPilot.command** in Finder. It reuses
+the existing `.venv`, waits for the local server and opens its correct browser URL.
+Control-C in its Terminal stops only that server. No Git/package/model downloads
+occur during ordinary startup. Your existing datasets and saved analyses persist.
+See [start tomorrow / safe updates](docs/MAC_EVERYDAY_USE.md).
 
-For optional local inference, install Ollama yourself and explicitly run
-`ollama pull qwen3.5:4b`. Follow the [Mac guide](docs/LOCAL_AI_MAC_GUIDE.md),
-including disabling Ollama cloud features. Then choose **AI Analyst → Local AI
+If Ollama and `qwen3.5:4b` are already installed, reuse them. The launcher can open
+the installed Mac app when offline and does not pull models. Choose **AI Analyst → Local AI
 Analyst** and refresh installed models. Default endpoint is loopback
 `http://127.0.0.1:11434`; no paid provider is required. Standard analysis, SQL Lab
 and all other pages work without Ollama. Actual Qwen quality and Apple Silicon
 performance remain unverified here; mocked integration is reported separately.
+Double-click **Check Local AI.command** for the actual-model acceptance procedure
+with independent DuckDB references and no personal-data changes.
 
 ## First minute
 

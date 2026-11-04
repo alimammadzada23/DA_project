@@ -1,5 +1,11 @@
 # Local AI Analyst architecture
 
+**Current repair:** [LOCAL_AI_RELIABILITY.md](LOCAL_AI_RELIABILITY.md) documents
+the strict action variants, one bounded missing-operation repair, source-record
+operation, follow-up ordering and permanent launcher. Descriptions below of the
+original no-retry planner are historical for the initial integration; network
+failures and invalid/unsafe requests still do not retry automatically.
+
 This upgrade starts at `e3874eeef01275700852bef683eb06ccae056a74` on
 `codex/unified-insightpilot`; implementation is on `codex/insightpilot-local-ai`.
 The existing Streamlit application, workspace catalog, Engine, Metric compiler,

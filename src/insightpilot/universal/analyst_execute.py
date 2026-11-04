@@ -149,6 +149,10 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         if op=='trend':primary['method']['time_grain']=data['grain']
         if primary['truncated']:extra.append('More groups/periods exist than are displayed. Top-N output is not the complete population; no Other group is invented.')
         if any(m['aggregation']=='share' for m in data['measures']):extra.append('Shares use the entire selected row denominator before top-N; displayed shares are not renormalized to 100%.')
+    elif op=='records':
+        columns=['_row_id',*(fields or scoped.info['columns'])]
+        primary=lab.execute('SELECT '+','.join(quote(c) for c in columns)+' FROM '+quote(scoped.table)+' ORDER BY _row_id',size=data['limit'])
+        extra.append('Displays bounded source records in original row order, not a random sample or a grouped calculation. More rows may exist than are displayed.')
     elif op in ('schema','missing'):
         columns=fields or scoped.info['columns'];parts=[]
         for i,column in enumerate(columns):parts.append(f"count(*) FILTER (WHERE {quote(column)} IS NULL OR trim(CAST({quote(column)} AS VARCHAR))='') AS {quote('missing_'+str(i))}")
