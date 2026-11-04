@@ -1,97 +1,180 @@
-# InsightPilot — AI Business Intelligence
+# InsightPilot — Evidence-led Data Intelligence
 
-A Business Analyst / Data Analyst portfolio application with independent procurement, customer-complaint and mapped-upload workspaces. The sponsor scenarios are hypothetical; no real engagement, stakeholder sign-off, implemented saving or causal finding is claimed. Existing procurement ingestion, DuckDB queries, dashboards, guided analyst and Power BI artifacts are preserved.
+A local-first **Streamlit, DuckDB and Plotly** analytics application. Import
+unfamiliar data, inspect its quality, review its meaning, define explicit metrics,
+investigate differences and export reproducible evidence. Original procurement,
+CFPB and mapped-upload workspaces are preserved.
 
-**Current data status:** zero genuine CFPB records and zero genuine BPI records imported in this cloud task. CFPB website/API access is denied by the proxy (HTTP 403); the BPI source previously returned upstream HTTP 503. Test results and screenshots use clearly labeled synthetic references. Real-data findings, deployed CFPB schema/usage acceptance, Windows Power BI and live LLM acceptance remain incomplete. The product is not claimed fully interview-ready.
+**Implemented:** eight Universal Intelligence pages, multi-table imports,
+conservative profiling, reversible preparation, safe metric expressions,
+relationship validation, statistical tools, interactive exploration and
+version-bound reports. Deterministic calculations need no AI connection.
 
-[Mac installation and all workspaces](docs/multi-dataset-guide.md) · [Procurement guide](docs/dashboard-guide.md) · [Actual UI screenshots](docs/screenshots/) · [Validation evidence](docs/validation.md) · [CFPB source verification](docs/cfpb-source-verification.json)
+[Implementation and acceptance status](docs/next-generation-validation.md) ·
+[Usage guide](docs/universal-intelligence-guide.md) ·
+[Technical audit](docs/next-generation-audit.md) ·
+[Measured benchmarks](docs/next-generation-benchmarks.json) ·
+[Real browser evidence](docs/next-generation-browser.json)
 
-**CFPB date fix:** ISO 8601 received/sent timestamps (including `2026-09-02T19:36:07.000Z`) now parse to UTC calendar dates. **Previously imported snapshots are not repaired automatically: reimport the original CSV.** Follow the [exact update, reimport and validation steps](docs/cfpb-date-fix.md). The reported 81,915-record genuine file is not available in this cloud task; regression verification uses labeled synthetic data.
+This is a tested working upgrade, **not a claim that every master-assignment
+item is complete**. Two authentic cross-domain cases reconcile against independent
+calculations. CFPB acquisition is blocked by HTTP 403; the reported 81,915-record
+original file is absent. Live PostgreSQL/provider acceptance, native Mac and
+Windows Power BI acceptance, and specialized capabilities remain unverified or
+deferred. The status document gives the precise boundaries.
 
-## Open the application
+![Authentic NYC flight data in the new workspace](docs/screenshots/next-generation/flights-executive.png)
 
-From your existing repository checkout, after stopping any previous server:
+This screenshot uses the public NYC-2013 package extract. Screenshots beginning
+`SYNTHETIC-` show controlled software examples, not genuine business findings.
+
+## Install and run
+
+From your existing checkout **containing these changes**, with
+[uv](https://docs.astral.sh/uv/) installed:
 
 ```sh
-git switch feature/insightpilot
-git pull --ff-only
 uv python install 3.12
 uv sync --frozen --extra test --python 3.12
 uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
 ```
 
-Run these on your Mac to open its local browser. The cloud task has no supported public-preview endpoint. Fresh launches show a dataset selector. Choose **Procurement Intelligence → Data & import → Explore synthetic portfolio demo** for the 1,200-item seeded demonstration, or import an original XES/XES.gz. The original four-item fixture remains available. API keys and Power BI are optional.
+Choose **Universal Intelligence → Data Hub**. Import files, inspect **Data
+Quality**, approve roles, then define a metric in **Executive Intelligence**.
+Supply its meaning, units and limitations. The explicit **Records** metric also
+works immediately. Explore, investigate, inspect the underlying rows and report.
 
-## Independent dataset workspaces
+Changes are local to the development branch; no push or deployment is automatic.
+Do not assume an older remote `feature/insightpilot` checkout has this upgrade.
+The [historical README](docs/pre-upgrade-readme.md) preserves earlier workspace
+documentation; the commands above supersede its branch-update advice.
 
-| Workspace | Supported analysis | Source treatment |
-|---|---|---|
-| Procurement Intelligence | Existing four pages, case filters, process discovery, variants, waits, repeated activities, SQL and AI | Original BPI import is unverified until obtained; demonstrations visibly synthetic |
-| Customer Experience & Risk Intelligence | Reported volumes, product donut, company comparison/stacks, daily trends, concentration heatmap, equal-period issue changes, response coverage, paginated drill-down and guided SQL | Official HTTPS period connector records raw bytes, schema, hash, download receipt and quality; uploaded exports remain user supplied |
-| Analyze My Dataset | CSV, .xlsx, Parquet; schema/quality review, sample rows and approved mapping; compatible transactional, complaint or process profiles; revenue only after explicit confirmation | Isolated local snapshots; missing/invalid values disclosed; private records stay local unless live-AI transmission is authorized |
+Mac use is intended but the recorded execution evidence is Linux. No API key is
+required for local analysis. Stop with Control-C. Data, databases, environments
+and generated outputs are Git-ignored. Use the existing checkout in an isolated
+cloud task; do not create a worktree unless explicitly requested.
 
-Each dataset owns its metadata, filters, analytical profile and history scope. Charts use SQL aggregates; record views paginate at 100 rows. Bar selection reveals matching records within the active filters. Chart PNG/HTML, current-page CSV, manifests, evidence and a complaint management summary can be exported. Raw SQL/JSON and Power BI preparation remain in expandable evidence/Developer Tools.
+## Eight analytical workspaces
 
-## Obtain and analyze official CFPB records
+| Workspace | Implemented workflow |
+|---|---|
+| Data Hub | CSV, TSV, XLSX, flat Parquet, JSON/JSON Lines; multiple tables; read-only SQLite/DuckDB extracts; configured page-number APIs; optional PostgreSQL |
+| Data Quality | Complete searchable catalog, full-data summaries, quality/duplicates, semantic uncertainty, reviewed roles, immutable preparation versions and error ledgers |
+| Executive Intelligence | Explicit KPIs, calendar trends, group comparisons, evidence-backed concentration/missingness/equal-window change findings |
+| Visual Explorer | Ranked bars, numeric histograms, scatterplots, calendar trends, group box summaries, complete bounded heatmaps and paginated records |
+| Advanced Analytics | Mean intervals, Welch/effect sizes, Pearson/OLS, categorical/Fisher association, rolling time analysis, gated baseline forecasts, IQR/MAD screens, RFM, cohorts, funnels, text frequencies and exploratory clustering |
+| Investigation Lab | Equal-period additive contributions, exact rate/mix decomposition, safe fact-to-dimension metrics and record drill-through |
+| AI Business Analyst | Local guided questions; optional schema-only model planning over a finite validated vocabulary; numerical answers calculated locally |
+| Reports and Exports | Standalone HTML, PNG/chart HTML, plotted CSV, paginated CSV/XLSX, evidence JSON, source/filter/metric manifests and retained-version replay |
 
-On your Mac or another machine with source access:
+Original Procurement Intelligence, Customer Experience & Risk Intelligence and
+Analyze My Dataset remain available, including XES ingestion, process discovery,
+complaint definitions, optional legacy consent-controlled LLM tools and Power BI
+preparation. No native Power BI rendering or PDF engine is claimed.
 
-```sh
-uv run --frozen insightpilot cfpb-download data/cfpb/2026-09-01-week --start 2026-09-01 --end 2026-09-08
-uv run --frozen insightpilot cfpb-validate data/cfpb/2026-09-01-week/complaints.csv data/cfpb/2026-09-01-week/analytics.duckdb
-uv run --frozen insightpilot cfpb-analyze data/cfpb/2026-09-01-week/analytics.duckdb outputs/cfpb-report
-uv run --frozen streamlit run app.py --server.port 8501 --server.headless false
+## Architecture
+
+```mermaid
+flowchart LR
+    F[Files / read-only sources] --> S[Versioned DuckDB workspace]
+    S --> P[Profiles and reviewed semantics]
+    P --> M[Explicit metrics and relationships]
+    M --> E[Filtered analytical engine]
+    E --> A[Statistics and investigations]
+    A --> V[Plotly charts and supporting records]
+    E --> R[Reports, evidence and replay manifests]
+    Q[Optional schema-only model plan] --> E
+    E --> U[Eight Streamlit pages]
+    L[Preserved procurement / complaint engines] --> U
 ```
 
-Choose **Customer Experience & Risk Intelligence**. The connector obtains a full date-filtered CSV, checks its actual headers, compares source rows with the exact JSON API count, and enforces the requested half-open period locally. Source boundary rows and all exclusions are disclosed. It retains source pages for usage review; the software repository’s CC0 terms are not represented as a verified dataset license. The API may change or reject large exports: choose a shorter period and inspect recorded failures. Read [source and KPI definitions](docs/complaints-case-study.md).
+Reusable calculations live in `src/insightpilot/universal/`; UI modules call the
+services. [Module map and design decisions](docs/next-generation-validation.md).
 
-If the connector is unavailable, export CSV from the [official CFPB database](https://www.consumerfinance.gov/data-research/consumer-complaints/) and use the complaint workspace’s import form. A manual export remains labeled **user uploaded**, with an unverified completeness/provenance claim. No real findings are prefilled. `cfpb-analyze` produces actual SQL evidence, independent source validation, a management summary, case study and [Power BI-ready export](powerbi/complaints/README.md) after a successful import.
+## Trust contracts
 
-## Four business pages
+- Retain source bytes/hashes and immutable versions. No automatic deduplication,
+  revenue inference or destructive cleaning. Invalid conversions retain source
+  values and row IDs; missing differs from zero.
+- Ambiguous roles remain unapproved. IDs are excluded from automatic measures.
+  Rates need explicit denominators; zero denominators are unavailable.
+- Metric formulas use a small safe aggregate grammar, never `eval` or arbitrary
+  SQL. Analytical connections disable external file/network access.
+- Joins disclose cardinality, null/duplicate/unmatched keys and row multiplication.
+  Analytical fact joins require a unique right key.
+- Shared filters and chart selections govern records and calculations. Limits,
+  top-N truncation, time gaps and incomplete periods are disclosed.
+- The new optional AI planner receives only the question, column names and metric
+  definition after consent. It cannot execute SQL/code or write numerical claims.
+  Legacy live-AI modes have separate consent and may send query results.
+- CSV/XLSX exports escape formula-like text/headers. Reports escape imported text
+  and include source hashes, definitions, filters, queries and limitations.
 
-| Page | Business question | Working capabilities |
+## Authentic cases
+
+| Case | Evidence | Status |
 |---|---|---|
-| Executive Overview | How is the recorded process performing? | KPIs, monthly volume, median/P90 trends, duration bands, flow comparisons, review signals and an executive summary |
-| Process Explorer | Where are delays, complexity and repeated activities? | Interactive flow links, variants, activity/repetition analysis, waiting distributions, PM4Py discovery and ordered item timelines |
-| Root-Cause Investigation | What factors are associated with longer spans? | Group comparisons, chart-to-case selection, contextual drill-down and ranked investigation cards with evidence/limitations |
-| AI Business Analyst | What should management investigate? | Guided SQL questions without credentials, optional restricted LLM tools, business answers/charts and expandable evidence |
-
-A shared case cohort governs every main-page result. Filters cover process type, company, vendor, spend, item-start dates, observed spans, repeats and items containing an activity. Technical SQL, DAX, JSON, source configuration and Power BI proposals are preserved under collapsed **Advanced / Developer Tools**.
-
-## Real-source workflow
-
-Authoritative entry: [official DOI](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1). The published expected totals are 76,349 purchasing documents, 251,734 items, 1,595,923 events, 42 activities and 627 resources. These are source-description expectations, not our observed findings.
-
-Follow the [download/import procedure](docs/download-and-run.md), preserve the original file/license and use its actual filename:
+| [NYC flight operations](docs/case-study-flight-operations.md) | 336,776 flights + 16 airline rows, pinned nycflights13/Rdatasets extract, upstream CC0; independent count/mean/rate/group reconciliation and a safe join | Verified package extract, not an independently acquired BTS raw extract |
+| [Environmental field measurements](docs/case-study-penguin-measurements.md) | 344 Palmer LTER penguin measurements, pinned publisher CSV, CC0 with attribution/data-use expectations; independent within-species calculations | Verified; observational limitations disclosed |
+| [CFPB complaints](docs/case-study-cfpb-pending.md) | Original connector/validator/analysis preserved; current proxy returned 403 | Blocked; no genuine findings fabricated |
 
 ```sh
-uv run insightpilot ingest data/raw/your-original-log.xes.gz data/analytics/bpi2019.duckdb
-uv run insightpilot validate-source data/raw/your-original-log.xes.gz data/analytics/bpi2019.duckdb
-uv run insightpilot quality data/analytics/bpi2019.duckdb
-uv run insightpilot analyze data/analytics/bpi2019.duckdb outputs/real-analysis
-uv run insightpilot export data/analytics/bpi2019.duckdb data/exports
+uv run --frozen python scripts/reproduce_public_cases.py --download
 ```
 
-Targets must be new files; failed imports do not replace sources. The pipeline streams XES, retains original attributes/order, rejects malformed data atomically, honors global defaults and materializes derived snapshots once. It does not load a full raw-log copy into every chart. `prepare <database>` idempotently materializes an older database's existing views without changing raw tables; reimport to apply changed normalization/model semantics.
+Pinned checksums are verified; existing source bytes are not replaced. New local
+workspaces, standalone reports and evidence are created per run. Set
+`INSIGHTPILOT_UNIVERSAL_WORKSPACE` to a printed workspace path before launching
+Streamlit to open a case. Source bytes are not committed or publicly deployed.
 
-## Reliability and limitations
-
-- Items, documents and events remain distinct grains. Dates select full items by first recorded UTC timestamp, retaining complete histories.
-- Observed spans are not completed-case cycle time; legitimate multiple receipts/invoices may create repetitions. Matching-flow review signals are not verified noncompliance.
-- Source-byte reconciliation independently checks ten metrics. Automated fixtures/reference questions and browser tests support the software; original-log and native Mac acceptance remain outstanding.
-- The SQL tool uses a read-only connection, external-access restrictions, statement/table scope checks, row limits and timeout. No LLM shell or report-writing tool exists.
-- Optional live LLM credentials use secure process variables. A ChatGPT subscription does not provide API credits. Mocked provider tests are not live-provider acceptance, and arbitrary narrative claims still need evidence review.
-- The Power BI companion is preserved with official-schema/static-binding validation. Windows Desktop TMDL/refresh/DAX/rendering acceptance remains unverified; see [Power BI guide](powerbi/README.md).
+## Testing and measured performance
 
 ```sh
 uv run --frozen --extra test pytest -q
 uv run --frozen --extra test python powerbi/validate.py
+uv run --frozen python scripts/benchmark_universal.py
 ```
 
-## Evidence and interview package
+The independently established baseline is **182 passing tests**. Current counts,
+warnings, commands and source fingerprints are in the
+[validation report](docs/next-generation-validation.md). Tests include formats
+and failures, preservation, semantics, safe formulas, reference statistics,
+denominators, joins, rate/mix identities, forecast gates, injection attempts, API
+pagination, UI navigation, filters, exports and old-version replay.
 
-[Business case / BRD / backlog / UAT](docs/business-analysis.md), [data and KPI dictionary](docs/data-and-methods.md), [source verification](docs/official-source-verification.json), [portfolio and interview questions](docs/portfolio.md), [live AI acceptance protocol](docs/ai-acceptance.md).
+Optional browser tooling:
 
-The business story is **Question → Dataset → Investigation → Observations → Recommendations → Validation**. Observations and recommendations must be supported by executed results and disclose source scope; the synthetic UI demo is not an original-company case study.
+```sh
+uv sync --frozen --extra test --extra browser
+# Start Streamlit with the verified flights workspace, then separately:
+uv run --frozen --extra browser python scripts/browser_universal.py
+```
 
-Use this existing checkout in the isolated cloud task. Do not create a worktree unless explicitly requested. Raw data, databases, credentials, virtual environments and analysis exports are ignored by Git.
+The browser script uses the validated Linux `/usr/bin/chromium` executable;
+adjust it for another machine. It checks rendered values, record scope,
+downloads, multiple-file uploads and a 768px layout. Native Mac, Power BI Desktop
+and live-provider acceptance are not implied.
+
+Benchmarks cover 10k, 100k and 1m synthetic rows in independent fresh processes,
+two DuckDB threads and a 768MB DuckDB memory setting. Arithmetic is reconciled to
+a generated reference. [Results](docs/next-generation-benchmarks.json) record
+actual import/profile/query/overview times, RSS, platform and methodology, not
+unlimited-scale or native Mac guarantees.
+
+## Limits and remaining work
+
+Native imports cap at 512 MiB, 5m rows and 150 fields; measured scale is 1m rows,
+not every possible input at the limits. Excel retains its 100 MiB/500k-row reader.
+Immutable versions consume disk. Numeric analytics use finite double precision,
+not ledger-grade decimal arithmetic. Statistical independence, observation
+completeness and business definitions still require review.
+
+HTTP pagination is a configurable page-number contract, not every API scheme.
+PostgreSQL needs the optional extra and a configured read-only source. Bounded
+text/sequence/clustering analyses disclose their selection. Forecast error bands
+are empirical, not calibrated guarantees. Maps/geocoding, embeddings/sentiment,
+composite keys, arbitrary many-to-many metrics, full conversational AI, native
+PDF generation and Power BI Desktop rendering are not claimed implemented.
+
+See [acceptance status and next priorities](docs/next-generation-validation.md)
+and the [factual CV/interview notes](docs/next-generation-portfolio.md).

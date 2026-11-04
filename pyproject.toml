@@ -7,10 +7,28 @@ name = "insightpilot"
 version = "0.1.0"
 description = "Evidence-led multi-dataset business intelligence"
 requires-python = ">=3.11"
-dependencies = ["duckdb>=1.4,<2", "defusedxml>=0.7,<1", "pandas>=2.2,<4", "streamlit>=1.45,<2", "pm4py>=2.7,<3", "httpx>=0.28,<1", "plotly>=6,<7", "openpyxl>=3.1,<4", "pyarrow>=18,<24"]
+dependencies = [
+    "duckdb>=1.4,<2",
+    "defusedxml>=0.7,<1",
+    "pandas>=2.2,<4",
+    "streamlit>=1.45,<2",
+    "pm4py>=2.7,<3",
+    "httpx>=0.28,<1",
+    "plotly>=6,<7",
+    "openpyxl>=3.1,<4",
+    "pyarrow>=18,<24",
+    "numpy>=2,<3",
+    "scipy>=1.14,<2",
+]
 
 [project.optional-dependencies]
 test = ["pytest>=8,<10", "jsonschema>=4.23,<5"]
+postgres = [
+    "psycopg[binary]>=3.2,<4",
+]
+browser = [
+    "playwright>=1.50,<2",
+]
 
 [project.scripts]
 insightpilot = "insightpilot.cli:main"

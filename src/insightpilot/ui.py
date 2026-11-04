@@ -36,6 +36,7 @@ h3 {font-size:1.05rem!important;}
 [data-testid="stPlotlyChart"] {border:1px solid #243147;border-radius:14px;padding:8px;background:#111B2E;}
 [data-testid="stChatMessage"] {border:1px solid #243147;border-radius:14px;}
 .stDeployButton {display:none;}
+[data-testid="stAppDeployButton"] {display:none;}
 .brand {display:flex;align-items:center;gap:12px;margin:8px 0 22px;}
 .brand-mark {background:#61D5C5;color:#0B1020;font-size:19px;font-weight:800;padding:10px;border-radius:12px;}
 .brand-name {font-size:22px;font-weight:700;letter-spacing:-.04em;color:#E3EAF5;}

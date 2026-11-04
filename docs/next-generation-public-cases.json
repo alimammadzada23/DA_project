@@ -1,0 +1,102 @@
+{
+  "generated_at": "2026-11-04T08:54:49.063496+00:00",
+  "sources": {
+    "flights.csv": {
+      "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/nycflights13/flights.csv",
+      "sha256": "b791a2590c9167aa0bd3cb45af3f64101180878cf088c183eae4011e3a654f42",
+      "rows": 336776,
+      "license": "CC0, per upstream nycflights13 DESCRIPTION",
+      "documentation": "https://raw.githubusercontent.com/tidyverse/nycflights13/df98ef215aa8216fe0838a0b8ac5bada646d814c/DESCRIPTION",
+      "citation": "Wickham, nycflights13; source RITA/Bureau of Transportation Statistics, NYC departures in 2013. Rdatasets mirror, not an independently acquired BTS extract."
+    },
+    "airlines.csv": {
+      "url": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/nycflights13/airlines.csv",
+      "sha256": "5c9f0c947dca4a2b7e009c9dc86b96fc637e45bf39a034bffb413e84b98b08f6",
+      "rows": 16,
+      "license": "CC0, nycflights13",
+      "documentation": "https://nycflights13.tidyverse.org",
+      "citation": "nycflights13 airline metadata, retained as a related dimension table."
+    },
+    "penguins.csv": {
+      "url": "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/8957207b78d6ccd1b4654a9dd9c9041b657478ab/inst/extdata/penguins.csv",
+      "sha256": "f204db2c753b0937caac3cb35258562c14f073e4bbc76be24b4c51ce22767a93",
+      "rows": 344,
+      "license": "CC0; preserve attribution and LTER data-use expectations",
+      "documentation": "https://github.com/allisonhorst/palmerpenguins#license",
+      "citation": "Horst, Hill & Gorman (2020), palmerpenguins; Gorman, Williams & Fraser (2014), PLoS ONE 9(3):e90081. Measurements from Palmer Station LTER, 2007\u20132009."
+    }
+  },
+  "flights": {
+    "rows": 336776,
+    "recorded_arrival_delays": 327346,
+    "missing_arrival_delays": 9430,
+    "mean_arrival_delay_minutes": 6.89537675731489,
+    "delayed_over_15_minutes_percent": 23.71496825988404,
+    "origin_mean_delay_minutes": {
+      "EWR": 9.107054735458092,
+      "LGA": 5.783488234130908,
+      "JFK": 5.551481036679838
+    },
+    "january_departures": 27004,
+    "march_departures": 28834,
+    "january_to_march_departure_change": 1830,
+    "relationship": {
+      "left": "flights",
+      "left_key": "carrier",
+      "right": "airlines",
+      "right_key": "carrier",
+      "left_version": "t_3d80aca6c2f44503a91c05d3e5e04527",
+      "right_version": "t_82e883d43f2342d3b5e55f96dd6ec111",
+      "cardinality": "many-to-one",
+      "left_rows": 336776,
+      "right_rows": 16,
+      "left_null_keys": 0,
+      "right_null_keys": 0,
+      "left_duplicate_keys": 336760,
+      "right_duplicate_keys": 0,
+      "left_unmatched_rows": 0,
+      "right_unmatched_rows": 0,
+      "inner_join_rows": 336776,
+      "left_join_rows": 336776,
+      "key_policy": "Exact text equality, no numeric coercion or trimming. NULL never matches NULL."
+    },
+    "delay_rate_mix_percentage_points": {
+      "observed_change": 0.11145776965778842,
+      "origin_mix": -0.04242873391077701,
+      "within_origin_rate": 0.15388650356856484
+    },
+    "workspace": "/workspace/DA_project/outputs/public-cases/20261104T085442-90b6ee/flights-workspace",
+    "reference_checks_passed": true
+  },
+  "penguins": {
+    "rows": 344,
+    "recorded_body_mass": 342,
+    "missing_body_mass": 2,
+    "adelie_male_n": 73,
+    "adelie_female_n": 73,
+    "species_mean_body_mass_g": {
+      "Gentoo": 5076.016260162602,
+      "Chinstrap": 3733.0882352941176,
+      "Adelie": 3700.662251655629
+    },
+    "adelie_male_minus_female_mean_g": 674.6575342465753,
+    "difference_ci95_g": [
+      573.0139063399297,
+      776.301162153221
+    ],
+    "welch_p_value": 6.402319748031804e-26,
+    "hedges_g": 2.161342592254616,
+    "within_adelie_flipper_mass_pearson_r": 0.46820169421793956,
+    "workspace": "/workspace/DA_project/outputs/public-cases/20261104T085442-90b6ee/penguins-workspace",
+    "reference_checks_passed": true
+  },
+  "report_directory": "outputs/public-cases/20261104T085442-90b6ee",
+  "cfpb": {
+    "status": "blocked, not a completed genuine-data case",
+    "source": "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+    "observed_error": "ProxyError: 403 Forbidden on 2026-11-04; no genuine records acquired",
+    "procedure": "uv run --frozen insightpilot cfpb-download data/cfpb/real-week --start 2025-01-01 --end 2025-01-08",
+    "existing_report": "docs/complaints-case-study.md"
+  },
+  "claims": "Two authentic cross-domain cases verified; CFPB third case blocked and disclosed. No synthetic record is described as authentic."
+}

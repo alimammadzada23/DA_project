@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>flights — analytical findings</title><style>body{font:16px system-ui;color:#172c40;max-width:1100px;margin:40px auto;padding:20px;line-height:1.6}h1,h2{line-height:1.2}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:8px;border-bottom:1px solid #cad4df;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5f8;padding:16px}.note{color:#4b5f74}</style>
+<h1>flights — analytical findings</h1>
+<p>Dataset: flights · source: verified_public_source_extract</p>
+<p>One scheduled flight departure record in the NYC-2013 package; flight number alone is not a unique flight identity.</p>
+<h2>Metric overview</h2><p>Mean recorded arrival delay: <strong>6.89537675731489</strong> minutes</p>
+<p>Mean across finite recorded arrival delays; unknown delays excluded. Formula: <code>avg(&quot;arr_delay&quot;)</code></p>
+<p class="note">Missing arrival delays are not zeros and are not classified as cancellations without additional evidence. Airlines, routes and airports have different mixes.</p>
+<h2>Findings and investigations</h2>
+<h2>Executed evidence</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>value</th>
+      <th>records</th>
+      <th>present_arr_delay</th>
+      <th>finite_numeric_arr_delay</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>6.895377</td>
+      <td>336776</td>
+      <td>327346</td>
+      <td>327346</td>
+    </tr>
+  </tbody>
+</table>
+<details><summary>Query, filters and provenance</summary><pre>{
+  &quot;columns&quot;: [
+    &quot;value&quot;,
+    &quot;records&quot;,
+    &quot;present_arr_delay&quot;,
+    &quot;finite_numeric_arr_delay&quot;
+  ],
+  &quot;rows&quot;: [
+    [
+      6.89537675731489,
+      336776,
+      327346,
+      327346
+    ]
+  ],
+  &quot;truncated&quot;: false,
+  &quot;sql&quot;: &quot;WITH selected AS (SELECT * FROM \&quot;t_3d80aca6c2f44503a91c05d3e5e04527\&quot; WHERE true) SELECT avg(CASE WHEN isfinite(try_cast(NULLIF(trim(CAST(\&quot;arr_delay\&quot; AS VARCHAR)),&#x27;&#x27;) AS DOUBLE)) THEN try_cast(NULLIF(trim(CAST(\&quot;arr_delay\&quot; AS VARCHAR)),&#x27;&#x27;) AS DOUBLE) END) AS value,count(*) AS records,count(NULLIF(trim(CAST(\&quot;arr_delay\&quot; AS VARCHAR)),&#x27;&#x27;)) AS \&quot;present_arr_delay\&quot;,count(CASE WHEN isfinite(try_cast(NULLIF(trim(CAST(\&quot;arr_delay\&quot; AS VARCHAR)),&#x27;&#x27;) AS DOUBLE)) THEN try_cast(NULLIF(trim(CAST(\&quot;arr_delay\&quot; AS VARCHAR)),&#x27;&#x27;) AS DOUBLE) END) AS \&quot;finite_numeric_arr_delay\&quot; FROM selected&quot;,
+  &quot;parameters&quot;: [],
+  &quot;filters&quot;: [],
+  &quot;source_sha256&quot;: &quot;b791a2590c9167aa0bd3cb45af3f64101180878cf088c183eae4011e3a654f42&quot;,
+  &quot;table&quot;: &quot;flights&quot;,
+  &quot;version&quot;: &quot;t_3d80aca6c2f44503a91c05d3e5e04527&quot;,
+  &quot;evidence_id&quot;: &quot;5e6523555514d30fa955931f01aee42a3d068e80e8cb6618a78b7fe8b1eb745f&quot;,
+  &quot;elapsed_seconds&quot;: 0.0282,
+  &quot;method&quot;: {
+    &quot;name&quot;: &quot;Mean recorded arrival delay&quot;,
+    &quot;formula&quot;: &quot;avg(\&quot;arr_delay\&quot;)&quot;,
+    &quot;description&quot;: &quot;Mean across finite recorded arrival delays; unknown delays excluded.&quot;,
+    &quot;units&quot;: &quot;minutes&quot;,
+    &quot;limitations&quot;: &quot;Missing arrival delays are not zeros and are not classified as cancellations without additional evidence. Airlines, routes and airports have different mixes.&quot;
+  }
+}</pre></details>
+<h2>Reproduction manifest</h2><pre>{
+  &quot;format_version&quot;: 1,
+  &quot;generated_at&quot;: &quot;2026-11-04T09:20:24.636142+00:00&quot;,
+  &quot;table&quot;: &quot;flights&quot;,
+  &quot;version&quot;: &quot;t_3d80aca6c2f44503a91c05d3e5e04527&quot;,
+  &quot;source&quot;: {
+    &quot;origin&quot;: &quot;verified_public_source_extract&quot;,
+    &quot;url&quot;: &quot;https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/nycflights13/flights.csv&quot;,
+    &quot;sha256&quot;: &quot;b791a2590c9167aa0bd3cb45af3f64101180878cf088c183eae4011e3a654f42&quot;,
+    &quot;rows&quot;: 336776,
+    &quot;license&quot;: &quot;CC0, per upstream nycflights13 DESCRIPTION&quot;,
+    &quot;documentation&quot;: &quot;https://raw.githubusercontent.com/tidyverse/nycflights13/df98ef215aa8216fe0838a0b8ac5bada646d814c/DESCRIPTION&quot;,
+    &quot;citation&quot;: &quot;Wickham, nycflights13; source RITA/Bureau of Transportation Statistics, NYC departures in 2013. Rdatasets mirror, not an independently acquired BTS extract.&quot;,
+    &quot;filename&quot;: &quot;flights.csv&quot;,
+    &quot;retained&quot;: &quot;sources/8a33a74c1c3b4cc4aa1aad63d8d91214.csv&quot;,
+    &quot;bytes&quot;: 33206996
+  },
+  &quot;grain&quot;: &quot;One scheduled flight departure record in the NYC-2013 package; flight number alone is not a unique flight identity.&quot;,
+  &quot;roles&quot;: {
+    &quot;carrier&quot;: &quot;company&quot;,
+    &quot;origin&quot;: &quot;geography&quot;,
+    &quot;dest&quot;: &quot;geography&quot;,
+    &quot;departure_date&quot;: &quot;date&quot;,
+    &quot;arr_delay&quot;: &quot;duration&quot;,
+    &quot;dep_delay&quot;: &quot;duration&quot;,
+    &quot;distance&quot;: &quot;measure&quot;,
+    &quot;rownames&quot;: &quot;identifier&quot;,
+    &quot;tailnum&quot;: &quot;identifier&quot;
+  },
+  &quot;transformations&quot;: [
+    {
+      &quot;table&quot;: &quot;t_8a33a74c1c3b4cc4aa1aad63d8d91214&quot;,
+      &quot;parent&quot;: null,
+      &quot;operation&quot;: {
+        &quot;kind&quot;: &quot;import&quot;,
+        &quot;sheet&quot;: 0
+      },
+      &quot;rows&quot;: 336776,
+      &quot;created_at&quot;: &quot;2026-11-04T08:54:44.682850+00:00&quot;,
+      &quot;errors&quot;: 0
+    },
+    {
+      &quot;table&quot;: &quot;t_e3c10a1600cc4d4a8aba0ee7e6775bc1&quot;,
+      &quot;parent&quot;: &quot;t_8a33a74c1c3b4cc4aa1aad63d8d91214&quot;,
+      &quot;operation&quot;: {
+        &quot;kind&quot;: &quot;nullify_many&quot;,
+        &quot;markers&quot;: [
+          &quot;NA&quot;
+        ]
+      },
+      &quot;rows&quot;: 336776,
+      &quot;created_at&quot;: &quot;2026-11-04T08:54:45.517645+00:00&quot;,
+      &quot;errors&quot;: 0
+    },
+    {
+      &quot;table&quot;: &quot;t_3d80aca6c2f44503a91c05d3e5e04527&quot;,
+      &quot;parent&quot;: &quot;t_e3c10a1600cc4d4a8aba0ee7e6775bc1&quot;,
+      &quot;operation&quot;: {
+        &quot;kind&quot;: &quot;date_parts&quot;,
+        &quot;year&quot;: &quot;year&quot;,
+        &quot;month&quot;: &quot;month&quot;,
+        &quot;day&quot;: &quot;day&quot;,
+        &quot;new_name&quot;: &quot;departure_date&quot;
+      },
+      &quot;rows&quot;: 336776,
+      &quot;created_at&quot;: &quot;2026-11-04T08:54:46.372710+00:00&quot;,
+      &quot;errors&quot;: 0
+    }
+  ],
+  &quot;filters&quot;: [],
+  &quot;metric&quot;: {
+    &quot;name&quot;: &quot;Mean recorded arrival delay&quot;,
+    &quot;formula&quot;: &quot;avg(\&quot;arr_delay\&quot;)&quot;,
+    &quot;description&quot;: &quot;Mean across finite recorded arrival delays; unknown delays excluded.&quot;,
+    &quot;units&quot;: &quot;minutes&quot;,
+    &quot;limitations&quot;: &quot;Missing arrival delays are not zeros and are not classified as cancellations without additional evidence. Airlines, routes and airports have different mixes.&quot;
+  },
+  &quot;limitations&quot;: &quot;Version-bound local analysis; user-supplied provenance is not authenticated.&quot;
+}</pre>
+<p class="note">Descriptive findings are not proven causes. Source authenticity, reporting completeness, sampling and metric definitions require review. No business outcome is implied.</p></html>

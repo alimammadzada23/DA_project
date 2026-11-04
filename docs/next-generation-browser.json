@@ -1,0 +1,46 @@
+{
+  "scope": "Actual Chromium on local Linux; authentic NYC flights plus explicitly labeled synthetic browser upload tests. No native Mac/Power BI/live-provider acceptance implied.",
+  "status": "passed",
+  "validated_at": "2026-11-04T09:20:30.859309+00:00",
+  "checks": [
+    {
+      "data_hub": true,
+      "http_status": 200
+    },
+    {
+      "full_column_catalog": true,
+      "source_rows": 336776
+    },
+    {
+      "real_data_kpi": 6.89537675731489,
+      "charts_rendered": true,
+      "metric_selection_to_render_seconds": 3.41
+    },
+    {
+      "plotly_png_download": true
+    },
+    {
+      "chart_selection_filters_records": true,
+      "pointer_box_selection": true,
+      "selected_origin": "EWR",
+      "scope_preserved": true
+    },
+    {
+      "guided_analyst_executes": true,
+      "external_model": false
+    },
+    {
+      "report_download": true,
+      "numerical_evidence_and_source_hash": true
+    },
+    {
+      "browser_multi_file_import": true,
+      "synthetic_orders": 4,
+      "synthetic_customers": 2,
+      "explicit_metric_sum_verified": 100,
+      "synthetic_label_visible": true
+    }
+  ],
+  "uncaught_browser_errors": [],
+  "responsive_768px_no_page_overflow": true
+}

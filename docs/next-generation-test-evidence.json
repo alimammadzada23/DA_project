@@ -1,0 +1,128 @@
+{
+  "recorded_at": "2026-11-04T09:30:11.367623+00:00",
+  "scope": "Current local working tree, Linux. No remote push/deployment/publication; no native Mac/live-source acceptance implied.",
+  "base_commit": "3c19a2e6368ccc888a92c3912853c31d34160abe",
+  "branch": "codex/insightpilot-next",
+  "baseline": {
+    "tests": 182,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_sha256": "4c3bae1cee5159e939c750c403681ce8ac76a831bda9f840912de3fd47598222",
+    "junit_path": "outputs/baseline-tests.xml"
+  },
+  "full_suite": {
+    "tests": 271,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_sha256": "086c9164a3b9cc8209681b5a1d69e7064b4d12ad701b19dafc33d8f64678d6b5",
+    "junit_path": "outputs/next-generation-tests.xml"
+  },
+  "additional_test_cases": 89,
+  "warnings": {
+    "count": 12,
+    "status": "Inherited pandas Series.values timezone deprecation warnings; no new failures/skips."
+  },
+  "follow_up_checks": {
+    "read_only_connectors": {
+      "passed": 2
+    },
+    "universal_ui": {
+      "passed": 19
+    },
+    "powerbi_static": {
+      "json_files_validated": 22,
+      "native_windows_acceptance": "unrun"
+    },
+    "browser": {
+      "status": "passed",
+      "validated_at": "2026-11-04T09:20:30.859309+00:00",
+      "pointer_box_selection": true
+    },
+    "package_build": {
+      "status": "passed",
+      "wheel_sources_equal_current_python_files": true,
+      "artifacts": [
+        {
+          "path": "/tmp/insightpilot-dist/insightpilot-0.1.0.tar.gz",
+          "sha256": "39cb09705fdf145b45f514e9b1fa440d1ec2af37302878e8e53fffee05e976d7"
+        },
+        {
+          "path": "/tmp/insightpilot-dist/insightpilot-0.1.0-py3-none-any.whl",
+          "sha256": "4e4c4542aa54bfc881f0bf05c6f2b133179425b993be3ff812752e4275f968f9"
+        }
+      ]
+    }
+  },
+  "commands": [
+    ".venv/bin/python -m pytest -q --junitxml=outputs/next-generation-tests.xml",
+    ".venv/bin/python powerbi/validate.py",
+    ".venv/bin/python scripts/reproduce_public_cases.py --write-docs",
+    ".venv/bin/python scripts/benchmark_universal.py",
+    ".venv/bin/python scripts/browser_universal.py",
+    "uv build --out-dir /tmp/insightpilot-dist"
+  ],
+  "source_sha256": {
+    ".streamlit/config.toml": "3fee9d2511f8c1478f86cf8a58aa41a31cbe2324e326c3eae773ecc158757553",
+    "app.py": "fe5b2a7ec3ef6a6f0025c9d0c53d4380804844f4318250beba354a68b5195968",
+    "pyproject.toml": "3e9f5d2bed9367e1cd317dc4d308eceef0973d7c0cd0d151c9210f9a11d38ab6",
+    "scripts/benchmark_ingest.py": "3c33fca83d3286bcfb5e3c42c5adde531ca167dd80c1da6dd66107df5605b72e",
+    "scripts/benchmark_universal.py": "4d8653f39b5f12970dce8accfa7129c973c848beef0c638e22e31bbadf9390ce",
+    "scripts/browser_date_regression.py": "dd24071050e8453fb64a601a97c4c54ac5bfbb1af628f289a49c33b5e55d974e",
+    "scripts/browser_smoke.py": "7224ba47d433f5ba56db00c82a9de516ed9eaa3ce8f4ed3ace352782e7ed2b2a",
+    "scripts/browser_universal.py": "de1c608b749faffb51b08e252f420d14e630ec0508588717502df91d709d6d64",
+    "scripts/browser_uploads.py": "3712d2b1a186b8f93b63b96e6bc8380a6e3572aa69f51a85097083d504712884",
+    "scripts/browser_workspaces.py": "af7041ea72da2ea8c618e47ad8b71162d1a1cb574d626c8470513bdf17fdce1f",
+    "scripts/prepare_browser_fixtures.py": "11d55a2384e9f95e07b890022e1ace1d625e1c1204f3dfb9e91b65bcd32e2806",
+    "scripts/reproduce_public_cases.py": "fa20a21dc23980d3df31d37a106db7d85acd904d685b4797832dd532e365aeae",
+    "src/insightpilot/__init__.py": "e6d46b773aeb790abce9314ecc3dc254aad644319d4f6af6e5aaa0fa5cf657fe",
+    "src/insightpilot/agent.py": "5302782ad24fcf82bb937a9afa31d43690265e35a6e148c727e2a6ac9de1bf79",
+    "src/insightpilot/analytics.py": "14386831bfa33457f355f2652645116f73ecde5cebfea4868e296b56e1c47ca2",
+    "src/insightpilot/business_charts.py": "69a8e9aff012efcdffb786e5d5bfa328e4abd3b2f397c5911874ef6a440aceff",
+    "src/insightpilot/charts.py": "3421db9e129fd7dd55997ef5382e09c13a151053792a64360c11ea00a265578f",
+    "src/insightpilot/cli.py": "5c05cca8f3110cd7f06c290f9f42f16fc4af72aeb0e80ecef6499b850389346e",
+    "src/insightpilot/complaints.py": "e1b4f8540c40edcf6fd168599e2522d924221794383709220a975a66f6a8cf3b",
+    "src/insightpilot/custom.py": "820facee50e7a9dd2e617b689f0ac2cdefbd29767714aeeda1db83295131120b",
+    "src/insightpilot/dashboard.py": "a435d91cadbec27c61529903713a77c804d267fc05ce16787f718d2169038db7",
+    "src/insightpilot/datasets.py": "f38b121fd8f4834c768294ef6fe286e6a3874bd81222dc2925d08d22b109971c",
+    "src/insightpilot/demo.py": "ce87294d9c45a6d778971aa63daae469d51294b3e7e40d9d0e0111340ddbe458",
+    "src/insightpilot/ingest.py": "7ea0efbec6299906abc337a2307d503206fb18a4f86b4ac2488dacbfffbb598d",
+    "src/insightpilot/model.sql": "a59124d21e56360e251b8dab7497caddd6409c484a7ab1b75c75a252866e4876",
+    "src/insightpilot/reporting.py": "03539aac868ef0c1dda6b5be6d7441404da410695427374e767706e93d07da27",
+    "src/insightpilot/ui.py": "5950055ddb119071eeaf6d19f82a0173865aeef8131974f430257ecb67add176",
+    "src/insightpilot/universal/__init__.py": "80434310a40250846cece36ff4ef9b13d08de5dea79ed595bcdc97bb921a0fab",
+    "src/insightpilot/universal/advanced.py": "d9acd6e12759ef3e20ae328368708020d36d14de8a4e3184165c67da1bc5ff3f",
+    "src/insightpilot/universal/assistant.py": "bf8d72d5f520f5811345713067a106ef42b53a49f111283f2d32919d6c0f09c7",
+    "src/insightpilot/universal/connectors.py": "516664fd6c392c64505ae7cd897f15d7e5c82f3c75b7ea1bf449033ccec1d07a",
+    "src/insightpilot/universal/engine.py": "969c3ba28906b1c6950384c4115b49c9c362e81ce8a6c664d60a79064c967446",
+    "src/insightpilot/universal/insights.py": "f716c68bb62c64507e4d42cd71ce74baec987388383b3f2e0423890726cb30b3",
+    "src/insightpilot/universal/investigation.py": "23601af7510213337cb574a8fc73ca71148f4b8bdaa374f8891c09f5a1bf2e56",
+    "src/insightpilot/universal/metrics.py": "afdd9a91d0d7be343bb3d0088d01f3467227ec3a59106ef55ebc06e275666bf7",
+    "src/insightpilot/universal/profile.py": "0a06103342624c71ac5bc0685eaf6a74bb6c4758203f186c113a8899f0979aa8",
+    "src/insightpilot/universal/relationships.py": "47b27fcb2dfc695285088b68f820e08c39acac7c0cb3bd2129ad83633f4e7fc2",
+    "src/insightpilot/universal/report.py": "f52f15c61908c62522a54fd72f881c7e14e44230e5dca8980ed121f132c8e9fc",
+    "src/insightpilot/universal/segmentation.py": "187fc35e254d4198e13d7ef3380c51e02bc283bea8eba51318b0324c77bcdb5f",
+    "src/insightpilot/universal/statistics.py": "390c639d0756cf6c4522bf9b543192ed09d5d66db4768244710881325f51e4a8",
+    "src/insightpilot/universal/store.py": "82daf2de0d900790e55aa0bac2f6657dba3e3c2d1ea4e62b6cd1de3b5dcfaa09",
+    "src/insightpilot/universal/ui.py": "a7d4b6a871421177fc38aab76e23eeaf5b09d292a422e357a18ae31db5eafb02",
+    "src/insightpilot/universal/ui_data.py": "b70a61c760a624cf435bdb11537454c66fb0208877c1b822a44b19c7b0602e5e",
+    "src/insightpilot/universal/visuals.py": "795812bf7e1d96d13c9e7c7390e30ebff42d2402773641954feb76365b4638b7",
+    "src/insightpilot/workspace_ui.py": "5a88f513584724dd85aeb7ded1c1effdd0a070ac4f4fe6b0e542719a6b4fc2f0",
+    "tests/conftest.py": "470c451b4f777852d582cb6e878f589e8482422e4a33b4ef6dd4e5f3cc21e3c8",
+    "tests/test_agent_app.py": "69ca712eeec38a597ce3ea608337bf41068f3aca19ff6bd640dadc573a381aed",
+    "tests/test_business_views.py": "a76f5d684ce1df96d91c9ff25f1d9c7f670b9fc23d83ebbde8f9048a31933267",
+    "tests/test_complaint_regressions.py": "072e3a679d18bef4be72ce77eef9ead9ad9eb205332d55a75bf398577322024a",
+    "tests/test_complaints.py": "0a80212643e34b05702d592ee4e1e01d98c5f6a14e1294a250bcee45ef30d83f",
+    "tests/test_dashboard.py": "ca76f06a93eca1639440a17f183276c920af5e56164c45e89df78e699c5d65a9",
+    "tests/test_datasets.py": "a3b7a3ad94abc142501d618117622c96a5f59671e1d075cd30c9b5945fc03be6",
+    "tests/test_pipeline.py": "3145ea467f497abdf5a080de2c2f36e30c9afb3a08fafbd070ba54529af8072d",
+    "tests/test_powerbi.py": "20d1985d480af3a6d8383d4c53713a49e7356e2765bf7441cbbcca1e5776cfff",
+    "tests/test_reporting.py": "e042a2cfb25c84b69ea8b410a9ea738a40a093a50882bf30a5eab14b8fc08ce6",
+    "tests/test_universal.py": "e601f3eb07ab359404439cc8fe5eb1ce667bb3a20c5cb013a4f9829bef61ffc1",
+    "tests/test_universal_boundaries.py": "caca133d4a2852fcde6e29989105fe867fc4fb69e842b29b47f75eb56551f93b",
+    "tests/test_universal_ui.py": "f4febf1cf112fc9ea968ca43f7139294eb5caf915a1c5326b958d3b780508615",
+    "tests/test_workspace_ui.py": "6c25c2dcc4021044424860084c6d5b7e5f3805affaee8ac181896109d9a76bf6",
+    "uv.lock": "2670e27a3695323a8beb4f49594f73d1675877c3711ddbc3267118a08c1d0f55"
+  }
+}

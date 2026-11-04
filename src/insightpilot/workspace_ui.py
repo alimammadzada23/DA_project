@@ -17,7 +17,7 @@ from .complaints import Complaints, UnusableComplaintDates, download_extract, in
 from .custom import CustomAnalytics, CustomProcessAnalytics
 from .datasets import TableFilters, inspect_table, ingest_table, metadata, MAX_BYTES
 
-WORKSPACES = ['Choose a workspace', 'Procurement Intelligence', 'Customer Experience & Risk Intelligence', 'Analyze My Dataset']
+WORKSPACES = ['Choose a workspace', 'Procurement Intelligence', 'Customer Experience & Risk Intelligence', 'Analyze My Dataset', 'Universal Intelligence']
 COMPLAINT_PAGES = ['Executive Overview', 'Company Comparison', 'Root-Cause Investigation', 'AI Business Analyst']
 COMPLAINT_QUESTIONS = ['Which companies have the highest reported complaint volumes?',
     'Which products account for the largest share of complaints?', 'How have complaints changed over time?',
@@ -68,6 +68,10 @@ def landing():
     st.markdown('<div class="eyebrow">EVIDENCE / DECISIONS / ACTION</div>', unsafe_allow_html=True)
     st.title('InsightPilot — AI Business Intelligence')
     st.write('Choose a dataset workspace. Explore the evidence, compare patterns and decide what deserves investigation.')
+    with st.container(border=True):
+        st.subheader('Universal Intelligence')
+        st.write('Import unfamiliar data and related tables, review every field, define explicit metrics, investigate changes and export reproducible analysis.')
+        if st.button('Open Universal Intelligence',type='primary'): select_workspace(WORKSPACES[4])
     columns = st.columns(3)
     descriptions = [
         ('Procurement Intelligence', 'Understand recorded process paths, waiting intervals and repeated activities.', 'Original BPI import or clearly labeled synthetic demonstrations.'),
@@ -556,7 +560,10 @@ def main():
         if workspace == WORKSPACES[0]: landing()
         elif workspace == WORKSPACES[1]: ui.main(embedded=True)
         elif workspace == WORKSPACES[2]: complaints_workspace()
-        else: custom_workspace()
+        elif workspace == WORKSPACES[3]: custom_workspace()
+        else:
+            from .universal.ui import main as universal_main
+            universal_main()
     except (ValueError, OSError, duckdb.Error) as exc:
         st.error('This dataset view could not finish. Review the source and mapping or choose another dataset.')
         with st.expander('View diagnostic'): st.write(f'{type(exc).__name__}: {exc}')
