@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-05T14:06:17.489986+01:00",
+  "base_commit": "d9a0717d9abce32a4161cd7527ca01a5b8088ff9",
+  "scope": "Exact staged snapshot, plus path/credential-pattern/provenance review.",
+  "scanner": "Gitleaks 8.24.3 default rules, full redaction, ignore comments not accepted; reports in ignored outputs/complete-groups-security/.",
+  "intended_snapshot_leaks": 0,
+  "unresolved_credential_pattern_matches": 0,
+  "existing_dummy_credential_test_urls": {
+    "count": 2,
+    "classification": "Existing unchanged explicit test literals for URL credential rejection; no real credentials."
+  },
+  "private_or_generated_data_paths": 0,
+  "existing_synthetic_CSVs": {
+    "count": 3,
+    "unchanged_from_parent": true,
+    "files": [
+      "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "tests/fixtures/SYNTHETIC-complaints.csv",
+      "tests/fixtures/SYNTHETIC-sales.csv"
+    ]
+  },
+  "new_evidence": "Only code contracts, synthetic/mocked validation receipts and documentation. No raw model responses, local datasets or user workspaces included.",
+  "guardrails": "Existing SQL/memory/time/100-group/cohort/semantic/local-only controls retained. Complete overflow returns no partial result.",
+  "publication": "Local commit only; no push, merge or deployment.",
+  "limits": "Scanner plus path/provenance review, not proof about every possible secret."
+}

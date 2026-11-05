@@ -4,8 +4,8 @@ Keep using **`~/DA_project`**, your existing clone and its existing environment.
 There is no need to download another ZIP, clone again, reinstall Python, reinstall
 Ollama or download Qwen again.
 
-The previous measure-contract repairs and launchers are in `7099841` on
-`codex/insightpilot-local-ai`. The new request-constraint fixes are **local until
+The previous request-constraint repairs and launchers are in `d9a0717` on
+`codex/insightpilot-local-ai`. The new complete-grouped-results fixes are **local until
 you authorize a new push**. A pull cannot retrieve unpublished files. After
 publication, update the existing clone using the safe steps below.
 
@@ -59,9 +59,10 @@ there is no automatic external AI fallback.
 
 ## Verify the real Qwen repair
 
-The latest real Mac acceptance was **13/16 at `7099841`**, improved from 2/16.
-The new focused fix and its tests do not replace that result. Follow the
-[request-constraint diagnostic procedure](LOCAL_AI_REQUEST_CONSTRAINTS.md)
+The latest real Mac report has two remaining failures: `groups` and `compound`
+were truncated by an unrequested model limit. Automated tests do not establish
+real-model success. Follow the
+[complete-grouped-results diagnostic procedure](LOCAL_AI_COMPLETE_GROUPS.md)
 to compare actual plan shapes, application corrections and a new real-model result.
 
 After Ollama is running, double-click **Check Local AI.command**. No complicated

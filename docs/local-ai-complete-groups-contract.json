@@ -1,0 +1,40 @@
+{
+  "at": "2026-11-05T14:04:33.343287+01:00",
+  "base_commit": "d9a0717d9abce32a4161cd7527ca01a5b8088ff9",
+  "branch": "codex/insightpilot-local-ai",
+  "schema_sha256": "69be639f0a02106c2157e71261bdd07f9f4ca7bb24ec2e4617b55f3daf2cc41e",
+  "system_prompt_sha256": "317463e17c4e7120dce2b2580004e209fd25eaef8d3df49b968092cb01577a53",
+  "complete_grouped_result": "limit:null; used for fresh grouped aggregates with no requested top-N/limit. Invented model limits are reconciled and reported before full semantic/request validation.",
+  "resource_bound": {
+    "maximum_complete_groups": 100,
+    "overflow_probe_rows": 101,
+    "overflow_policy": "Clear error, no primary table, evidence, chart or savable partial answer. Bound is not raised."
+  },
+  "explicit_limits": "Requested integer N remains exact, within existing 1\u2013100 guard.",
+  "followups": "Referenced prior selections retain their limit and group membership, including prior complete results with null limits.",
+  "other_operations": "Null limit rejected; existing integer bounds retained.",
+  "saved_analyses": "New null limits and existing integer limits replay through the same canonical plan format; no migration or data rewrite.",
+  "unchanged_paths_verified": [
+    "src/insightpilot/universal/engine.py",
+    "src/insightpilot/universal/sql_lab.py",
+    "src/insightpilot/universal/metrics.py",
+    "src/insightpilot/universal/local_ai.py",
+    "src/insightpilot/universal/analyst_session.py",
+    "scripts/accept_local_ai.py",
+    "scripts/benchmark_local_ai.py",
+    "scripts/local_ai_benchmark_cases.py"
+  ],
+  "reported_real_failure_properties": {
+    "cases": [
+      "groups",
+      "compound"
+    ],
+    "model_limit": 10,
+    "requested_limit": null,
+    "fixture_groups": 12,
+    "full_raw_model_envelopes_provided": false
+  },
+  "new_real_qwen_run_performed": false,
+  "new_real_qwen_score": null,
+  "publication": "Local commit only; no push, merge, rebuild, model change or deployment."
+}

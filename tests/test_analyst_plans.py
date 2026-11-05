@@ -78,14 +78,15 @@ def test_standard_comparison_uses_canonical_count_order_without_a_requested_rank
 
 
 @pytest.mark.parametrize('question,descending,limit',[
-    ('Which segment has the highest average value?',True,15),
-    ('Which segment has the lowest average value?',False,15),
+    ('Which segment has the highest average value?',True,None),
+    ('Which segment has the lowest average value?',False,None),
     ('Show the top three segment groups by average value.',True,3),
 ])
 def test_standard_explicit_metric_rank_and_followup_keep_the_requested_order(analysis_model,question,descending,limit):
     e,p=engine_and_profile(analysis_model);conversation=Conversation()
     result=analyze_question(e,p,Metric('Records'),question,conversation)
-    expected=analysis_model[1].groupby('segment').value.mean().sort_values(ascending=not descending).head(limit)
+    expected=analysis_model[1].groupby('segment').value.mean().sort_values(ascending=not descending)
+    if limit is not None:expected=expected.head(limit)
     actual=frame_of(result['primary'])
     assert list(actual.group_0)==list(expected.index) and list(actual.m0)==pytest.approx(list(expected))
     assert result['plan']['sort_by']=='m0' and result['plan']['descending']==descending

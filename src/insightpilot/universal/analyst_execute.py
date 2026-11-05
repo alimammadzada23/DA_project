@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 
 from ..datasets import quote
 from . import advanced, visuals
-from .analyst_plan import PlanError, ClarificationRequired, ValidatedPlan, validate_plan
+from .analyst_plan import MAX_GROUPS, PlanError, ClarificationRequired, ValidatedPlan, validate_plan
 from .engine import Engine,Filter,frame_of
 from .metrics import Metric,load_metrics
 from .profile import numeric_expression,date_expression,profile as full_profile
@@ -100,7 +100,7 @@ def source_sql(engine,lab,data):
 
 def cohort_clause(groups,cohort):
     if not cohort:return '',[]
-    if not groups or len(cohort)>100 or any(len(row)!=len(groups) for row in cohort):raise PlanError('Invalid follow-up cohort.')
+    if not groups or len(cohort)>MAX_GROUPS or any(len(row)!=len(groups) for row in cohort):raise PlanError('Invalid follow-up cohort.')
     params=[];terms=[]
     for row in cohort:
         parts=[]
@@ -143,9 +143,13 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         if op!='trend' and groups:sort+=','+','.join(quote('group_'+str(i))+' ASC NULLS LAST' for i in range(len(groups)))
         # All text here is generated from validated choices/quoted identifiers;
         # data values remain bound parameters and still pass the SQL Lab AST scope.
-        limit=1000 if op=='trend' else data['limit']
+        complete=op=='aggregate' and bool(groups) and data['limit'] is None
+        limit=1000 if op=='trend' else MAX_GROUPS if complete else data['limit']
         query='SELECT '+','.join(clauses)+' FROM ('+source+') AS scoped'+where+group_sql+' ORDER BY '+sort+f' LIMIT {limit+1}'
         primary=lab.execute(query,size=limit,parameters=[*params,*cohort_params])
+        if complete and primary['truncated']:
+            raise PlanError(f'Complete grouped results exceed the {MAX_GROUPS}-group safety limit. No partial result was returned. Add an explicit top-N request or narrow the filters.')
+        if complete:extra.append('All grouped results are included; no top-N limit was requested.')
         if op=='trend':primary['method']['time_grain']=data['grain']
         if primary['truncated']:extra.append('More groups/periods exist than are displayed. Top-N output is not the complete population; no Other group is invented.')
         if any(m['aggregation']=='share' for m in data['measures']):extra.append('Shares use the entire selected row denominator before top-N; displayed shares are not renormalized to 100%.')
@@ -197,6 +201,7 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
     evidence=[primary,*evidence]
     primary['method']={'plan':data,'measure_definitions':definitions,'execution':primary.get('method'),
         'selected_sidebar_metric':asdict(selected_metric),'question_specific_filters':data['filters'],
+        'complete_grouped_result':op=='aggregate' and bool(groups) and data['limit'] is None,
         'followup_cohort_rows':len(cohort),'full_selected_rows_before_cohort':total}
     answer=summarize(primary,data,definitions,total)
     if op=='distribution' and len(evidence)>1:

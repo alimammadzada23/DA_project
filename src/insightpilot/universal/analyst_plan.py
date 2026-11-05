@@ -14,6 +14,8 @@ from jsonschema import Draft202012Validator
 from .metrics import Metric, NUMERIC_ROLES, load_metrics
 from .sql_lab import SQLLab
 
+MAX_GROUPS=100
+
 SCALAR={'type':['string','number','boolean','null'],'maxLength':200}
 CONDITION={'type':'object','additionalProperties':False,'required':['column','operator'],
     'properties':{'column':{'type':'string','minLength':1,'maxLength':256},
@@ -43,7 +45,7 @@ ANALYSIS_PROPERTIES={
         'filters':{'type':'array','items':CONDITION,'maxItems':8},
         'fields':{'type':'array','items':{'type':'string','maxLength':256},'maxItems':40,'uniqueItems':True},
         'sort_by':{'enum':['records','group','m0','m1','m2','m3','period']},'descending':{'type':'boolean'},
-        'limit':{'type':'integer','minimum':1,'maximum':100},'bins':{'type':'integer','minimum':5,'maximum':80},
+        'limit':{'type':['integer','null'],'minimum':1,'maximum':MAX_GROUPS},'bins':{'type':'integer','minimum':5,'maximum':80},
         'date_basis':{'type':['string','null'],'maxLength':256},'grain':{'enum':['day','week','month','quarter','year']},
         'periods':{'type':'array','items':{'type':'string','format':'date'},'minItems':4,'maxItems':4},
         'relationship':{'type':['string','null'],'maxLength':200},'inherit':{'type':'boolean'},
@@ -179,7 +181,8 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
         if len(combined)>8:raise PlanError('Too many question-specific filters. Start a new conversation.')
         data['filters']=combined
     if 'operation' not in data:raise PlanError('An analytical operation is required.')
-    for key,default in {'group_by':[],'measures':[],'filters':[],'fields':[],'sort_by':'records','descending':True,'limit':15,'bins':25,
+    default_limit=None if data['operation']=='aggregate' and data.get('group_by') else 15
+    for key,default in {'group_by':[],'measures':[],'filters':[],'fields':[],'sort_by':'records','descending':True,'limit':default_limit,'bins':25,
                         'date_basis':None,'grain':engine.context.time_grain,'relationship':None,'chart':'auto','inherit':False}.items():data.setdefault(key,default)
     validate_structure(data)
     lab=SQLLab(engine);allowed=set(engine.info['columns'])
@@ -192,6 +195,8 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     if set(data['group_by'])-allowed or set(data['fields'])-set(engine.info['columns']):raise PlanError('The plan references an unavailable grouping or field.')
     for condition in data['filters']:check_condition(engine,profile,condition)
     op=data['operation'];groups=data['group_by'];fields=data['fields'];measures=data['measures']
+    if data['limit'] is None and not (op=='aggregate' and groups):
+        raise PlanError('A complete result without a top-N limit is supported only for grouped aggregates; other operations require a bounded integer limit.')
     if groups and op not in ('aggregate','group_distribution','compare_periods'):
         raise ClarificationRequired('This operation cannot preserve the requested grouping. Choose grouped aggregates or group distributions; time trends currently use one series at a time.')
     if fields and op in ('aggregate','trend','compare_periods'):raise PlanError('Specify aggregate inputs in measures; an extra field list would be ambiguous.')
@@ -251,7 +256,7 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     if data['chart']=='scatter' and op!='scatter':raise PlanError('A scatter plot requires a paired numeric calculation.')
     if data['chart']=='box' and op!='group_distribution':raise PlanError('A box plot requires calculated group quantiles.')
     if op=='records' and data['chart'] not in ('auto','table'):raise PlanError('Source records use a table; request a separate aggregate for a chart.')
-    if data['chart']=='pie' and (op!='aggregate' or len(groups)!=1 or len(measures)!=1 or measures[0]['aggregation'] not in ('records','share') or data['limit']>6):
+    if data['chart']=='pie' and (op!='aggregate' or len(groups)!=1 or len(measures)!=1 or measures[0]['aggregation'] not in ('records','share') or data['limit'] is not None and data['limit']>6):
         raise PlanError('Composition charts need one count/share, one group and at most six categories.')
     data['inherit']=False  # Canonical plans can be independently revalidated/replayed.
     return ValidatedPlan(data,approval,inherited)

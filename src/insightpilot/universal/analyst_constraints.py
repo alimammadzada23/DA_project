@@ -86,7 +86,11 @@ class RequestConstraints:
     def summary(self):
         return {k: v for k, v in {'limit': self.limit, 'descending': self.descending,
                 'group_by': self.groups, 'measures': self.measures, 'operation': self.operation,
+                'result_limit_policy': 'explicit' if self.limit is not None else 'preserve_previous_selection' if self.preserve or self.reuse_inputs else 'complete_grouped_aggregates',
                 'preserve_previous_group_membership': self.preserve, 'sort_existing_result_only': self.sort_only}.items() if v is not None}
+
+    def requires_complete_groups(self, data):
+        return self.limit is None and not (self.preserve or self.reuse_inputs) and data['operation']=='aggregate' and bool(data.get('group_by'))
 
     def repair(self, raw):
         validate_structure(raw)  # Never normalize invalid schema/measure arguments.
@@ -107,6 +111,8 @@ class RequestConstraints:
         if self.limit is not None: set_explicit('limit', self.limit)
         if self.descending is not None: set_explicit('descending', self.descending)
         if self.operation is not None: set_explicit('operation', self.operation)
+        effective = candidate | {'group_by': candidate.get('group_by', self.previous.get('group_by', []) if self.previous and candidate.get('inherit') else [])}
+        if self.requires_complete_groups(effective): set_explicit('limit', None)
         if self.sort_by is not None: set_explicit('sort_by', self.sort_by)
         elif self.sort_records: set_explicit('sort_by', 'records')
         elif self.sort_measure:
@@ -121,6 +127,7 @@ class RequestConstraints:
         if self.limit is not None and data['limit'] != self.limit: conflict()
         if self.descending is not None and data['descending'] != self.descending: conflict()
         if self.operation and data['operation'] != self.operation: conflict()
+        if self.requires_complete_groups(data) and data['limit'] is not None: conflict()
         if self.sort_by is not None and data['sort_by'] != self.sort_by: conflict()
         if self.sort_records and data['sort_by'] != 'records': conflict()
         if self.sort_measure:

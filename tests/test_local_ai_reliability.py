@@ -217,7 +217,8 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
         if captured_failures:
             # Reconstructed from user-reported redacted properties, not a new
             # real Qwen execution. Original questions/oracles remain unchanged.
-            if name=='resort':value=counted(limit=10);value.pop('descending')
+            if name in ('groups','compound'):value['limit']=10
+            elif name=='resort':value=counted(limit=10);value.pop('descending')
             elif name=='median':value['operation']='group_distribution'
             elif name=='smallest':value.pop('limit');value.pop('descending')
         plans.append(value)
@@ -231,7 +232,9 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
     assert (path.parent/'rejected-plans.jsonl').exists()==diagnostics
     if captured_failures:
         for case in report['results']:
-            if case['id'] in ('resort','median','smallest'):assert case['application_constraint_repairs']
+            if case['id'] in ('groups','compound','resort','median','smallest'):assert case['application_constraint_repairs']
+            if case['id'] in ('groups','compound'):
+                assert case['validated_plan']['limit'] is None and len(case['actual']['rows'])==12
 
 
 def test_plotly_typed_numeric_arrays_export_actual_values_after_json_roundtrip():

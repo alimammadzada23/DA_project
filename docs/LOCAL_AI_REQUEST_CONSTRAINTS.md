@@ -1,5 +1,10 @@
 # Explicit analytical constraints and follow-up scope
 
+This page describes the `d9a0717` repair, which was subsequently published. The
+user then reported two remaining invented-limit failures. See the newer
+[complete-grouped-results repair](LOCAL_AI_COMPLETE_GROUPS.md) for the current
+limit policy and next real-Mac acceptance procedure. Receipts below are historical.
+
 Focused repair on `codex/insightpilot-local-ai`, starting at `7099841`.
 No model, analytics engine, deployment or workspace migration was changed.
 This revision is local until a new push is authorized.
