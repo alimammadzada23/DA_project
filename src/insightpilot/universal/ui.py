@@ -201,9 +201,12 @@ def executive(engine,report,metric,scope):
 def explorer(engine,report,metric,scope):
     explore_guidance(engine,report)
     numeric,dates,dims=fields(report)
-    options=['Ranked groups','Numeric distribution','Numeric relationship','Calendar trend','Distribution by group','Two-dimensional counts','Records']
+    options=['Ranked groups','Numeric distribution','Numeric relationship','Calendar trend','Distribution by group','Two-dimensional counts','Composition & Pareto','Records']
     choice=st.selectbox('What would you like to understand?',options,key='explore-chart-type')
-    if choice=='Ranked groups':
+    if choice=='Composition & Pareto':
+        from .ui_concentration import concentration_view
+        concentration_view(engine,metric,scope,draw,evidence)
+    elif choice=='Ranked groups':
         choices=[None]+engine.info['columns']
         dimension=st.selectbox('Group by',choices,index=choices.index(engine.context.comparison) if engine.context.comparison in choices else 0,
                                format_func=lambda x:'Choose a grouping field' if x is None else x,key='explore-groupby')
@@ -395,9 +398,23 @@ def investigation(engine,report,metric,scope):
         a,b=st.columns(2)
         earlier=a.date_input('Earlier inclusive period',(bounds[0],bounds[0]+timedelta(days=width-1)))
         later=b.date_input('Later inclusive period',(bounds[1]-timedelta(days=width-1),bounds[1]))
+        comparison_key='comparison-'+hashlib.sha256(repr((scope,dim,dt,earlier,later)).encode()).hexdigest()[:20]
         if st.button('Calculate segment contributions') and len(earlier)==2 and len(later)==2:
-            result=engine.compare_periods(dim,metric,dt,earlier,later)
-            st.dataframe(frame_of(result),hide_index=True,width='stretch')
+            st.session_state[comparison_key]=engine.compare_periods(dim,metric,dt,earlier,later)
+        result=st.session_state.get(comparison_key)
+        if result:
+            data=frame_of(result)
+            complete=not data.empty and data[['earlier','later']].notna().all().all()
+            if complete:
+                baseline=float(data.earlier.sum());current=float(data.later.sum());change=current-baseline
+                a,b,c=st.columns(3)
+                a.metric('Earlier baseline',format_value(baseline),help=metric.units)
+                b.metric('Later observed value',format_value(current),help=metric.units)
+                c.metric('Absolute change',format_value(change),delta=f'{change/abs(baseline):+.1%}' if baseline else None,delta_color='off')
+                if not baseline:st.caption('Relative change is unavailable because the earlier baseline is zero.')
+            else:st.info('A period or group has an unavailable aggregate. An overall change is withheld rather than treating missing values as zero.')
+            st.caption('Baseline: '+str(earlier[0])+' → '+str(earlier[1])+' · Comparison: '+str(later[0])+' → '+str(later[1])+'. Shared filters apply to both periods; coverage requires review.')
+            st.dataframe(data,hide_index=True,width='stretch')
             draw(visuals.contribution(result,'Segment contribution to metric change',metric.units),'ui-waterfall-'+scope,result=result); evidence(result)
         with st.expander('Separate a proportion change into segment mix and within-segment rates'):
             candidates=[Metric('Records'),*[m for m in load_metrics(engine.workspace,engine.table) if m.additive]]

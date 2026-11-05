@@ -5,17 +5,17 @@ import pandas as pd
 
 from .engine import frame_of
 
-TEAL='#61D5C5'
+TEAL='#67E0CD'
 COLORS=['#61D5C5','#8EBAFF','#F1BC73','#DCA8EF','#EF8E9A','#A4C897']
 
 
 def style(fig,title,x=None,y=None):
-    fig.update_layout(template='plotly_dark',paper_bgcolor='#111B2E',plot_bgcolor='#111B2E',
-        font={'family':'Arial, sans-serif','size':13,'color':'#E3EAF5'},title={'text':title,'font':{'size':18}},
+    fig.update_layout(template='plotly_dark',paper_bgcolor='#0f1b2b',plot_bgcolor='#0f1b2b',
+        font={'family':'Inter, ui-sans-serif, sans-serif','size':13,'color':'#E3EAF5'},title={'text':title,'font':{'size':18}},
         margin={'l':24,'r':24,'t':65,'b':50},height=430,
         colorway=COLORS,legend={'orientation':'h','y':1.1},hoverlabel={'namelength':-1})
-    fig.update_xaxes(title=x,gridcolor='#263348',automargin=True)
-    fig.update_yaxes(title=y,gridcolor='#263348',automargin=True)
+    fig.update_xaxes(title=x,gridcolor='#223340',automargin=True)
+    fig.update_yaxes(title=y,gridcolor='#223340',automargin=True)
     return fig
 
 
@@ -103,7 +103,10 @@ def plotted_data(figure):
     for number,trace in enumerate(figure.data):
         name=trace.name or f'Series {number+1}'
         x,y=values(getattr(trace,'x',None)),values(getattr(trace,'y',None))
-        if trace.type=='heatmap':
+        if trace.type=='pie':
+            for label,value in zip(values(trace.labels),values(trace.values)):
+                rows.append({'series':name,'category':label,'value':value})
+        elif trace.type=='heatmap':
             for i,row in enumerate(values(trace.z)):
                 for j,value in enumerate(row): rows.append({'series':name,'x':x[j] if j<len(x) else j,'y':y[i] if i<len(y) else i,'value':value})
         elif trace.type=='box' and trace.q1 is not None:

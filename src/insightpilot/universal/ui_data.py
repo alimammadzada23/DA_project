@@ -290,8 +290,24 @@ def metric_editor(workspace,table):
         st.caption('Use sum("amount"), avg("duration"), median("value"), count(), count("field"), distinct("customer") '
                    ', valid("numeric field"), count_if("delay", ">", 15) and + − × /. '
                    'valid counts finite numeric inputs. Ratios aggregate their numerator and denominator separately. A zero denominator returns unavailable.')
+        templates={'Custom expression':None,'Row count':'count()', 'Distinct entities':'distinct',
+                   'Average value':'avg','Total value':'sum','Quantity × unit price':'product','Average per entity':'ratio'}
+        template=st.selectbox('Metric starting point',list(templates))
+        selected=[]
+        fields=workspace.columns(table)
+        if templates[template] in ('distinct','avg','sum','product','ratio'):
+            selected.append(st.selectbox('Metric input field',fields,key='metric-template-first-'+table))
+        if templates[template] in ('product','ratio'):
+            selected.append(st.selectbox('Second metric input',fields,key='metric-template-second-'+table))
+        # JSON string literals are also valid literal strings in the safe expression language.
+        quoted=[json.dumps(v) for v in selected]
+        operation=templates[template]
+        formula_default=(f'{operation}({quoted[0]})' if operation in ('distinct','avg','sum') else
+            f'sum({quoted[0]} * {quoted[1]})' if operation=='product' else
+            f'sum({quoted[0]}) / distinct({quoted[1]})' if operation=='ratio' else 'count()')
+        st.caption('Templates are a starting point. Review row grain, units, eligibility, and missing inputs. The same validated calculation language checks every saved definition.')
         with st.form('universal-metric-'+str(workspace.directory)+'-'+table):
-            name=st.text_input('Metric name'); formula=st.text_input('Aggregate formula','count()')
+            name=st.text_input('Metric name'); formula=st.text_input('Aggregate formula',formula_default,key='metric-formula-'+table+'-'+template+'-'+repr(selected))
             description=st.text_input('Metric definition / interpretation')
             unit=st.text_input('Units or currency','records')
             limitations=st.text_input('Known metric limitations','Review source coverage, missing inputs, row grain and double counting.')
