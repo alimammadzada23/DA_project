@@ -51,6 +51,9 @@ def provider_plan(engine,question,metric,dimension,date_column,*,consent=False):
 
 def answer(engine,question,metric,*,dimension=None,date_column=None,use_provider=False,consent=False):
     if not question.strip() or len(question)>2000: raise ValueError('Enter a question of 1–2,000 characters.')
+    from .analyst_planner import guard_question
+    guarded=guard_question(question,engine.table)
+    if guarded and guarded['action']=='refuse':raise ValueError(guarded['message'])
     text=question.lower()
     if re.search(r'\b(rate|percentage|proportion)\b',text) and not metric.components and 'weighted_avg(' not in metric.formula:
         raise ValueError('Define the requested numerator and eligible denominator, then select that rate metric. A record count is not a rate.')

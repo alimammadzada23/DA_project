@@ -1,0 +1,20 @@
+{
+  "evidence_type": "Constructed reproducer, NOT actual Qwen JSON",
+  "old_schema_accepts": true,
+  "old_semantic_error": "Measure arguments do not match its aggregation.",
+  "constructed_plan": {
+    "version": 1,
+    "action": "analyze",
+    "table": "facts",
+    "operation": "aggregate",
+    "group_by": [
+      "job"
+    ],
+    "measures": [
+      {
+        "aggregation": "records",
+        "column": "job"
+      }
+    ]
+  }
+}

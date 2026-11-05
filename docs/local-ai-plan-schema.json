@@ -48,99 +48,212 @@
         "measures": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "aggregation"
-            ],
-            "properties": {
-              "aggregation": {
-                "enum": [
-                  "records",
-                  "count",
-                  "distinct",
-                  "sum",
-                  "avg",
-                  "median",
-                  "min",
-                  "max",
-                  "quantile",
-                  "saved",
-                  "share",
-                  "rate"
-                ]
-              },
-              "column": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              },
-              "metric": {
-                "type": "string",
-                "maxLength": 100
-              },
-              "quantile": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              },
-              "numerator": {
+            "oneOf": [
+              {
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "column",
-                  "operator"
+                  "aggregation"
                 ],
                 "properties": {
+                  "aggregation": {
+                    "const": "records"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "share"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "count"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "distinct"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "sum"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "avg"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "median"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "min"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "max"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column",
+                  "quantile"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "quantile"
+                  },
                   "column": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 256
                   },
-                  "operator": {
-                    "enum": [
-                      "eq",
-                      "ne",
-                      "gt",
-                      "gte",
-                      "lt",
-                      "lte",
-                      "is_missing",
-                      "not_missing",
-                      "from",
-                      "through"
-                    ]
-                  },
-                  "value": {
-                    "type": [
-                      "string",
-                      "number",
-                      "boolean",
-                      "null"
-                    ],
-                    "maxLength": 200
+                  "quantile": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
                   }
                 }
               },
-              "denominator": {
+              {
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "kind"
+                  "aggregation",
+                  "metric"
                 ],
                 "properties": {
-                  "kind": {
-                    "enum": [
-                      "selected",
-                      "nonmissing",
-                      "condition"
-                    ]
+                  "aggregation": {
+                    "const": "saved"
                   },
-                  "column": {
+                  "metric": {
                     "type": "string",
-                    "maxLength": 256
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "numerator",
+                  "denominator"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "rate"
                   },
-                  "condition": {
+                  "numerator": {
                     "type": "object",
                     "additionalProperties": false,
                     "required": [
@@ -177,10 +290,95 @@
                         "maxLength": 200
                       }
                     }
+                  },
+                  "denominator": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "selected"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "column"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "nonmissing"
+                          },
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "condition"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "condition"
+                          },
+                          "condition": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "column",
+                              "operator"
+                            ],
+                            "properties": {
+                              "column": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "operator": {
+                                "enum": [
+                                  "eq",
+                                  "ne",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "is_missing",
+                                  "not_missing",
+                                  "from",
+                                  "through"
+                                ]
+                              },
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean",
+                                  "null"
+                                ],
+                                "maxLength": 200
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
                   }
                 }
               }
-            }
+            ]
           },
           "maxItems": 4
         },

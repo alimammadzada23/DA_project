@@ -18,12 +18,23 @@ SCALAR={'type':['string','number','boolean','null'],'maxLength':200}
 CONDITION={'type':'object','additionalProperties':False,'required':['column','operator'],
     'properties':{'column':{'type':'string','minLength':1,'maxLength':256},
         'operator':{'enum':['eq','ne','gt','gte','lt','lte','is_missing','not_missing','from','through']},'value':SCALAR}}
-DENOMINATOR={'type':'object','additionalProperties':False,'required':['kind'],
-    'properties':{'kind':{'enum':['selected','nonmissing','condition']},'column':{'type':'string','maxLength':256},'condition':CONDITION}}
-MEASURE={'type':'object','additionalProperties':False,'required':['aggregation'],
-    'properties':{'aggregation':{'enum':['records','count','distinct','sum','avg','median','min','max','quantile','saved','share','rate']},
-        'column':{'type':'string','minLength':1,'maxLength':256},'metric':{'type':'string','maxLength':100},
-        'quantile':{'type':'number','minimum':0,'maximum':1},'numerator':CONDITION,'denominator':DENOMINATOR}}
+def closed_object(properties):
+    return {'type':'object','additionalProperties':False,'required':list(properties),'properties':properties}
+
+
+DENOMINATOR={'oneOf':[
+    closed_object({'kind':{'const':'selected'}}),
+    closed_object({'kind':{'const':'nonmissing'},'column':{'type':'string','minLength':1,'maxLength':256}}),
+    closed_object({'kind':{'const':'condition'},'condition':CONDITION})]}
+MEASURE_ARGUMENTS={
+    **{a:{} for a in ('records','share')},
+    **{a:{'column':{'type':'string','minLength':1,'maxLength':256}} for a in ('count','distinct','sum','avg','median','min','max')},
+    'quantile':{'column':{'type':'string','minLength':1,'maxLength':256},'quantile':{'type':'number','minimum':0,'maximum':1}},
+    'saved':{'metric':{'type':'string','minLength':1,'maxLength':100}},
+    'rate':{'numerator':CONDITION,'denominator':DENOMINATOR}}
+MEASURE_SCHEMAS={a:closed_object({'aggregation':{'const':a},**arguments}) for a,arguments in MEASURE_ARGUMENTS.items()}
+MEASURE={'oneOf':list(MEASURE_SCHEMAS.values())}
+MEASURE_VALIDATORS={a:Draft202012Validator(schema) for a,schema in MEASURE_SCHEMAS.items()}
 ANALYSIS_PROPERTIES={
         'version':{'const':1},'action':{'enum':['analyze','clarify','refuse']},'table':{'type':'string','maxLength':63},
         'operation':{'enum':['aggregate','records','schema','missing','summary','distribution','group_distribution','scatter','trend','compare_periods','outliers']},
@@ -56,8 +67,8 @@ class PlanError(ValueError):
     """Invalid or unauthorized model data; never an executable program."""
     code='invalid_plan'
 
-    def __init__(self,message,*,reason=None):
-        super().__init__(message);self.reason=reason
+    def __init__(self,message,*,reason=None,repair_feedback=None):
+        super().__init__(message);self.reason=reason;self.repair_feedback=repair_feedback
 
 
 class ClarificationRequired(ValueError):
@@ -103,6 +114,13 @@ def validate_structure(value):
         error=next(VALIDATOR.iter_errors(value),None)
     except (TypeError,RecursionError) as exc:raise PlanError('The plan contains invalid data types or excessive nesting.') from exc
     if error:
+        if isinstance(value,dict) and value.get('action')=='analyze' and isinstance(value.get('measures'),list):
+            for measure in value['measures']:
+                if not isinstance(measure,dict):continue
+                aggregation=measure.get('aggregation')
+                if isinstance(aggregation,str) and aggregation in MEASURE_SCHEMAS and not MEASURE_VALIDATORS[aggregation].is_valid(measure):
+                    keys=', '.join(MEASURE_SCHEMAS[aggregation]['required'])
+                    raise PlanError('Invalid arguments for '+aggregation+'; required and permitted keys: '+keys+'. No calculation ran.',reason='measure_arguments')
         if isinstance(value,dict) and value.get('action')=='analyze' and 'operation' not in value and INCOMPLETE_VALIDATOR.is_valid(value):
             raise PlanError('An analysis plan must include a supported operation. No calculation was run.',reason='missing_operation')
         location='.'.join(map(str,error.absolute_path)) or 'plan'
@@ -185,8 +203,8 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     saved={m.name:m for m in load_metrics(engine.workspace,engine.table)}|{selected_metric.name:selected_metric,'Records':Metric('Records')}
     for m in measures:
         agg=m['aggregation']
-        valid_keys={'aggregation'}|({'metric'} if agg=='saved' else {'numerator','denominator'} if agg=='rate' else {'column','quantile'} if agg=='quantile' else {'column'} if agg not in ('records','share') else set())
-        if set(m)-valid_keys:raise PlanError('Measure arguments do not match its aggregation.')
+        # The producer schema and this defensive check use the same contract.
+        if set(m)!=set(MEASURE_SCHEMAS[agg]['required']):raise PlanError('Measure arguments do not match its aggregation.')
         if agg=='saved':
             if m.get('metric') not in saved:raise PlanError('The plan selected an unknown metric definition.')
             definition=saved[m['metric']];definition.compile(engine.info['columns'],engine.info['roles'])

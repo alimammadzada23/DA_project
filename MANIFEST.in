@@ -21,6 +21,7 @@ include scripts/browser_local_ai.py
 include *.command
 include scripts/launch_insightpilot.py
 include scripts/accept_local_ai.py
+include scripts/synthetic_plan_diagnostics.py
 include scripts/browser_reliability.py
 include docs/MAC_EVERYDAY_USE.md
 recursive-include tests *.py *.csv

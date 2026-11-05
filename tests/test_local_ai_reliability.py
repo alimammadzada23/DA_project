@@ -191,7 +191,8 @@ def test_version_change_before_repair_prevents_retry(data):
     assert result['status']=='error' and len(calls)==1 and not result['evidence'] and 'changed' in result['answer']
 
 
-def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(tmp_path):
+@pytest.mark.parametrize('diagnostics',[False,True])
+def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(tmp_path,diagnostics):
     plans=[]
     for case in accept.questions():
         name=case['id']
@@ -214,10 +215,13 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
         elif name=='smallest':value.update(limit=10,descending=False)
         plans.append(value)
     client,chats=client_for(plans)
-    code,report,path=accept.run(client.config,client=client,directory=tmp_path/'mock-acceptance')
-    assert code==0 and report['passed']==16 and report['failed']==0 and len(chats)==15
+    code,report,path=accept.run(client.config,client=client,directory=tmp_path/'mock-acceptance',diagnostics=diagnostics)
+    assert code==0 and report['passed']==16 and report['failed']==0 and len(chats)==13
+    assert all(r['handling']=='application_guard' and r['model_attempts']==0 for r in report['results'] if r['id'] in ('clarify','refuse','guard_refuse'))
     assert report['actual_model_test'] is False and report['actual_model_executed'] is False
     assert all('plan_validated' in r and 'correct_numbers' in r and 'appropriate_chart' in r and 'model_attempts' in r for r in report['results'])
+    assert report['diagnostics_enabled']==diagnostics
+    assert (path.parent/'rejected-plans.jsonl').exists()==diagnostics
 
 
 def test_plotly_typed_numeric_arrays_export_actual_values_after_json_roundtrip():

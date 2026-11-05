@@ -1,0 +1,76 @@
+{
+  "at": "2026-11-05T11:49:22.183911+01:00",
+  "base_commit": "3be7f67cefd03725bfbd26431f9cfcd6e6c1e246",
+  "branch": "codex/insightpilot-local-ai",
+  "schema_sha256": "d3d1b5d7a39c671d1ec72949c2682cc46975217f46ce4252894ec86c8f17e546",
+  "schema_hash_serialization": "json.dumps(PLAN_SCHEMA, sort_keys=True), UTF-8",
+  "system_prompt_sha256": "859b63014775ee4e86ba1fa7d7a7b4e796845e73bd2f00a2044a4baac1ec1c1a",
+  "measure_required_and_permitted_keys": {
+    "records": [
+      "aggregation"
+    ],
+    "share": [
+      "aggregation"
+    ],
+    "count": [
+      "aggregation",
+      "column"
+    ],
+    "distinct": [
+      "aggregation",
+      "column"
+    ],
+    "sum": [
+      "aggregation",
+      "column"
+    ],
+    "avg": [
+      "aggregation",
+      "column"
+    ],
+    "median": [
+      "aggregation",
+      "column"
+    ],
+    "min": [
+      "aggregation",
+      "column"
+    ],
+    "max": [
+      "aggregation",
+      "column"
+    ],
+    "quantile": [
+      "aggregation",
+      "column",
+      "quantile"
+    ],
+    "saved": [
+      "aggregation",
+      "metric"
+    ],
+    "rate": [
+      "aggregation",
+      "numerator",
+      "denominator"
+    ]
+  },
+  "denominator_required_and_permitted_keys": {
+    "selected": [
+      "kind"
+    ],
+    "nonmissing": [
+      "kind",
+      "column"
+    ],
+    "condition": [
+      "kind",
+      "condition"
+    ]
+  },
+  "repair": "One extra request total for missing operation or explicit missing-value scope/count mismatch; same local model, static feedback, remaining budget and full live validation. No repair or stripping of invalid measure arguments.",
+  "action_variants": "Analyze requires operation; clarify/refuse require message and prohibit analysis arguments.",
+  "persistence": "Canonical stored plans retain their existing shape; no workspace migration or engine rewrite.",
+  "original_qwen_json_available": false,
+  "actual_qwen_executed_in_this_revision": false
+}

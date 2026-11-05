@@ -14,6 +14,8 @@ Use only the active table and available fields. Reviewed roles/units/metric defi
 Use action clarify when a requested field, business outcome, "best" measure, denominator, grouping or date meaning is ambiguous. Use action refuse for causes, unsupported predictions, writes, secrets or other-workspace requests. Neither action may contain analysis arguments.
 For execution use action analyze and ALWAYS include operation, including follow-ups. Operations: aggregate (up to 4 explicit measures, up to 2 grouping fields), records (bounded source-row table), schema, missing, summary, distribution, group_distribution, scatter, trend, compare_periods, outliers. An aggregate/time plan must supply measures or inherit them from the prior validated plan.
 Fields are for summary/distribution/scatter/outliers/schema/missing. Aggregate inputs belong in measures. Use records for source-row counts, count for nonblank field values, avg for a reviewed numeric mean, saved with an exact existing metric name for a defined KPI. Use share only for group records/all selected rows, not a business conversion.
+Each measure is a different closed object. records and share have ONLY aggregation. count/distinct/sum/avg/median/min/max have ONLY aggregation and column. quantile adds quantile. saved has ONLY aggregation and metric. rate has ONLY aggregation, numerator and denominator. Never fill unused properties, even with defaults or null.
+Missing-value questions differ: "which fields have missing values" uses operation missing. "How many records remain excluding missing values in a field" uses aggregate, records, and an explicit not_missing filter on that field. Do not replace a filtered count with a missingness profile. If an explicitly requested field is absent, clarify; never ignore it and count rows instead. File creation/modification is unsupported, even if a record count could also be calculated.
 A new rate needs an explicit numerator condition and eligible denominator; the application requires human approval. Never invent what an outcome means. Do not equate sample proportions with population risks.
 Filters add to shared scope; never remove shared filters. Only eq/ne, finite numeric comparisons, missing tests or reviewed date from/through. Exact category values must come from the question; no guessing examples.
 For grouped record counts use operation aggregate, group_by with the exact category field, measures [{"aggregation":"records"}], sort_by records and chart bar. Highest to lowest means descending true, lowest to highest means false. Set limit to the exact requested count, including a spelled-out number. Show records where a condition holds means operation records, explicit filters, no measures or grouping, and chart table. Do not substitute a count for requested source rows.
@@ -25,6 +27,15 @@ No examples contain domain-specific columns or sample rows. Propose a precise pl
 def guard_question(question,table):
     if not isinstance(question,str) or not question.strip() or len(question)>2000:raise ClarificationRequired('Enter a question of 1–2,000 characters.')
     text=question.casefold()
+    write=r'\b(?:create|write|save|overwrite|append|modify|edit|delete|remove|rename|touch|truncate|move|copy|export|dump)\b'
+    target=r'\b(?:file|files|directory|directories|folder|folders|disk|filesystem)\b|(?:[\w./~-]+\.(?:csv|tsv|json|jsonl|xlsx|parquet|txt|sql|db|duckdb)\b)'
+    path_write=write+r'(?:\s+(?:a|the|new|results?|data|output|to|at|into)){0,8}\s+["\x27]?(?:/|~/|\.\.?/)'
+    # Creating a chart of file-related observations is a read-only operation;
+    # writing that chart to a filesystem target is a distinct unsupported action.
+    command_text=re.sub(r'\bcreate\s+(?:(?:a|the|new)\s+)?(?:(?:bar|line|scatter|pie|box)\s+)?(?:chart|plot|histogram|visualization|visualisation)\b(?!\s+(?:data\s+)?file\b)','render',text)
+    artifact_write=write+r'.{0,120}\b(?:to|at|into)\s+["\x27]?(?:/|~/|\.\.?/|[\w.-]+\.[a-z0-9]{1,8}\b)'
+    if re.search(write+r'[\s\S]{0,120}(?:'+target+r')',command_text) or re.search(path_write,text) or re.search(artifact_write,text) or re.search(r'\b(?:file|directory|folder)\b.{0,60}\b(?:should|must) be (?:created|modified|written|deleted|overwritten)',text):
+        return {'version':1,'action':'refuse','table':table,'message':'AI Analyst is read-only and cannot create or modify files. Use the explicit download or Reports controls after a supported calculation.'}
     if re.search(r'\b(ignore (?:all |previous )?(?:rules|instructions)|__import__|os\.system|api.?key|password|secret|gh_token)\b|/etc/passwd|\b(?:drop|delete|update|install|attach)\s+(?:table|rows|records|extension|database)\b',text):
         return {'version':1,'action':'refuse','table':table,'message':'AI Analyst is read-only and cannot access credentials, files, commands, or another workspace. Ask a descriptive question about the active data.'}
     if re.search(r'\b(caus(?:e[ds]?|al|ality)|prove.*effect|guarantee|forecast|predict)\b',text):
@@ -32,6 +43,41 @@ def guard_question(question,table):
     if re.search(r'\bbest\b|perform(?:s|ing)? best|most successful',text) and not re.search(r'\b(highest|lowest|largest|smallest|sum|mean|average|median|count)\b',text):
         return {'version':1,'action':'clarify','table':table,'message':'Which explicit measure defines success? Choose a reviewed metric or specify a supported quantity; the application will not invent what best means.'}
     return None
+
+
+def preflight_question(engine,question):
+    """Reject clear side effects and explicit unavailable field references."""
+    guarded=guard_question(question,engine.table)
+    if guarded:return guarded
+    known={c.casefold() for c in engine.info['columns']}
+    for rel in SQLLab(engine).relationships.values():known.update((rel['right']+'.'+c).casefold() for c in engine.workspace.columns(rel['right']))
+    pattern=r'\b(?:field|column)\s+(?:(?:called|named)\s+)?(?:"([^"]+)"|`([^`]+)`|\x27([^\x27]+)\x27|([\w.]+))'
+    skip={'is','are','has','have','with','for','in','on','of','to','the','a','an'}
+    for match in re.finditer(pattern,question,re.I):
+        name=next(g for g in match.groups() if g is not None)
+        if match.group(4) is not None:name=name.rstrip('.')
+        if name.casefold() not in skip and name.casefold() not in known:
+            return {'version':1,'action':'clarify','table':engine.table,'message':'The explicitly requested field is unavailable in the active analytical schema. Choose an available field; no substitute calculation ran.'}
+    return None
+
+
+def validate_question_intent(engine,question,validated):
+    """A valid JSON plan must still preserve explicit missing-value scope."""
+    from .analyst_plan import PlanError
+    if validated.data['action']!='analyze':return
+    text=' '+_normalize(question)+' '
+    if not re.search(r'\b(?:exclude|excluding|without|ignore|ignoring)\b.{0,70}\b(?:missing|null|blank)\b',text):return
+    fields=[]
+    for field in engine.info['columns']:
+        name=re.escape(_normalize(field))
+        if re.search(r'\b(?:missing|null|blank)\s+(?:values?\s+)?(?:(?:in|for|of)\s+)?'+name+r'\b',text):fields.append(field)
+    if len(fields)!=1:raise ClarificationRequired('Name the field whose missing values should be excluded; no alternative calculation ran.')
+    filters=[*validated.data.get('filters',[]),*({'column':f.column,'operator':f.operator} for f in engine.filters)]
+    correct_scope=any(f['column']==fields[0] and f['operator']=='not_missing' for f in filters)
+    asks_count=bool(re.search(r'\b(?:how many|number of|count records|count rows)\b',text))
+    correct_operation=not asks_count or (validated.data['operation']=='aggregate' and any(m['aggregation']=='records' or m['aggregation']=='saved' and m.get('metric')=='Records' for m in validated.data['measures']))
+    if not correct_scope or not correct_operation:
+        raise PlanError('The plan did not preserve the requested missing-value exclusion/count. No calculation ran.',reason='missing_scope',repair_feedback='Preserve the original request: exclude missing values with a not_missing filter on the requested field; a remaining-record count uses aggregate with records. Do not substitute operation missing or an unfiltered count.')
 
 
 def planning_messages(engine,profile,metric,question,previous=None,*,field_scope=None):

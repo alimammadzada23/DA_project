@@ -11,6 +11,7 @@ reports and backend/CLI compatibility remain intact.
 
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
 [Mac launcher and updates](docs/MAC_EVERYDAY_USE.md) ·
+[Qwen measure-contract repair and diagnostic rerun](docs/LOCAL_AI_MEASURE_CONTRACT.md) ·
 [Reliability repair](docs/LOCAL_AI_RELIABILITY.md) ·
 [Local AI architecture](docs/LOCAL_AI_ARCHITECTURE.md) ·
 [Unified baseline acceptance](docs/UNIFIED_ACCEPTANCE.md) ·
@@ -21,10 +22,11 @@ reports and backend/CLI compatibility remain intact.
 
 ## Run on your Mac
 
-Keep your existing **`~/DA_project`** clone. The published local AI baseline is
-`b8d562e` on **`codex/insightpilot-local-ai`**. The reliability repair and permanent
-launcher in this revision are local until a new push is explicitly authorized.
-After publication, update that clone; no new ZIP or clone is needed.
+Keep your existing **`~/DA_project`** clone on **`codex/insightpilot-local-ai`**.
+The previous reliability repair and permanent launchers are in `3be7f67`. The
+new measure-contract repair in this revision is local until a new push is
+explicitly authorized. After publication, update that clone; no new ZIP or clone
+is needed.
 
 ```bash
 cd ~/DA_project
@@ -44,10 +46,12 @@ If Ollama and `qwen3.5:4b` are already installed, reuse them. The launcher can o
 the installed Mac app when offline and does not pull models. Choose **AI Analyst → Local AI
 Analyst** and refresh installed models. Default endpoint is loopback
 `http://127.0.0.1:11434`; no paid provider is required. Standard analysis, SQL Lab
-and all other pages work without Ollama. Actual Qwen quality and Apple Silicon
-performance remain unverified here; mocked integration is reported separately.
-Double-click **Check Local AI.command** for the actual-model acceptance procedure
-with independent DuckDB references and no personal-data changes.
+and all other pages work without Ollama. The user's first real Mac acceptance
+was **2/16**; the new fixes still require a real-Qwen rerun. Mocked integration
+does not establish Qwen quality or Mac performance. Run
+`./"Check Local AI.command" --diagnostics` in Terminal for opt-in sanitized
+synthetic diagnostics and independent DuckDB references. See the
+[diagnostic rerun procedure](docs/LOCAL_AI_MEASURE_CONTRACT.md).
 
 ## First minute
 

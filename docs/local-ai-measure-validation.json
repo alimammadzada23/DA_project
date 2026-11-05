@@ -1,0 +1,82 @@
+{
+  "at": "2026-11-05T11:49:22.183911+01:00",
+  "base_commit": "3be7f67cefd03725bfbd26431f9cfcd6e6c1e246",
+  "branch": "codex/insightpilot-local-ai",
+  "user_reported_real_mac_qwen": {
+    "model": "qwen3.5:4b",
+    "passed": 2,
+    "total": 16,
+    "rejected_json_recorded": false,
+    "source": "User report; no raw rejected responses available."
+  },
+  "diagnosis": {
+    "old_schema_semantic_disagreement_reproduced": true,
+    "reproducer_type": "Constructed JSON, NOT actual Qwen output",
+    "actual_original_irrelevant_keys": "Unknown; requires the new real-model diagnostic rerun."
+  },
+  "baseline": {
+    "tests": 448,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 448,
+    "seconds": 119.283
+  },
+  "final": {
+    "tests": 552,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 552,
+    "seconds": 134.26
+  },
+  "final_junit": "outputs/measure-contract-final.xml",
+  "focused_diagnostic_and_reliability_check": {
+    "passed": 126,
+    "failed": 0,
+    "seconds": 30.24,
+    "kind": "HTTP mocks and deterministic calculations, no real Qwen"
+  },
+  "mock_synthetic_acceptance": {
+    "passed": 16,
+    "total": 16,
+    "model_planned_cases": 13,
+    "application_guard_cases": [
+      "clarify",
+      "refuse",
+      "guard_refuse"
+    ],
+    "diagnostics_on_and_off_tested": true,
+    "actual_qwen": false
+  },
+  "acceptance_oracles": {
+    "fixture_questions_comparison_and_checker_AST_unchanged_from_base": true,
+    "independent_reference": "Handwritten DuckDB SQL over the original synthetic fixture, not model or engine SQL"
+  },
+  "existing_benchmarks": {
+    "standard_passed": 48,
+    "standard_total": 51,
+    "remaining_standard_failures": [
+      "s18",
+      "s19",
+      "s22"
+    ],
+    "mock_integration_passed": 51,
+    "mock_integration_total": 51,
+    "questions_statuses_reference_tables_equal_previous_review": true,
+    "all_questions_statuses_reference_tables_sha256": "8a7b3a83077be03078e03c92debf3394cccd222ef80216637d2dcaf3f92b9e38",
+    "hash_serialization": "JSON list of id, question, expected_status, reference; sort_keys=True, separators=(comma, colon)",
+    "historical_reference_tables_receipt_sha256": "a71bcefb84f24aea3d6d951d3af68265af02e99b2c7263d908b1369e3c05b1b7"
+  },
+  "cloud_actual_model": {
+    "status": "model_unavailable",
+    "cases_run": 0,
+    "actual_model_executed": false,
+    "actual_model_quality_measured": false,
+    "receipt": "local-ai-measure-actual-model.json"
+  },
+  "real_model_repair_passed": null,
+  "native_mac_rerun_performed": false,
+  "real_model_acceptance_remaining": "Run Check Local AI.command --diagnostics on the existing Mac with the same qwen3.5:4b. Inspect actual sanitized response shapes and independent results; no new real-model success claimed.",
+  "publication": "Local commit only. No push, merge, deployment or model change."
+}

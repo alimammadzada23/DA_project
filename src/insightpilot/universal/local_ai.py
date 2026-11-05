@@ -20,9 +20,10 @@ MAX_RESPONSE=262_144
 
 
 class LocalAIError(ValueError):
-    def __init__(self,code,message,*,repair_feedback=None):
+    def __init__(self,code,message,*,repair_feedback=None,response_received=False):
         self.code=code
         self.repair_feedback=repair_feedback
+        self.response_received=response_received
         super().__init__(message)
 
 
@@ -61,8 +62,8 @@ def loopback_endpoint(value):
 
 
 class OllamaClient:
-    def __init__(self,config=LocalConfig(),*,transport=None):
-        self.config=config.validated();self.transport=transport
+    def __init__(self,config=LocalConfig(),*,transport=None,observer=None):
+        self.config=config.validated();self.transport=transport;self.observer=observer
 
     def _request(self,method,path,payload=None,*,inference=False):
         timeout=httpx.Timeout(self.config.timeout_seconds if inference else 2,connect=2,write=5,pool=2)
@@ -131,13 +132,16 @@ class OllamaClient:
         message=response.get('message')
         if not isinstance(message,dict) or message.get('tool_calls') or not isinstance(message.get('content'),str):
             raise LocalAIError('invalid_output','The model returned tools or an invalid message; no analysis was executed.')
+        if self.observer is not None:self.observer.capture_response(message['content'])
         try:plan=decode_plan(message['content'])
         except PlanError as exc:
+            if self.observer is not None:self.observer.decision('rejected_schema',reason=exc.reason or 'invalid_schema')
             feedback='Missing required property: operation for action analyze. Return a complete plan with a supported operation; preserve the original question and context.' if exc.reason=='missing_operation' else None
-            raise LocalAIError('invalid_output',str(exc),repair_feedback=feedback) from exc
+            raise LocalAIError('invalid_output',str(exc),repair_feedback=feedback,response_received=True) from exc
         stats={}
         for key in ('load_duration','total_duration','eval_duration','prompt_eval_count','eval_count'):
             v=response.get(key)
             if type(v) in (int,float) and math.isfinite(v) and v>=0:stats[key]=v
         return plan,{'backend':'Ollama local REST','model':self.config.model,'endpoint':self.config.endpoint,
+                    'model_response_received':True,
                     'planning_seconds':round(time.perf_counter()-started,4),'server_metrics':stats,'numerical_authority':'InsightPilot engine; model proposed intent only'}

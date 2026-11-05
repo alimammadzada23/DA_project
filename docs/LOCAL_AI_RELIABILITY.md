@@ -1,5 +1,12 @@
 # Local AI reliability repair and persistent Mac startup
 
+This page records the earlier missing-operation/launcher repair. The user's
+subsequent real Mac test was **2/16**. See the newer
+[measure-contract repair and diagnostic procedure](LOCAL_AI_MEASURE_CONTRACT.md)
+for the current changes and remaining real-Qwen acceptance. The receipts linked
+below are historical; current schema/prompt hashes are in
+[local-ai-measure-contract.json](local-ai-measure-contract.json).
+
 Baseline: clean `codex/insightpilot-local-ai` at
 `b8d562ee7b1517ec98e34971f72e3244db7b0150`. The existing branch is used; `main`
 and other branches are untouched. This repair is for a local commit only, with

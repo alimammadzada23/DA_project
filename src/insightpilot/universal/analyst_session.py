@@ -8,7 +8,7 @@ import uuid
 
 from .analyst_plan import PlanError,ClarificationRequired,validate_plan
 from .analyst_execute import execute_plan
-from .analyst_planner import guard_question,planning_messages,standard_plan
+from .analyst_planner import preflight_question,planning_messages,standard_plan,validate_question_intent
 from .local_ai import OllamaClient,LocalConfig,LocalAIError
 from .metrics import load_metrics
 from .relationships import load_relationships
@@ -79,10 +79,12 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
     if conversation.entries and conversation.entries[-1]['question']==question and conversation.entries[-1]['response']['status']=='ok':
         response=deepcopy(conversation.entries[-1]['response']);response['cache_hit']=True
         return response
-    started=time.perf_counter();backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False,'model_attempts':0,'repair_attempted':False}
+    started=time.perf_counter();backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False,'model_response_received':False,'model_attempts':0,'repair_attempted':False}
     try:
         assert_current(engine)
-        guarded=guard_question(question,engine.table)
+        observer=getattr(client,'observer',None)
+        if observer is not None:observer.verify_engine(engine)
+        guarded=preflight_question(engine,question)
         if guarded:raw=guarded
         elif mode=='local':
             effective=question
@@ -91,28 +93,39 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
                 if len(effective)>2000:raise ClarificationRequired('Restate the complete question in fewer than 2,000 characters.')
             messages=planning_messages(engine,profile,metric,effective,conversation.last_plan,field_scope=field_scope)
             planner=client or OllamaClient(config)
-            backend.update(backend='Ollama local REST',model=config.model,model_attempts=1)
-            try:
-                raw,metadata=planner.plan(messages)
-            except LocalAIError as exc:
-                if not exc.repair_feedback:raise
-                assert_current(engine)
-                if context_signature(engine,metric)!=conversation.signature:raise PlanError('The analytical context changed before repair. Ask again in the new context.')
-                remaining=config.timeout_seconds-(time.perf_counter()-started)
-                if remaining<5:raise LocalAIError('timeout','No planning time remains for a repair. Ask again explicitly; no calculation ran.') from exc
-                backend.update(model_attempts=2,repair_attempted=True)
-                if isinstance(planner,OllamaClient):planner=OllamaClient(replace(config,timeout_seconds=remaining),transport=planner.transport)
-                repair_messages=messages+[{'role':'user','content':'Validation feedback: '+exc.repair_feedback}]
-                try:raw,metadata=planner.plan(repair_messages)
-                except (LocalAIError,PlanError) as repaired:
-                    raise LocalAIError(getattr(repaired,'code','invalid_output'),'The local model could not produce a valid plan after one repair attempt. No calculation ran. '+str(repaired)) from repaired
-            backend.update(metadata);backend['model_request_completed']=True
+            backend.update(backend='Ollama local REST',model=config.model)
+            current_messages=messages
+            for attempt in range(2):
+                backend.update(model_attempts=attempt+1,model_request_completed=False)
+                if observer is not None:observer.begin_attempt(attempt+1)
+                try:
+                    raw,metadata=planner.plan(current_messages)
+                    backend.update(metadata);backend['model_request_completed']=True
+                    preliminary=validate_plan(engine,profile,raw,metric,conversation.last_plan)
+                    validate_question_intent(engine,question,preliminary)
+                    if observer is not None:observer.decision('validated')
+                    break
+                except (LocalAIError,PlanError) as exc:
+                    backend['model_response_received']=backend['model_response_received'] or getattr(exc,'response_received',False)
+                    if observer is not None:observer.decision('rejected',reason=getattr(exc,'reason',None) or getattr(exc,'code','invalid_plan'))
+                    feedback=getattr(exc,'repair_feedback',None)
+                    if attempt or not feedback:
+                        if attempt:raise LocalAIError(getattr(exc,'code','invalid_output'),'The local model could not produce a valid plan after one repair attempt. No calculation ran. '+str(exc)) from exc
+                        raise
+                    assert_current(engine)
+                    if context_signature(engine,metric)!=conversation.signature:raise PlanError('The analytical context changed before repair. Ask again in the new context.')
+                    remaining=config.timeout_seconds-(time.perf_counter()-started)
+                    if remaining<5:raise LocalAIError('timeout','No planning time remains for a repair. Ask again explicitly; no calculation ran.') from exc
+                    backend['repair_attempted']=True
+                    if isinstance(planner,OllamaClient):planner=OllamaClient(replace(config,timeout_seconds=remaining),transport=planner.transport,observer=observer)
+                    current_messages=messages+[{'role':'user','content':'Validation feedback: '+feedback}]
         elif mode=='standard':
             effective=question
             if conversation.clarification and len(question.split())<12:effective=conversation.clarification['question']+' '+question
             raw=standard_plan(engine,profile,metric,effective,conversation.last_plan)
         else:raise PlanError('Choose Standard analysis or Local AI explicitly; no automatic external provider routing is available.')
         validated=validate_plan(engine,profile,raw,metric,conversation.last_plan)
+        validate_question_intent(engine,question,validated)
         assert_current(engine)
         if context_signature(engine,metric)!=conversation.signature:raise PlanError('The workspace context changed while the plan was being produced. Ask again in the new context.')
         cohort=()

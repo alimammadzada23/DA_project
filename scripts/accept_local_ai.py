@@ -111,11 +111,12 @@ def check(case,response,reference,*,check_charts=True):
     return True,'Independent DuckDB values, scope, ordering and requested chart reconciled.'
 
 
-def run(config,*,client=None,directory=None):
+def run(config,*,client=None,directory=None,diagnostics=False):
     directory=directory or ROOT/'outputs/local-ai-acceptance'/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')+'-'+uuid.uuid4().hex[:6])
-    directory.mkdir(parents=True,exist_ok=True);path=directory/'report.json'
+    directory.mkdir(parents=True,exist_ok=True,mode=0o700);path=directory/'report.json'
     report={'model':config.model,'endpoint':config.endpoint,'platform':platform.platform(),'actual_model_test':client is None,
-        'data':'Isolated SYNTHETIC fixture; existing user workspaces are never selected or changed.','status':'running','results':[],'cases_run':0}
+        'data':'Isolated SYNTHETIC fixture; existing user workspaces are never selected or changed.','status':'running','results':[],'cases_run':0,
+        'diagnostics_enabled':diagnostics,'diagnostics_file':None}
     def save():path.write_text(json.dumps(report,default=str,indent=2)+'\n')
     try:
         planner=client or OllamaClient(config);report['model_metadata']=planner.inspect_model()
@@ -123,6 +124,18 @@ def run(config,*,client=None,directory=None):
         report.update(status='model_unavailable',reason=str(exc),actual_model_executed=False,actual_model_quality_measured=False);save()
         print(str(exc)+'\nNo model cases executed. Report: '+str(path));return 2,report,path
     engine,profile,metric,frame=fixture(directory/'fixture');conversations={}
+    observer=None
+    if diagnostics:
+        # Load the trusted sibling explicitly, including when this runner is
+        # imported programmatically rather than executed as a CLI script.
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('insightpilot_synthetic_diagnostics',Path(__file__).with_name('synthetic_plan_diagnostics.py'))
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        observer=module.SyntheticPlanDiagnostics(engine,directory/'rejected-plans.jsonl',[c['id'] for c in questions()])
+        planner.observer=observer;report['diagnostics_file']='rejected-plans.jsonl'
+        report['model']=config.model if config.model=='qwen3.5:4b' else '<model tag redacted>'
+        report['model_metadata']={'status':'available','name':report['model'],'other_metadata':'omitted in diagnostic mode'}
+        print('Explicit diagnostics enabled for the byte-verified synthetic fixture only. Unknown values/free text are redacted; no real user data or credentials are captured.',flush=True)
     with duckdb.connect() as con:
         con.register('fixture',frame)
         # Row views retain original CSV cell text; references must retain those
@@ -130,41 +143,56 @@ def run(config,*,client=None,directory=None):
         con.read_csv(str(engine.workspace.directory.parent/'SYNTHETIC-acceptance.csv'),header=True,all_varchar=True).create_view('raw_fixture')
         try:
             for case in questions():
+                if observer is not None:observer.begin_case(case['id'])
                 print('Checking '+case['id']+': '+case['question'],flush=True)
                 reference=con.execute(case['sql']).df() if 'sql' in case else None
                 conversation=conversations.setdefault(case.get('chain',case['id']),Conversation())
                 response=analyze_question(engine,profile,metric,case['question'],conversation,mode='local',config=config,client=planner)
+                # The companion report must not undo diagnostic redaction by
+                # storing a free-text model message or a raw plan inside evidence.
+                if observer is not None and response.get('backend',{}).get('model_attempts') and response['status']!='ok':
+                    response=dict(response,answer='No executed answer; free text omitted. See status and redacted plan diagnostics.')
                 passed,reason=check(case,response,reference)
                 numbers_correct=check(case,response,reference,check_charts=False)[0] if reference is not None else None
                 backend=response.get('backend',{})
+                if observer is not None:observer.decision('result_'+response['status'])
+                reported_plan=response.get('plan');reported_actual=response.get('primary');reported_backend=backend
+                if observer is not None:
+                    reported_plan=observer.project_plan(reported_plan)
+                    reported_actual=None if reported_actual is None else {k:reported_actual.get(k) for k in ('columns','rows','version','source_sha256')}
+                    reported_backend={k:backend.get(k) for k in ('model_attempts','repair_attempted','model_response_received','model_request_completed')}
                 report['results'].append({'id':case['id'],'question':case['question'],'passed':passed,'reason':reason,'status':response['status'],
                     'model_attempts':backend.get('model_attempts',0),'repair_attempted':backend.get('repair_attempted',False),
+                    'model_response_received':backend.get('model_response_received',False),
+                    'handling':'local_model' if backend.get('model_attempts') else 'application_guard',
                     'valid_model_output':backend.get('model_request_completed') if backend.get('model_attempts') else None,
                     'plan_validated':bool(response.get('plan')),'execution_succeeded':response['status']=='ok',
                     'correct_numbers':numbers_correct,'appropriate_chart':passed if case.get('chart') else None,'chart_count':len(response.get('figures',[])),
                     'clarification':response['status']=='clarify','refusal':response['status']=='unsupported',
-                    'validated_plan':response.get('plan'),'answer':response['answer'],'backend':backend,
-                    'actual':response.get('primary'),'independent_duckdb_reference':None if reference is None else reference.to_dict('split')})
+                    'validated_plan':reported_plan,'answer':response['answer'],'backend':reported_backend,
+                    'actual':reported_actual,'independent_duckdb_reference':None if reference is None else reference.to_dict('split')})
                 report['cases_run']=len(report['results']);save();print(('PASS ' if passed else 'FAIL ')+reason,flush=True)
         except KeyboardInterrupt:
             report['status']='interrupted';save();print('Stopped; existing workspaces were untouched. Report: '+str(path));return 130,report,path
     attempted=any(r['model_attempts'] for r in report['results'])
-    confirmed=client is None and any(r['valid_model_output'] is True for r in report['results'])
+    confirmed=client is None and any(r['model_response_received'] for r in report['results'])
     report.update(status='completed',passed=sum(r['passed'] for r in report['results']),failed=sum(not r['passed'] for r in report['results']),
         actual_model_executed=True if confirmed else None if client is None and attempted else False,
         actual_model_quality_measured=confirmed)
     save();print(f"{report['passed']}/{report['cases_run']} passed. Report: {path}",flush=True)
-    if report['failed']:print('Inspect the first failed plan and its reason. Restate only that request, review exact field roles, and record the Ollama version/model tag before changing models. No failure was treated as success.')
+    if report['failed']:print('Inspect the first failure and, if explicitly enabled, its redacted synthetic diagnostic plan. Keep qwen3.5:4b and record the Ollama version. No failure was treated as success or replaced with a different calculation.')
     return (1 if report['failed'] else 0),report,path
 
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model',default='qwen3.5:4b');parser.add_argument('--endpoint',default='http://127.0.0.1:11434')
-    parser.add_argument('--timeout',type=float,default=90);args=parser.parse_args(argv)
+    parser.add_argument('--timeout',type=float,default=90)
+    parser.add_argument('--diagnostics',action='store_true',help='Explicitly capture redacted model-plan projections for the built-in synthetic fixture only.')
+    args=parser.parse_args(argv)
     try:config=LocalConfig(endpoint=args.endpoint,model=args.model,timeout_seconds=args.timeout).validated()
     except LocalAIError as exc:print(str(exc));return 2
-    return run(config)[0]
+    return run(config,diagnostics=args.diagnostics)[0]
 
 
 if __name__=='__main__':raise SystemExit(main())

@@ -4,11 +4,10 @@ Keep using **`~/DA_project`**, your existing clone and its existing environment.
 There is no need to download another ZIP, clone again, reinstall Python, reinstall
 Ollama or download Qwen again.
 
-The reliability repairs and launchers are committed locally on
-`codex/insightpilot-local-ai`. They are **not published until you authorize a new
-push**. The already published baseline is `b8d562e`. A pull cannot retrieve these
-new files before publication. After publication, update the existing clone using
-the safe steps below.
+The previous reliability repairs and launchers are in `3be7f67` on
+`codex/insightpilot-local-ai`. The new measure-contract fixes are **local until
+you authorize a new push**. A pull cannot retrieve unpublished files. After
+publication, update the existing clone using the safe steps below.
 
 ## Everyday startup
 
@@ -60,6 +59,10 @@ there is no automatic external AI fallback.
 
 ## Verify the real Qwen repair
 
+The first real Mac acceptance was **2/16**. The new focused fix and its tests do
+not replace that result. Follow the [measure-contract diagnostic procedure](LOCAL_AI_MEASURE_CONTRACT.md)
+to capture sanitized actual plan shapes and obtain a new real-model result.
+
 After Ollama is running, double-click **Check Local AI.command**. No complicated
 commands or personal dataset setup are needed. It exercises InsightPilot's actual
 local planner, schema, semantic validator and calculation engine using 70 clearly
@@ -86,17 +89,26 @@ The equivalent Terminal command, using the existing environment, is:
 
 ```bash
 cd ~/DA_project
-.venv/bin/python scripts/accept_local_ai.py
+./"Check Local AI.command" --diagnostics
 ```
+
+Alternatively, use `.venv/bin/python scripts/accept_local_ai.py --diagnostics`.
+The optional flag adds `rejected-plans.jsonl` beside `report.json`, restricted to
+the byte-verified synthetic fixture. It redacts unknown keys/values and model
+free text. Without the flag no plan diagnostic file is created. The unavailable
+field, file-creation and deletion cases now run through deterministic application
+guards; the other thirteen cases require the model. Inspect both files and
+record `ollama --version` after the rerun. Keep `qwen3.5:4b` unchanged.
 
 Use `--timeout 120` explicitly if loading exceeds the normal acceptance wait.
 The app's ordinary Local AI controls offer their own bounded wait/context
-settings. One missing-operation response may receive one repair attempt using
-remaining planning time. There is no unlimited retry loop. If a case still fails,
+settings. A missing operation or explicit missing-value scope error may receive
+one repair attempt using remaining planning time, with two total attempts at
+most. There is no unlimited retry loop. If a case still fails,
 inspect its first failure reason and plan, confirm the exact field/role/model tag,
-record `ollama --version`, and retry that request in the app. Updating an old
-Ollama version may be necessary for current structured-output support. Do not
-change a denominator or field role merely to make a test pass.
+record `ollama --version`, and retain the sanitized diagnostic files for review.
+Do not change the model, denominator, field role or expected result to make a
+test pass.
 
 **Real Qwen and native Finder were unavailable in the Linux development
 environment.** Linux browser/process and mocked protocol tests do not establish

@@ -1,0 +1,27 @@
+{
+  "at": "2026-11-05T11:51:03.565757+01:00",
+  "base_commit": "3be7f67cefd03725bfbd26431f9cfcd6e6c1e246",
+  "scope": "All intended tracked files plus this focused repair; exact staged snapshot scanned before local commit.",
+  "scanner": "Gitleaks 8.24.3, default rules, redacted output, no ignore comments accepted; reports in ignored outputs/measure-contract-security/.",
+  "intended_snapshot_leaks": 0,
+  "unresolved_credential_pattern_matches": 0,
+  "credential_like_test_urls": {
+    "count": 2,
+    "classification": "Existing explicit dummy URL literals in tests of credential rejection; test files unchanged from base."
+  },
+  "generated_private_or_secret_file_paths": 0,
+  "existing_synthetic_csv_files": {
+    "count": 3,
+    "unchanged_from_base": true,
+    "files": [
+      "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "tests/fixtures/SYNTHETIC-complaints.csv",
+      "tests/fixtures/SYNTHETIC-sales.csv"
+    ]
+  },
+  "diagnostic_data_policy": "Only byte-verified synthetic fixture. Raw model responses, user workspaces, datasets and outputs/ are not staged. Companion report and JSONL redaction tested.",
+  "new_evidence": "Public code contracts and synthetic/mocked test receipts. Real-model availability receipt records zero cases, not success.",
+  "original_real_qwen_json_available": false,
+  "publication": "Local commit only; no push, merge or deployment authorized.",
+  "limits": "Scanner plus path/provenance review, not a proof about every possible secret."
+}
