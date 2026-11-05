@@ -205,7 +205,7 @@ def explorer(engine,report,metric,scope):
     choice=st.selectbox('What would you like to understand?',options,key='explore-chart-type')
     if choice=='Composition & Pareto':
         from .ui_concentration import concentration_view
-        concentration_view(engine,metric,scope,draw,evidence)
+        concentration_view(engine,metric,scope,draw,evidence,preferred=engine.context.comparison or (dims[0] if dims else None))
     elif choice=='Ranked groups':
         choices=[None]+engine.info['columns']
         dimension=st.selectbox('Group by',choices,index=choices.index(engine.context.comparison) if engine.context.comparison in choices else 0,

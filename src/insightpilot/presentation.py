@@ -33,6 +33,6 @@ button:focus-visible,[role="radio"]:focus-visible,input:focus-visible{outline:2p
 [data-testid="stAppDeployButton"]{display:none;}
 @media(min-width:901px){.st-key-hub-mobile{display:none;}}
 @media(max-width:1100px){.block-container{padding-left:1.4rem;padding-right:1.4rem;}h1{font-size:2rem!important;}.ip-statline{gap:20px;}}
-@media(max-width:900px){.st-key-command-wheel{display:none;}.st-key-command-header [data-testid="stHorizontalBlock"]{flex-direction:column;}.st-key-command-header [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}.st-key-command-header [data-testid="stColumn"]:has(.st-key-command-wheel){display:none;}.block-container{padding:1rem 1rem 3rem;}.ip-hero{padding-top:4px;}.st-key-workflow-nav [role="radiogroup"]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:900px){[data-testid="stMain"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap;gap:1rem;}[data-testid="stMain"] [data-testid="stColumn"]{min-width:min(100%,260px)!important;flex:1 1 260px!important;}.st-key-command-wheel{display:none;}.st-key-command-header [data-testid="stHorizontalBlock"]{flex-direction:column;}.st-key-command-header [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}.st-key-command-header [data-testid="stColumn"]:has(.st-key-command-wheel){display:none;}.block-container{padding:1rem 1rem 3rem;}.ip-hero{padding-top:4px;}.st-key-workflow-nav [role="radiogroup"]{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>'''

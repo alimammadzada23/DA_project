@@ -155,7 +155,7 @@ def home(workspace):
                 except ValueError as exc:st.warning(str(exc))
     st.subheader('Your project collection')
     query=st.text_input('Find a project',placeholder='Search by name or purpose')
-    visible=[p for p in peers if query.casefold() in (metadata(p)['name']+' '+metadata(p)['description']).casefold()]
+    visible=[p for p in peers if query.casefold() in (metadata(p)['name']+' '+metadata(p)['description']+' '+metadata(p).get('purpose','')).casefold()]
     if not visible:st.info('No project matches that search. Create a project or clear the search.')
     # Bounded cards; the selector still exposes every workspace.
     if len(visible)>12:st.caption('Showing the first 12 matching projects. Narrow the search or use the workspace selector for others.')
@@ -163,7 +163,7 @@ def home(workspace):
     for index,peer in enumerate(visible[:12]):
         info=metadata(peer);summary=project_summary(peer);tag=info['id']
         with columns[index%2].container(border=True,key='ux-project-'+tag):
-            st.text(info['name'] if info['status']=='named' else 'Project awaiting a name');st.caption(info['description'] or 'Add the business purpose in Workspace settings when you are ready.')
+            st.text(info['name'] if info['status']=='named' else 'Project awaiting a name');st.caption(info.get('purpose') or info['description'] or 'Add the business purpose in Project settings when you are ready.')
             st.write(f'{len(summary["tables"]):,} datasets · {summary["blocks"]:,} saved evidence · {summary["reports"]:,} report drafts')
             st.caption('Stage: '+summary['stage']+' · Activity: '+summary['activity'])
             st.text('Datasets: '+(', '.join(t.get('display_name') or t['source'].get('filename',name) for name,t in summary['tables'].items()) or 'No data imported yet'))

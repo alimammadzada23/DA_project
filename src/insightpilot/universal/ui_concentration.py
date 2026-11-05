@@ -5,10 +5,11 @@ from .concentration import pareto
 from . import visuals
 
 
-def concentration_view(engine, metric, scope, draw, evidence_view):
+def concentration_view(engine, metric, scope, draw, evidence_view, preferred=None):
     st.caption('COMPOSITION / CONTRIBUTION / PARETO')
     left,right=st.columns([3,1])
-    dimension=left.selectbox('Concentration grouping field',engine.info['columns'])
+    columns=engine.info['columns']
+    dimension=left.selectbox('Concentration grouping field',columns,index=columns.index(preferred) if preferred in columns else 0)
     threshold=right.selectbox('Cumulative threshold',[.8,.9,.95],format_func=lambda x:f'{x:.0%}')
     if not metric.additive:
         st.info('Choose a reviewed additive metric or Records in the sidebar. Shares of averages, ratios, or distinct counts would be misleading.');return
