@@ -9,6 +9,7 @@ The application now has one catalog and navigation. The former procurement,
 complaint and mapped-upload front doors are retired. Existing databases, sources,
 reports and backend/CLI compatibility remain intact.
 
+[Command hub redesign, validation, and screenshots](docs/redesign/README.md) ·
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
 [BI workflow upgrade, screenshots and Mac walkthrough](docs/BI_WORKFLOW_UPGRADE.md) ·
 [Descriptive questions without manual setup and Mac checks](docs/LOCAL_AI_DESCRIPTIVE_ANALYSIS.md) ·

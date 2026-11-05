@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "at": "2026-11-05T22:03:36.409733+00:00",
+  "events": [
+    "Keyboard arrow movement and Enter changed destination",
+    "All ten actual wheel sectors route successfully and show active state",
+    "Rendered grouped values and Pareto cumulative shares match independent pandas results; donut rendered and saved",
+    "Saved investigation, ordered report draft, self-contained report download with original source hash",
+    "1440, 1920, 1280, 768, and 390px layouts checked; native responsive routes preserve filters"
+  ],
+  "browser_errors": [],
+  "data": "Explicitly synthetic isolated fixture",
+  "local_ai_model_tested": false
+}
