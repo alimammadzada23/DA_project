@@ -57,7 +57,8 @@ def forecast(engine, date_column, metric, horizon=3):
             'Structural changes and forecast-horizon error growth are not modeled. Edge months were excluded; the first forecast may cover an observed edge month.'}
 
 
-def outliers(engine, column):
+def outliers(engine, column, *, limit=1000):
+    if type(limit) is not int or not 1<=limit<=1000:raise ValueError('Outlier preview requires an integer bound from 1 to 1,000.')
     summary=engine.numeric_summary(column); values=dict(zip(summary['columns'],summary['rows'][0]))
     if values['valid']<8: raise ValueError('Outlier review requires at least eight finite observations.')
     iqr=values['q3']-values['q1']
@@ -67,9 +68,9 @@ def outliers(engine, column):
     evidence=engine.run(f'''SELECT _row_id,{x} AS value,
         greatest((?-({x}))/? ,(({x})-?)/?,0) AS severity_iqr
         FROM selected WHERE {x}<? OR {x}>? ORDER BY severity_iqr DESC,_row_id''',
-        [lo,iqr,hi,iqr,lo,hi],limit=1000,method={'method':'Tukey 1.5 IQR fences','lower':lo,'upper':hi})
+        [lo,iqr,hi,iqr,lo,hi],limit=limit,method={'method':'Tukey 1.5 IQR fences','lower':lo,'upper':hi})
     return {'evidence':evidence,'summary':summary,'lower':lo,'upper':hi,
-            'limitations':'Univariate screening, not proof of error or fraud. Skewed distributions can legitimately contain many flagged records. Results capped at 1,000; source row IDs enable inspection.'}
+            'limitations':f'Univariate screening, not proof of error or fraud. Skewed distributions can legitimately contain many flagged records. Bounded preview capped at {limit:,}; source row IDs enable inspection.'}
 
 
 def time_anomalies(engine,date_column,metric):

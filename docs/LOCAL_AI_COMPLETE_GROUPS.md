@@ -1,5 +1,11 @@
 # Complete grouped results without an invented top-N
 
+This page records the `c2cfd89` repair and its evidence. It was subsequently
+published, then real Qwen exposed the count/row null-limit inconsistency. See the
+current [operation-contract audit](LOCAL_AI_OPERATION_AUDIT.md): null now means
+automatic per-operation policy, including bounded counts/previews, and real
+acceptance requires three complete passes plus the UCI public-data check.
+
 This focused repair uses `codex/insightpilot-local-ai` at parent `d9a0717`.
 The user reported two remaining real-Qwen failures: `groups` and `compound`.
 Both questions requested grouped calculations without a limit, but the model

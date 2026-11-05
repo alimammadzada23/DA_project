@@ -82,5 +82,5 @@ class SyntheticPlanDiagnostics:
 
     def decision(self,stage,*,reason=None):
         stages={'validated','rejected','rejected_schema','result_ok','result_clarify','result_unsupported','result_error','result_approval_required'}
-        reasons={'measure_arguments','missing_operation','missing_scope','request_constraints','invalid_schema','invalid_plan','invalid_output','timeout','unavailable','request_failed'}
+        reasons={'measure_arguments','missing_operation','missing_plan_metadata','missing_scope','request_constraints','operation_arguments','invalid_schema','invalid_plan','invalid_output','timeout','unavailable','request_failed'}
         self._write(stage if stage in stages else 'decision',reason=reason if reason in reasons else None)

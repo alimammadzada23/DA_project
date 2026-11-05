@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-05T15:57:43.469773+01:00",
+  "base_commit": "c2cfd89efb4ea6b6bd9cc7a571984406f9c2e0f6",
+  "branch": "codex/insightpilot-local-ai",
+  "baseline": {
+    "passed": 665,
+    "source": "Previous complete suite at parent c2cfd89, recorded in local-ai-complete-groups-validation.json; not rerun separately this turn."
+  },
+  "final": {
+    "tests": 812,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 812,
+    "seconds": 230.141
+  },
+  "final_junit": "outputs/operation-contract-final.xml",
+  "added_cases": 147,
+  "mocked_integration_tests": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 9,
+    "seconds": 37.224
+  },
+  "mocked_three_pass_protocol": {
+    "synthetic_passed_per_pass": [
+      16,
+      16,
+      16
+    ],
+    "model_planned_cases_per_pass": 13,
+    "application_guards_per_pass": 3,
+    "bank_shape_checks_per_pass": 1,
+    "dataset": "Synthetic CSV with the published UCI dimensions/job vocabulary, NOT actual UCI data",
+    "model": "Explicit HTTP mock, NOT Qwen",
+    "full_real_acceptance_passed": false
+  },
+  "original_16_acceptance_questions_fixture_reference_SQL_checker_unchanged": true,
+  "existing_benchmarks": {
+    "mock_passed": 51,
+    "total": 51,
+    "standard_passed": 48,
+    "standard_failures": [
+      "s18",
+      "s19",
+      "s22"
+    ],
+    "questions_expected_statuses_and_numerical_reference_tables_unchanged": true,
+    "canonical_expected_results_sha256": "8a7b3a83077be03078e03c92debf3394cccd222ef80216637d2dcaf3f92b9e38"
+  },
+  "prior_test_changes": "Blanket null rejection was the reported defect and is replaced by operation-policy/bound assertions. Missing-measure failures now allow one bounded repair and still fail without a measure. An incompatible time grouping now rejects at the operation-schema stage. No numeric expected answer was changed.",
+  "actual_qwen": {
+    "user_reported_passed": 14,
+    "user_reported_total": 16,
+    "user_reported_commit": "c2cfd89",
+    "new_model_cases_run": 0,
+    "status": "model_unavailable",
+    "new_score": null,
+    "native_mac_executed": false
+  },
+  "actual_UCI_model_acceptance_performed": false,
+  "availability_receipt": "local-ai-operation-availability.json",
+  "availability_timing": "Final prepared schema/prompt fingerprint; before local commit. The parent commit/dirty marker is preserved honestly. Zero model cases ran.",
+  "remaining_acceptance": "Existing Mac, same qwen3.5:4b: Check Local AI.command --runs 3 --diagnostics --bank-data outputs/uci-bank-marketing.zip. Require all three 16/16 plus every public-bank top-five reconciliation; retain every failure.",
+  "publication": "Local commit only; no push, merge, deploy, rebuild or model change."
+}

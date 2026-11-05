@@ -102,9 +102,10 @@ def test_repaired_plan_still_requires_live_field_validation(data):
 
 
 def test_aggregate_never_silently_defaults_to_another_measure(data):
-    client,_=client_for([counted(measures=[])])
+    client,chats=client_for([counted(measures=[]),counted(measures=[])])
     result=ask(data,client)
-    assert result['status']=='error' and result['evidence']==[] and 'explicitly' in result['answer']
+    assert result['status']=='error' and result['evidence']==[] and len(chats)==2
+    assert 'incompatible arguments' in result['answer']
 
 
 def test_reordering_followup_preserves_previously_displayed_groups(data):
@@ -221,6 +222,7 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
             elif name=='resort':value=counted(limit=10);value.pop('descending')
             elif name=='median':value['operation']='group_distribution'
             elif name=='smallest':value.pop('limit');value.pop('descending')
+            elif name in ('count','rows'):value['limit']=None
         plans.append(value)
     client,chats=client_for(plans)
     code,report,path=accept.run(client.config,client=client,directory=tmp_path/'mock-acceptance',diagnostics=diagnostics)

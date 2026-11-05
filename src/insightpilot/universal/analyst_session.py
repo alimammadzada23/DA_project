@@ -102,7 +102,7 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
                 if observer is not None:observer.begin_attempt(attempt+1)
                 try:
                     raw,metadata=planner.plan(current_messages)
-                    backend.update(metadata);backend['model_request_completed']=True
+                    backend.update(metadata);backend['model_request_completed']=metadata.get('wire_schema_valid',True)
                     raw,repairs=constraints.repair(raw)
                     backend['constraint_repairs']=repairs
                     preliminary=validate_plan(engine,profile,raw,metric,conversation.last_plan)
@@ -180,7 +180,7 @@ def replay_answer(workspace,payload):
     from .analyst_execute import profile_for_engine
     engine,metric=replay(workspace,payload['analysis'])
     profile=profile_for_engine(engine)
-    validated=validate_plan(engine,profile,payload['analysis_plan'],metric)
+    validated=validate_plan(engine,profile,payload['analysis_plan'],metric,legacy=True)
     response=execute_plan(engine,profile,validated,metric,approved=bool(payload.get('approved_definition')),cohort=payload.get('applied_cohort',[]))
     response['backend']={'backend':'Replayed saved calculation; no model invoked','model':None,'model_request_completed':False}
     return response

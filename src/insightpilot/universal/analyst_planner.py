@@ -6,6 +6,7 @@ import re
 from .analyst_plan import PLAN_SCHEMA,ClarificationRequired
 from .metrics import load_metrics,NUMERIC_ROLES
 from .sql_lab import SQLLab
+from .analyst_contract import prompt_rules
 
 SYSTEM='''You propose intent for a local read-only analyst; the application calculates every number.
 Return exactly one JSON object conforming to the supplied analysis schema. Never output SQL, code, tools, URLs, results or made-up numbers.
@@ -22,8 +23,9 @@ For grouped record counts use operation aggregate, group_by with the exact categ
 Sort other metric rankings by m0/m1/m2/m3. Stable limits 1–100. Numeric distributions use histogram; grouped quantiles use box; scatter needs two numeric fields. One bar per metric with its own units. Time uses ONLY shared date basis and grain; if absent or different ask clarification. Month labels alone are not a date.
 For a follow-up set inherit true, repeat the previous operation, and supply changed analytical properties; the application binds prior valid intent and preserves question-specific filters. "Their" after a ranked result means those displayed groups, not a newly selected cohort. Chart-only follow-ups inherit the prior calculation. If a sorting direction or replacement measure is unspecified, ask clarification rather than guess.
 Respect application_constraints derived from explicit question wording. A sort of previous results keeps their grouping, measures, filters and selection size; it never starts a new ranking or expands membership. A grouped mean, median, sum, min, max or count uses aggregate and measures, not group_distribution. group_distribution is for explicitly requested distributions/box summaries using fields. Omitted limits or ordering must not override explicit numbers, written numbers or ranking directions.
-For a fresh grouped aggregate with no requested top-N or limit, return limit null: every group must be included. Never invent a default limit such as 10 or 15. Explicit top-N requests keep their exact integer limit; references to previous selected results retain that selection. Null limits are only valid for grouped aggregates. If complete grouped results exceed the application safety bound, no partial answer is returned.
+Null or omitted limit ALWAYS means automatic operation policy, not unbounded access: scalar aggregates become one result row; records become a clearly labeled preview of at most 100 matching source rows; grouped aggregates/distributions include every group within the 100-group bound. Scatter/outlier previews use their documented fixed safety bounds. Summary/metadata/bin calculations do not use top-N; period comparisons and chronological trends require complete results within their operation bounds. Never invent a limit such as 10 or 15. Explicit supported top-N requests and previous referenced selections retain their exact size. Complete overflow returns no partial answer.
 No examples contain domain-specific columns or sample rows. Propose a precise plan or a concise clarification, never a speculative finding.'''
+SYSTEM+='\nOperation rules from the shared contract: '+json.dumps(prompt_rules(),separators=(',',':'))
 
 
 def guard_question(question,table):

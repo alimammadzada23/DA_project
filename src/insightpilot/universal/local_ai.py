@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from .analyst_plan import PLAN_SCHEMA, PlanError, decode_plan
+from .analyst_plan import PLAN_SCHEMA, VALIDATOR, PlanError, decode_plan
 
 DEFAULT_MODEL='qwen3.5:4b'
 DEFAULT_ENDPOINT='http://127.0.0.1:11434'
@@ -133,15 +133,16 @@ class OllamaClient:
         if not isinstance(message,dict) or message.get('tool_calls') or not isinstance(message.get('content'),str):
             raise LocalAIError('invalid_output','The model returned tools or an invalid message; no analysis was executed.')
         if self.observer is not None:self.observer.capture_response(message['content'])
-        try:plan=decode_plan(message['content'])
+        try:plan=decode_plan(message['content'],envelope=True)
         except PlanError as exc:
             if self.observer is not None:self.observer.decision('rejected_schema',reason=exc.reason or 'invalid_schema')
-            feedback='Missing required property: operation for action analyze. Return a complete plan with a supported operation; preserve the original question and context.' if exc.reason=='missing_operation' else None
+            feedback=exc.repair_feedback or ('Missing required property: operation for action analyze. Return a complete plan with a supported operation; preserve the original question and context.' if exc.reason=='missing_operation' else None)
             raise LocalAIError('invalid_output',str(exc),repair_feedback=feedback,response_received=True) from exc
         stats={}
         for key in ('load_duration','total_duration','eval_duration','prompt_eval_count','eval_count'):
             v=response.get(key)
             if type(v) in (int,float) and math.isfinite(v) and v>=0:stats[key]=v
         return plan,{'backend':'Ollama local REST','model':self.config.model,'endpoint':self.config.endpoint,
+                    'wire_schema_valid':VALIDATOR.is_valid(plan),
                     'model_response_received':True,
                     'planning_seconds':round(time.perf_counter()-started,4),'server_metrics':stats,'numerical_authority':'InsightPilot engine; model proposed intent only'}

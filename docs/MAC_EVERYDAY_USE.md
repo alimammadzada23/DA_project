@@ -4,8 +4,8 @@ Keep using **`~/DA_project`**, your existing clone and its existing environment.
 There is no need to download another ZIP, clone again, reinstall Python, reinstall
 Ollama or download Qwen again.
 
-The previous request-constraint repairs and launchers are in `d9a0717` on
-`codex/insightpilot-local-ai`. The new complete-grouped-results fixes are **local until
+The previous complete-group repairs and launchers are in `c2cfd89` on
+`codex/insightpilot-local-ai`. The operation-contract audit and fixes are **local until
 you authorize a new push**. A pull cannot retrieve unpublished files. After
 publication, update the existing clone using the safe steps below.
 
@@ -59,10 +59,10 @@ there is no automatic external AI fallback.
 
 ## Verify the real Qwen repair
 
-The latest real Mac report has two remaining failures: `groups` and `compound`
-were truncated by an unrequested model limit. Automated tests do not establish
-real-model success. Follow the
-[complete-grouped-results diagnostic procedure](LOCAL_AI_COMPLETE_GROUPS.md)
+The latest real Mac report was **14/16 at `c2cfd89`**: count and source-row plans
+were rejected for null limits. Automated tests do not establish real-model
+success. Follow the
+[operation-audit and three-run procedure](LOCAL_AI_OPERATION_AUDIT.md)
 to compare actual plan shapes, application corrections and a new real-model result.
 
 After Ollama is running, double-click **Check Local AI.command**. No complicated
@@ -94,6 +94,24 @@ cd ~/DA_project
 ./"Check Local AI.command" --diagnostics
 ```
 
+The full reliability target requires three fresh complete passes and the public
+UCI Bank Marketing question. After this revision is available on the Mac, use:
+
+```bash
+mkdir -p outputs
+curl --fail --location --proto '=https' --tlsv1.2 \
+  'https://archive.ics.uci.edu/static/public/222/bank+marketing.zip' \
+  --output outputs/uci-bank-marketing.zip
+./"Check Local AI.command" --runs 3 --diagnostics \
+  --bank-data outputs/uci-bank-marketing.zip
+```
+
+Read `outputs/local-ai-reliability/<run>/summary.json` and every per-pass report.
+All three synthetic runs must pass 16/16 and all three public-bank checks must
+pass. Failures are retained. Synthetic diagnostics never run on the public data;
+only the public job column enters its isolated workspace. The original single-run
+command remains available, but it does not establish the three-run target.
+
 Alternatively, use `.venv/bin/python scripts/accept_local_ai.py --diagnostics`.
 The optional flag adds `rejected-plans.jsonl` beside `report.json`, restricted to
 the byte-verified synthetic fixture. It redacts unknown keys/values and model
@@ -102,7 +120,9 @@ field, file-creation and deletion cases now run through deterministic applicatio
 guards; the other thirteen cases require the model. Inspect both files and
 record `ollama --version` after the rerun. Keep `qwen3.5:4b` unchanged.
 
-Use `--timeout 120` explicitly if loading exceeds the normal acceptance wait.
+Use the direct `.venv/bin/python scripts/accept_local_ai.py` entry point with
+`--runs 3 --diagnostics --timeout 120 --bank-data outputs/uci-bank-marketing.zip`
+if loading exceeds the normal acceptance wait.
 The app's ordinary Local AI controls offer their own bounded wait/context
 settings. A missing operation or explicit missing-value scope error may receive
 one repair attempt using remaining planning time, with two total attempts at

@@ -13,16 +13,19 @@ from jsonschema import Draft202012Validator
 
 from .metrics import Metric, NUMERIC_ROLES, load_metrics
 from .sql_lab import SQLLab
-
-MAX_GROUPS=100
+from .analyst_contract import MAX_GROUPS, OPERATIONS, defaults, legacy_saved_plan, operation_variants
 
 SCALAR={'type':['string','number','boolean','null'],'maxLength':200}
-CONDITION={'type':'object','additionalProperties':False,'required':['column','operator'],
-    'properties':{'column':{'type':'string','minLength':1,'maxLength':256},
-        'operator':{'enum':['eq','ne','gt','gte','lt','lte','is_missing','not_missing','from','through']},'value':SCALAR}}
 def closed_object(properties):
     return {'type':'object','additionalProperties':False,'required':list(properties),'properties':properties}
 
+_COLUMN={'type':'string','minLength':1,'maxLength':256}
+CONDITION={'oneOf':[
+    {'type':'object','additionalProperties':False,'required':['column','operator'],
+     'properties':{'column':_COLUMN,'operator':{'enum':['is_missing','not_missing']},'value':{'type':'null'}}},
+    closed_object({'column':_COLUMN,'operator':{'enum':['eq','ne']},'value':SCALAR}),
+    closed_object({'column':_COLUMN,'operator':{'enum':['gt','gte','lt','lte']},'value':{'type':'number'}}),
+    closed_object({'column':_COLUMN,'operator':{'enum':['from','through']},'value':{'type':'string','pattern':r'^\d{4}-\d{2}-\d{2}$'}})]}
 
 DENOMINATOR={'oneOf':[
     closed_object({'kind':{'const':'selected'}}),
@@ -39,29 +42,30 @@ MEASURE={'oneOf':list(MEASURE_SCHEMAS.values())}
 MEASURE_VALIDATORS={a:Draft202012Validator(schema) for a,schema in MEASURE_SCHEMAS.items()}
 ANALYSIS_PROPERTIES={
         'version':{'const':1},'action':{'enum':['analyze','clarify','refuse']},'table':{'type':'string','maxLength':63},
-        'operation':{'enum':['aggregate','records','schema','missing','summary','distribution','group_distribution','scatter','trend','compare_periods','outliers']},
+        'operation':{'enum':list(OPERATIONS)},
         'group_by':{'type':'array','items':{'type':'string','maxLength':256},'maxItems':2,'uniqueItems':True},
         'measures':{'type':'array','items':MEASURE,'maxItems':4},
         'filters':{'type':'array','items':CONDITION,'maxItems':8},
         'fields':{'type':'array','items':{'type':'string','maxLength':256},'maxItems':40,'uniqueItems':True},
         'sort_by':{'enum':['records','group','m0','m1','m2','m3','period']},'descending':{'type':'boolean'},
-        'limit':{'type':['integer','null'],'minimum':1,'maximum':MAX_GROUPS},'bins':{'type':'integer','minimum':5,'maximum':80},
+        'limit':{'type':['integer','null'],'minimum':1,'maximum':max(p.limit_bound for p in OPERATIONS.values())},'bins':{'type':'integer','minimum':5,'maximum':80},
         'date_basis':{'type':['string','null'],'maxLength':256},'grain':{'enum':['day','week','month','quarter','year']},
         'periods':{'type':'array','items':{'type':'string','format':'date'},'minItems':4,'maxItems':4},
         'relationship':{'type':['string','null'],'maxLength':200},'inherit':{'type':'boolean'},
         'chart':{'enum':['auto','table','bar','histogram','line','scatter','box','pie']}}
-# Use disjoint, complete object variants. Ollama's grammar receives the same
-# contract as the runtime validator; no optional-operation analysis branch.
+# Typed admission is separate from operation validation after intent repair.
 ANALYSIS_SCHEMA={'type':'object','additionalProperties':False,
     'required':['version','action','table','operation'],
     'properties':ANALYSIS_PROPERTIES|{'action':{'const':'analyze'}}}
-PLAN_SCHEMA={'$schema':'https://json-schema.org/draft/2020-12/schema','oneOf':[
-    ANALYSIS_SCHEMA,
-    *[{'type':'object','additionalProperties':False,'required':['version','action','table','message'],
+ACTION_SCHEMAS=[{'type':'object','additionalProperties':False,'required':['version','action','table','message'],
        'properties':{k:v for k,v in ANALYSIS_PROPERTIES.items() if k in ('version','table')}|
        {'action':{'const':action},'message':{'type':'string','minLength':1,'maxLength':400}}}
-      for action in ('clarify','refuse')]]}
+      for action in ('clarify','refuse')]
+_VARIANTS,_DEFINITIONS=operation_variants(ANALYSIS_PROPERTIES)
+PLAN_SCHEMA={'$schema':'https://json-schema.org/draft/2020-12/schema','$defs':_DEFINITIONS,'oneOf':[*_VARIANTS,*ACTION_SCHEMAS]}
+ENVELOPE_SCHEMA={'oneOf':[ANALYSIS_SCHEMA,*ACTION_SCHEMAS]}
 VALIDATOR=Draft202012Validator(PLAN_SCHEMA)
+ENVELOPE_VALIDATOR=Draft202012Validator(ENVELOPE_SCHEMA)
 INCOMPLETE_VALIDATOR=Draft202012Validator(ANALYSIS_SCHEMA|{'required':['version','action','table']})
 
 
@@ -94,7 +98,7 @@ def finite_json(value):
         for v in value:finite_json(v)
 
 
-def decode_plan(raw):
+def decode_plan(raw,*,envelope=False):
     if not isinstance(raw,str) or len(raw.encode('utf-8'))>16_384:
         raise PlanError('The model plan exceeds its size limit.')
     def unique(pairs):
@@ -105,15 +109,15 @@ def decode_plan(raw):
         return d
     try:value=json.loads(raw,object_pairs_hook=unique)
     except (json.JSONDecodeError,RecursionError) as exc:raise PlanError('The model did not return a valid JSON plan. No calculation was run.') from exc
-    validate_structure(value)
+    validate_structure(value,envelope=envelope)
     return value
 
 
-def validate_structure(value):
+def validate_structure(value,*,envelope=False):
     try:
         if len(json.dumps(value,ensure_ascii=False).encode('utf-8'))>16_384:raise PlanError('Plan exceeds its size limit.')
         finite_json(value)
-        error=next(VALIDATOR.iter_errors(value),None)
+        error=next((ENVELOPE_VALIDATOR if envelope else VALIDATOR).iter_errors(value),None)
     except (TypeError,RecursionError) as exc:raise PlanError('The plan contains invalid data types or excessive nesting.') from exc
     if error:
         if isinstance(value,dict) and value.get('action')=='analyze' and isinstance(value.get('measures'),list):
@@ -125,6 +129,15 @@ def validate_structure(value):
                     raise PlanError('Invalid arguments for '+aggregation+'; required and permitted keys: '+keys+'. No calculation ran.',reason='measure_arguments')
         if isinstance(value,dict) and value.get('action')=='analyze' and 'operation' not in value and INCOMPLETE_VALIDATOR.is_valid(value):
             raise PlanError('An analysis plan must include a supported operation. No calculation was run.',reason='missing_operation')
+        if envelope and isinstance(value,dict) and value.get('action')=='analyze':
+            missing={'version','table','operation'}-set(value)
+            probe={'version':1,'table':'','operation':'aggregate'}|value
+            if missing and ENVELOPE_VALIDATOR.is_valid(probe):
+                raise PlanError('Missing required plan metadata: '+', '.join(sorted(missing))+'. No calculation ran.',reason='missing_plan_metadata',repair_feedback='Return all required root metadata: version 1, the exact active table from context, action, and a supported operation. Preserve the original request; do not change dataset or invent fields.')
+        if not envelope and ENVELOPE_VALIDATOR.is_valid(value) and value.get('action')=='analyze':
+            op=value['operation'];policy=OPERATIONS[op]
+            feedback=f'Operation {op}: group_by needs {policy.groups[0]}–{policy.groups[1]} fields; fields needs {policy.fields[0]}–{policy.fields[1]}; measures needs {policy.measures[0]}–{policy.measures[1]}. Allowed charts: '+', '.join(policy.charts)+'. Allowed sort_by: '+', '.join(policy.sorts)+'. Null limits select the documented operation policy. Preserve the user request; clarify if these constraints cannot express it.'
+            raise PlanError('The plan has incompatible arguments for '+op+'. No calculation ran.',reason='operation_arguments',repair_feedback=feedback)
         location='.'.join(map(str,error.absolute_path)) or 'plan'
         raise PlanError('Invalid structured plan at '+location+'. Unknown keys, types or operations are not accepted.')
 
@@ -162,8 +175,8 @@ def safe_model_message(value):
     return value or 'Specify the intended field, metric, grouping or eligible denominator.'
 
 
-def validate_plan(engine,profile,value,selected_metric,previous=None):
-    validate_structure(value);data=deepcopy(value)
+def validate_plan(engine,profile,value,selected_metric,previous=None,*,legacy=False):
+    validate_structure(value,envelope=True);data=deepcopy(value)
     if data['table']!=engine.table:raise PlanError('The plan cannot change the active table or workspace.')
     if data['action']!='analyze':
         if set(data)-{'version','action','table','message'}:raise PlanError('Clarification/refusal plans cannot contain executable analysis arguments.')
@@ -181,9 +194,9 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
         if len(combined)>8:raise PlanError('Too many question-specific filters. Start a new conversation.')
         data['filters']=combined
     if 'operation' not in data:raise PlanError('An analytical operation is required.')
-    default_limit=None if data['operation']=='aggregate' and data.get('group_by') else 15
-    for key,default in {'group_by':[],'measures':[],'filters':[],'fields':[],'sort_by':'records','descending':True,'limit':default_limit,'bins':25,
-                        'date_basis':None,'grain':engine.context.time_grain,'relationship':None,'chart':'auto','inherit':False}.items():data.setdefault(key,default)
+    if legacy:data=legacy_saved_plan(data,engine.context.time_grain)
+    validate_structure(data)
+    defaults(data,engine.context.time_grain)
     validate_structure(data)
     lab=SQLLab(engine);allowed=set(engine.info['columns'])
     if data['relationship']:
@@ -195,8 +208,6 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
     if set(data['group_by'])-allowed or set(data['fields'])-set(engine.info['columns']):raise PlanError('The plan references an unavailable grouping or field.')
     for condition in data['filters']:check_condition(engine,profile,condition)
     op=data['operation'];groups=data['group_by'];fields=data['fields'];measures=data['measures']
-    if data['limit'] is None and not (op=='aggregate' and groups):
-        raise PlanError('A complete result without a top-N limit is supported only for grouped aggregates; other operations require a bounded integer limit.')
     if groups and op not in ('aggregate','group_distribution','compare_periods'):
         raise ClarificationRequired('This operation cannot preserve the requested grouping. Choose grouped aggregates or group distributions; time trends currently use one series at a time.')
     if fields and op in ('aggregate','trend','compare_periods'):raise PlanError('Specify aggregate inputs in measures; an extra field list would be ambiguous.')
@@ -249,8 +260,15 @@ def validate_plan(engine,profile,value,selected_metric,previous=None):
         data['date_basis']=engine.context.date_basis
         if len(measures)!=1:raise PlanError('Time analyses currently use one explicit metric at a time.')
         if op=='compare_periods' and (len(groups)!=1 or len(data.get('periods',[]))!=4):raise ClarificationRequired('Specify a grouping and two equally long, nonoverlapping complete periods.')
+        if op=='compare_periods':
+            try:a,b,c,d=map(date.fromisoformat,data['periods'])
+            except ValueError as exc:raise ClarificationRequired('Specify valid ISO calendar dates for both periods.') from exc
+            if not a<=b<c<=d or (b-a)!=(d-c):raise ClarificationRequired('Use nonoverlapping, equally long inclusive periods, earlier first.')
     if op not in ('aggregate','trend','compare_periods') and measures:raise PlanError('This operation uses explicit fields, not aggregate measure definitions.')
-    if data['sort_by'].startswith('m') and int(data['sort_by'][1:])>=len(measures):raise PlanError('The ordering references an unavailable measure.')
+    if data['sort_by'].startswith('m') and int(data['sort_by'][1:])>=len(measures):
+        raise PlanError('The ordering references an unavailable measure.',reason='operation_arguments',repair_feedback='Use an existing measure alias from the proposed measures, or a supported record/group ordering, preserving the question. Do not add a measure merely to satisfy an invalid sort index.')
+    if op=='aggregate' and not groups and (data['sort_by']=='group' or data['chart'] in ('bar','pie')):
+        raise PlanError('A scalar aggregate uses a table and has no grouping to rank.',reason='operation_arguments',repair_feedback='The request is an ungrouped aggregate: use chart auto/table and sort_by records or an existing measure. Do not invent a grouping.')
     if data['chart']=='line' and op!='trend':raise PlanError('A line chart requires a validated calendar trend.')
     if data['chart']=='histogram' and op!='distribution':raise PlanError('A histogram requires calculated numeric bins.')
     if data['chart']=='scatter' and op!='scatter':raise PlanError('A scatter plot requires a paired numeric calculation.')

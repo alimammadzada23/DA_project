@@ -292,7 +292,7 @@ def test_skewness_uses_filtered_values_and_not_full_profile(analysis_model):
 
 def test_period_comparison_and_chart_validity_are_not_silently_changed(analysis_model):
     e,p=engine_and_profile(analysis_model)
-    with pytest.raises(ClarificationRequired):validate_plan(e,p,plan(operation='trend',group_by=['zone'],measures=[{'aggregation':'records'}]),Metric('Records'))
+    with pytest.raises(PlanError):validate_plan(e,p,plan(operation='trend',group_by=['zone'],measures=[{'aggregation':'records'}]),Metric('Records'))
     with pytest.raises(PlanError):validate_plan(e,p,plan(operation='aggregate',group_by=['zone'],measures=[{'aggregation':'records'}],chart='line'),Metric('Records'))
     with pytest.raises(ClarificationRequired):validate_plan(e,p,plan(operation='trend',grain='day',measures=[{'aggregation':'records'}]),Metric('Records'))
 

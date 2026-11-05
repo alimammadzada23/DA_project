@@ -1,0 +1,28 @@
+{
+  "at": "2026-11-05T16:00:02.997015+01:00",
+  "base_commit": "c2cfd89efb4ea6b6bd9cc7a571984406f9c2e0f6",
+  "scope": "Exact staged snapshot plus credential-pattern/path/provenance review.",
+  "scanner": "Gitleaks 8.24.3 default rules, full redaction, no ignore comments accepted; reports in ignored outputs/operation-contract-security/.",
+  "intended_snapshot_leaks": 0,
+  "unresolved_credential_pattern_matches": 0,
+  "existing_dummy_credential_test_urls": {
+    "count": 2,
+    "classification": "Unchanged explicit test literals for credential URL rejection; not real credentials."
+  },
+  "private_generated_dataset_paths": 0,
+  "existing_synthetic_CSV_fixtures": {
+    "count": 3,
+    "unchanged_from_parent": true,
+    "files": [
+      "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "tests/fixtures/SYNTHETIC-complaints.csv",
+      "tests/fixtures/SYNTHETIC-sales.csv"
+    ]
+  },
+  "new_evidence": "Only contracts, synthetic/mocked validation receipts, audit and a real-model-unavailable receipt with zero cases. No raw responses, model weights, UCI CSV/archive, user uploads, private datasets or generated secrets included.",
+  "diagnostics": "Off by default; byte-verified original synthetic fixture only; unknown/free text redacted. Never attached to public-bank or ordinary user workspaces.",
+  "public_bank_reader": "Explicit caller file; published dimensions/vocabulary and size/nesting bounds, no ZIP path extraction, only job retained; failed source/model text not logged. Official download and CSV hash provide caller provenance, not independent remote-byte attestation.",
+  "local_only_and_SQL": "Literal loopback, no redirects/cloud/tools/fallback; existing SQL AST, relationship, memory, time and approval guards retained. Engine, SQL Lab and metric compiler byte-identical to parent.",
+  "publication": "Local commit only; no push, merge or deployment.",
+  "limits": "Scanner plus path/provenance review, not proof about every possible secret."
+}

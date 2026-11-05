@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from insightpilot.universal import Workspace
-from insightpilot.universal.analyst_plan import MAX_GROUPS, PlanError, validate_plan
+from insightpilot.universal.analyst_plan import MAX_GROUPS, PlanError, ClarificationRequired, validate_plan
 from insightpilot.universal.analyst_session import Conversation, analyze_question, save_answer, replay_answer
 from insightpilot.universal.context import AnalysisContext
 from insightpilot.universal.engine import Engine, frame_of
@@ -112,9 +112,16 @@ def test_explicit_limit_at_resource_bound_still_returns_requested_top_n(tmp_path
 
 
 @pytest.mark.parametrize('operation', ['records','schema','missing','summary','group_distribution','trend'])
-def test_null_limit_cannot_remove_other_operation_bounds(data, operation):
+def test_null_limit_has_operation_policy_and_keeps_live_safeguards(data, operation):
     candidate=counted(operation=operation,group_by=[],measures=[],limit=None,chart='table')
-    with pytest.raises(PlanError,match='only for grouped aggregates'):validate_plan(*data[:2],candidate,data[2])
+    if operation in ('summary','group_distribution'):candidate['fields']=['age']
+    if operation=='group_distribution':candidate['group_by']=['job']
+    if operation=='trend':
+        candidate['measures']=[{'aggregation':'records'}];candidate.pop('sort_by')
+        with pytest.raises(ClarificationRequired,match='date basis'):validate_plan(*data[:2],candidate,data[2])
+    else:
+        result=validate_plan(*data[:2],candidate,data[2])
+        assert result.data['limit']==(100 if operation=='records' else None)
 
 
 @pytest.mark.parametrize('count,status', [(3,'ok'), (7,'clarify')])

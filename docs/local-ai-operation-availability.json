@@ -1,0 +1,30 @@
+{
+  "model": "qwen3.5:4b",
+  "actual_model_test": true,
+  "requested_runs": 3,
+  "runs": [
+    {
+      "pass": 1,
+      "synthetic_status": "model_unavailable",
+      "synthetic_passed": 0,
+      "contract": {
+        "schema_sha256": "bc1f6ce1fa87341b9bcbbdc31572d1d7bf5fb48c96a00ae73e9afebfde4f6bbc",
+        "system_prompt_sha256": "05ed014f086afa9a087636068fc34ff8f2a3998d715b827022bfd80277f5e0df",
+        "code_commit": "c2cfd89efb4ea6b6bd9cc7a571984406f9c2e0f6",
+        "tracked_changes": true
+      },
+      "synthetic_cases_run": 0,
+      "synthetic_actual_model_quality_measured": false,
+      "synthetic_report": "pass-1/synthetic/report.json",
+      "bank_passed": null,
+      "bank_actual_model_quality_measured": false,
+      "passed": false
+    }
+  ],
+  "session_policy": "Fresh fixture, workspace and conversations for each complete run; same deterministic model configuration. No statistical independence or accuracy estimate is implied.",
+  "bank_requested": false,
+  "all_requested_checks_passed": false,
+  "three_consecutive_real_synthetic_runs_passed": false,
+  "full_real_acceptance_passed": false,
+  "status": "model_unavailable"
+}

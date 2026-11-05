@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 import re
 
 from .analyst_plan import ClarificationRequired, PlanError, validate_structure
+from .analyst_contract import OPERATIONS, automatic_limit
 
 ONES = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split()
 TENS = 'twenty thirty forty fifty sixty seventy eighty ninety'.split()
@@ -61,6 +62,31 @@ def record_count(text):
     return bool(re.search(r'\b(?:record|row|observation|entry) counts?\b|\bcounts? (?:the |of )?(?:records|rows|observations|entries)\b|\b(?:number of|how many|most|fewest|total) (?:records|rows|observations|entries)\b', text))
 
 
+def requested_filters(question, columns):
+    """Literal comparisons only; never infer outcomes or eligible populations."""
+    rate=bool(re.search(r'\b(?:rate|proportion|percent(?:age)?|share|risk)\b',question,re.I))
+    scope=re.split(r'\bwhere\b',question,maxsplit=1,flags=re.I)
+    if rate:
+        eligibility=re.findall(r'\b(?:exclude|excluding|without)\b[^;?]*(?=;|\?|$)',question,re.I)
+        text=' '.join(([scope[1]] if len(scope)==2 else [])+eligibility)
+    else:text=question
+    result=[]
+    operators={'above':'gt','over':'gt','greater than':'gt','at least':'gte','below':'lt','under':'lt','less than':'lt','at most':'lte'}
+    for column in columns:
+        name=r'(?<!\w)'+re.escape(column)+r'(?!\w)'
+        for match in re.finditer(name+r'\s+(?:is\s+)?(above|over|greater than|at least|below|under|less than|at most)\s+([-+]?\d+(?:\.\d+)?)\b',text,re.I):
+            result.append({'column':column,'operator':operators[match[1].casefold()],'value':float(match[2])})
+        pattern=name+r'\s+(?:(is not|not equal to|is|equals|equal to)\s+)?(["\x27])([^"\x27]{0,200})\2'
+        for match in re.finditer(pattern,text,re.I):
+            negative=bool(match[1] and match[1].casefold() in ('is not','not equal to') or re.search(r'\b(?:exclude|excluding|without)\s*$',text[:match.start()],re.I))
+            result.append({'column':column,'operator':'ne' if negative else 'eq','value':match[3]})
+    unique=[]
+    for value in result:
+        if value not in unique:unique.append(value)
+    cues=bool(re.search(r'\b(?:where|whose|only|filter|filtered|with|without|exclude|excluding|above|over|below|under|at least|at most|greater than|less than|missing|null|blank)\b',text,re.I))
+    return unique,not cues and not unique
+
+
 def conflict():
     raise PlanError('The proposed plan conflicts with explicit request constraints. No calculation ran.',
                     reason='request_constraints', repair_feedback='Preserve every explicit request constraint in the context: exact named grouping and measures, result limit, ordering and previous-result scope. Return a complete schema-valid plan. Do not add filters, replace a requested measure, or broaden a referenced selection.')
@@ -81,19 +107,24 @@ class RequestConstraints:
     reuse_inputs: bool = False
     new_analysis: bool = False
     sort_only: bool = False
+    chart: str | None = None
+    filters: list = field(default_factory=list)
+    forbid_new_filters: bool = False
     cohort: list = field(default_factory=list)
 
     def summary(self):
         return {k: v for k, v in {'limit': self.limit, 'descending': self.descending,
                 'group_by': self.groups, 'measures': self.measures, 'operation': self.operation,
-                'result_limit_policy': 'explicit' if self.limit is not None else 'preserve_previous_selection' if self.preserve or self.reuse_inputs else 'complete_grouped_aggregates',
+                'chart': self.chart,
+                'required_filters': self.filters,
+                'result_limit_policy': 'explicit' if self.limit is not None else 'preserve_previous_selection' if self.preserve or self.reuse_inputs else 'automatic_operation_policy',
                 'preserve_previous_group_membership': self.preserve, 'sort_existing_result_only': self.sort_only}.items() if v is not None}
 
     def requires_complete_groups(self, data):
-        return self.limit is None and not (self.preserve or self.reuse_inputs) and data['operation']=='aggregate' and bool(data.get('group_by'))
+        return self.limit is None and not (self.preserve or self.reuse_inputs) and OPERATIONS[data['operation']].limit_kind in ('aggregate','groups') and bool(data.get('group_by'))
 
     def repair(self, raw):
-        validate_structure(raw)  # Never normalize invalid schema/measure arguments.
+        validate_structure(raw,envelope=True)  # Unsafe envelopes/measure arguments remain rejected.
         candidate = deepcopy(raw); repairs = []
         if candidate['action'] != 'analyze': return candidate, repairs
         def set_explicit(key, value):
@@ -113,6 +144,18 @@ class RequestConstraints:
         if self.operation is not None: set_explicit('operation', self.operation)
         effective = candidate | {'group_by': candidate.get('group_by', self.previous.get('group_by', []) if self.previous and candidate.get('inherit') else [])}
         if self.requires_complete_groups(effective): set_explicit('limit', None)
+        elif self.limit is None and not (self.preserve or self.reuse_inputs):
+            set_explicit('limit', automatic_limit(candidate['operation'],effective['group_by']))
+        policy=OPERATIONS[candidate['operation']]
+        if self.chart is not None:
+            if self.chart not in policy.charts:
+                raise PlanError('The proposed operation cannot generate the explicitly requested chart.',reason='operation_arguments',repair_feedback='Preserve the explicitly requested chart and calculation. Select a compatible supported operation only if it expresses the original question; otherwise clarify. Do not substitute a different chart or measure.')
+            set_explicit('chart',self.chart)
+        if self.limit is not None and policy.limit_kind in ('none','complete','series'):
+            raise ClarificationRequired('This operation does not support a top-N selection. Ask for a grouped ranking or choose fields/period boundaries explicitly; no different calculation ran.')
+        if candidate['operation']=='trend':
+            if self.descending is True:raise ClarificationRequired('Time trends use chronological order. Reverse-order trend requests are unsupported; no different ordering ran.')
+            set_explicit('sort_by','period');set_explicit('descending',False)
         if self.sort_by is not None: set_explicit('sort_by', self.sort_by)
         elif self.sort_records: set_explicit('sort_by', 'records')
         elif self.sort_measure:
@@ -127,6 +170,11 @@ class RequestConstraints:
         if self.limit is not None and data['limit'] != self.limit: conflict()
         if self.descending is not None and data['descending'] != self.descending: conflict()
         if self.operation and data['operation'] != self.operation: conflict()
+        if self.chart is not None and data['chart'] != self.chart:conflict()
+        inherited=self.previous.get('filters',[]) if self.previous and (self.preserve or self.reuse_inputs) else []
+        expected=[*inherited,*[f for f in self.filters if f not in inherited]]
+        if any(f not in data['filters'] for f in expected):conflict()
+        if self.forbid_new_filters and any(f not in expected for f in data['filters']):conflict()
         if self.requires_complete_groups(data) and data['limit'] is not None: conflict()
         if self.sort_by is not None and data['sort_by'] != self.sort_by: conflict()
         if self.sort_records and data['sort_by'] != 'records': conflict()
@@ -156,6 +204,10 @@ def request_constraints(engine, question, previous=None, response=None):
     main = re.sub(r'(["\x27`])([^"\x27`]*?)\1', lambda m: m[2] if normalized(m[2]) in known else ' ', main)
     text = normalized(main); fields = named_fields(text, engine.info['columns'])
     constraints = RequestConstraints(limit=explicit_limit(main, engine.info['columns']), previous=old)
+    constraints.filters,constraints.forbid_new_filters=requested_filters(question,engine.info['columns'])
+    charts=[chart for pattern,chart in [(r'\bbar (?:chart|plot)\b','bar'),(r'\bpie (?:chart|plot)\b','pie'),(r'\bline (?:chart|plot)\b','line'),(r'\bhistogram\b','histogram'),(r'\bbox\s*(?:chart|plot)\b','box'),(r'\bscatter\s*(?:chart|plot)\b','scatter'),(r'\b(?:as a table|table only|no chart)\b','table')] if re.search(pattern,text)]
+    if len(charts)>1:raise ClarificationRequired('Choose one supported chart type for this analysis.')
+    constraints.chart=charts[0] if charts else None
     reference = bool(re.search(r'\b(?:those|these|their|previous|prior|same|displayed|shown|them)\b|\b(?:that|the|this) results?\b|\b(?:visuali[sz]e|plot|chart) (?:that|it)\b', text))
     follow = bool(old) and bool(reference or re.match(r'(?:now|and|also|instead|then|next)\b', text))
     sorting = bool(re.search(r'\b(?:sort|reorder|order)\b', text))

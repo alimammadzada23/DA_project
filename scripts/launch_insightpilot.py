@@ -155,15 +155,21 @@ def main():
     parser.add_argument('--no-ollama-start',action='store_true')
     parser.add_argument('--check-local-ai',action='store_true')
     parser.add_argument('--diagnostics',action='store_true',help='Only with --check-local-ai; synthetic acceptance diagnostics, never dashboard logging.')
+    parser.add_argument('--runs',type=int,default=1)
+    parser.add_argument('--bank-data',type=Path)
     args=parser.parse_args()
     if not 1024<=args.port<=65535:parser.error('Choose a port between 1024 and 65535.')
     if args.diagnostics and not args.check_local_ai:parser.error('--diagnostics is restricted to the synthetic acceptance check.')
+    if (args.runs!=1 or args.bank_data is not None) and not args.check_local_ai:parser.error('Acceptance run/data flags require --check-local-ai.')
     for signum in (signal.SIGTERM,signal.SIGHUP):signal.signal(signum,lambda *_:(_ for _ in ()).throw(KeyboardInterrupt()))
     try:
         if args.check_local_ai:
             dependencies()
             from accept_local_ai import main as accept
-            result=accept(['--diagnostics'] if args.diagnostics else [])
+            options=['--diagnostics'] if args.diagnostics else []
+            if args.runs!=1:options+=['--runs',str(args.runs)]
+            if args.bank_data is not None:options+=['--bank-data',str(args.bank_data)]
+            result=accept(options)
             if sys.stdin.isatty():input('\nPress Return to close this acceptance report. ')
             return result
         return launch(port=args.port,browser=not args.no_browser,start_ollama=not args.no_ollama_start)

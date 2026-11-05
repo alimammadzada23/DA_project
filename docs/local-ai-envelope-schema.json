@@ -1,0 +1,788 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "operation"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "action": {
+          "const": "analyze"
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "operation": {
+          "enum": [
+            "aggregate",
+            "records",
+            "schema",
+            "missing",
+            "summary",
+            "distribution",
+            "group_distribution",
+            "scatter",
+            "trend",
+            "compare_periods",
+            "outliers"
+          ]
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "records"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "share"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "count"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "distinct"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "sum"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "avg"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "median"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "min"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "max"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "column",
+                  "quantile"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "quantile"
+                  },
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "quantile": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "metric"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "saved"
+                  },
+                  "metric": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "aggregation",
+                  "numerator",
+                  "denominator"
+                ],
+                "properties": {
+                  "aggregation": {
+                    "const": "rate"
+                  },
+                  "numerator": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "column",
+                          "operator"
+                        ],
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
+                          "operator": {
+                            "enum": [
+                              "is_missing",
+                              "not_missing"
+                            ]
+                          },
+                          "value": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "column",
+                          "operator",
+                          "value"
+                        ],
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
+                          "operator": {
+                            "enum": [
+                              "eq",
+                              "ne"
+                            ]
+                          },
+                          "value": {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "null"
+                            ],
+                            "maxLength": 200
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "column",
+                          "operator",
+                          "value"
+                        ],
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
+                          "operator": {
+                            "enum": [
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte"
+                            ]
+                          },
+                          "value": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "column",
+                          "operator",
+                          "value"
+                        ],
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
+                          "operator": {
+                            "enum": [
+                              "from",
+                              "through"
+                            ]
+                          },
+                          "value": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "denominator": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "selected"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "column"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "nonmissing"
+                          },
+                          "column": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "condition"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "condition"
+                          },
+                          "condition": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "column",
+                                  "operator"
+                                ],
+                                "properties": {
+                                  "column": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  "operator": {
+                                    "enum": [
+                                      "is_missing",
+                                      "not_missing"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "null"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "column",
+                                  "operator",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "column": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  "operator": {
+                                    "enum": [
+                                      "eq",
+                                      "ne"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": [
+                                      "string",
+                                      "number",
+                                      "boolean",
+                                      "null"
+                                    ],
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "column",
+                                  "operator",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "column": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  "operator": {
+                                    "enum": [
+                                      "gt",
+                                      "gte",
+                                      "lt",
+                                      "lte"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "number"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "column",
+                                  "operator",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "column": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  "operator": {
+                                    "enum": [
+                                      "from",
+                                      "through"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "maxItems": 4
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "column",
+                  "operator"
+                ],
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "operator": {
+                    "enum": [
+                      "is_missing",
+                      "not_missing"
+                    ]
+                  },
+                  "value": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "column",
+                  "operator",
+                  "value"
+                ],
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "operator": {
+                    "enum": [
+                      "eq",
+                      "ne"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "column",
+                  "operator",
+                  "value"
+                ],
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "operator": {
+                    "enum": [
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte"
+                    ]
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "column",
+                  "operator",
+                  "value"
+                ],
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "operator": {
+                    "enum": [
+                      "from",
+                      "through"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  }
+                }
+              }
+            ]
+          },
+          "maxItems": 8
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 40,
+          "uniqueItems": true
+        },
+        "sort_by": {
+          "enum": [
+            "records",
+            "group",
+            "m0",
+            "m1",
+            "m2",
+            "m3",
+            "period"
+          ]
+        },
+        "descending": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "bins": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 80
+        },
+        "date_basis": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "grain": {
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "quarter",
+            "year"
+          ]
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "relationship": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "inherit": {
+          "type": "boolean"
+        },
+        "chart": {
+          "enum": [
+            "auto",
+            "table",
+            "bar",
+            "histogram",
+            "line",
+            "scatter",
+            "box",
+            "pie"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "message"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "action": {
+          "const": "clarify"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "message"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 63
+        },
+        "action": {
+          "const": "refuse"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
+    }
+  ]
+}

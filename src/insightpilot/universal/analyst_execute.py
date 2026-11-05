@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from ..datasets import quote
 from . import advanced, visuals
 from .analyst_plan import MAX_GROUPS, PlanError, ClarificationRequired, ValidatedPlan, validate_plan
+from .analyst_contract import OPERATIONS, execution_bound
 from .engine import Engine,Filter,frame_of
 from .metrics import Metric,load_metrics
 from .profile import numeric_expression,date_expression,profile as full_profile
@@ -143,20 +144,20 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         if op!='trend' and groups:sort+=','+','.join(quote('group_'+str(i))+' ASC NULLS LAST' for i in range(len(groups)))
         # All text here is generated from validated choices/quoted identifiers;
         # data values remain bound parameters and still pass the SQL Lab AST scope.
-        complete=op=='aggregate' and bool(groups) and data['limit'] is None
-        limit=1000 if op=='trend' else MAX_GROUPS if complete else data['limit']
+        complete=data['limit'] is None
+        limit=execution_bound(data)
         query='SELECT '+','.join(clauses)+' FROM ('+source+') AS scoped'+where+group_sql+' ORDER BY '+sort+f' LIMIT {limit+1}'
         primary=lab.execute(query,size=limit,parameters=[*params,*cohort_params])
         if complete and primary['truncated']:
-            raise PlanError(f'Complete grouped results exceed the {MAX_GROUPS}-group safety limit. No partial result was returned. Add an explicit top-N request or narrow the filters.')
-        if complete:extra.append('All grouped results are included; no top-N limit was requested.')
+            raise PlanError(f'Complete results exceed the {limit}-row safety limit. No partial result was returned. Narrow the filters or request a supported grouped top-N.')
+        if complete:extra.append('All eligible groups/periods are included; no top-N limit was requested.')
         if op=='trend':primary['method']['time_grain']=data['grain']
         if primary['truncated']:extra.append('More groups/periods exist than are displayed. Top-N output is not the complete population; no Other group is invented.')
         if any(m['aggregation']=='share' for m in data['measures']):extra.append('Shares use the entire selected row denominator before top-N; displayed shares are not renormalized to 100%.')
     elif op=='records':
         columns=['_row_id',*(fields or scoped.info['columns'])]
         primary=lab.execute('SELECT '+','.join(quote(c) for c in columns)+' FROM '+quote(scoped.table)+' ORDER BY _row_id',size=data['limit'])
-        extra.append('Displays bounded source records in original row order, not a random sample or a grouped calculation. More rows may exist than are displayed.')
+        extra.append(f'Bounded source-row preview: at most {data["limit"]} matching records in original row order. This is not a random sample or an aggregate.')
     elif op in ('schema','missing'):
         columns=fields or scoped.info['columns'];parts=[]
         for i,column in enumerate(columns):parts.append(f"count(*) FILTER (WHERE {quote(column)} IS NULL OR trim(CAST({quote(column)} AS VARCHAR))='') AS {quote('missing_'+str(i))}")
@@ -176,15 +177,20 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         evidence.append(numeric_statistics(scoped,fields[0]));extra.append('Equal-width finite-value bins; missing/nonfinite values excluded. Exact maximum can occupy its own boundary bin.')
     elif op=='group_distribution':
         value=numeric_expression(fields[0]);group=quote(groups[0])
+        limit=execution_bound(data);sort='group_0' if data['sort_by']=='group' else 'records'
+        ordering=sort+(' DESC' if data['descending'] else ' ASC')+' NULLS LAST,group_0 ASC NULLS LAST'
         primary=lab.execute(f'''SELECT {group} AS group_0,count({value}) AS valid,min({value}) AS minimum,
             quantile_cont({value},.25) AS q1,median({value}) AS median,quantile_cont({value},.75) AS q3,max({value}) AS maximum,
-            count(*) AS records FROM {quote(scoped.table)} GROUP BY 1 ORDER BY records DESC,group_0 ASC NULLS LAST LIMIT {data['limit']+1}''',size=data['limit'])
+            count(*) AS records FROM {quote(scoped.table)} GROUP BY 1 ORDER BY {ordering} LIMIT {limit+1}''',size=limit)
+        if data['limit'] is None and primary['truncated']:raise PlanError(f'Complete grouped results exceed the {limit}-group safety limit. No partial result was returned.')
         definitions=[{'label':fields[0]+' by '+groups[0],'units':scoped.info.get('semantics',{}).get('units',{}).get(fields[0]) or 'units unconfirmed'}]
         extra.append('Full-data quartiles; whiskers show observed min/max, not Tukey fences. This is descriptive, not a significance test.')
     elif op=='scatter':
-        primary=scoped.scatter(*fields);extra.append('Scatter displays the first 2,000 selected records in stable source order, not a representative random sample.')
+        x,y=map(numeric_expression,fields)
+        primary=lab.execute(f'SELECT _row_id,{x} AS x,{y} AS y FROM {quote(scoped.table)} ORDER BY _row_id',size=data['limit'])
+        extra.append(f'Scatter is a bounded preview of at most {data["limit"]} selected records in stable source order, not a representative random sample.')
     elif op=='outliers':
-        result=advanced.outliers(scoped,fields[0]);primary=result['evidence']
+        result=advanced.outliers(scoped,fields[0],limit=data['limit']);primary=result['evidence']
         # Existing method returns actual flagged records and full-scope summary.
         if 'data' in result:primary=primary|{'columns':list(result['data'].columns),'rows':list(result['data'].itertuples(index=False,name=None))}
         extra.append(result.get('limitations','IQR screening is descriptive; extreme values are not automatically errors.'))
@@ -197,11 +203,14 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         else:metric=Metric(definition['label'],spec['aggregation']+'('+json.dumps(spec['column'])+')',units=definition['units'])
         if not metric.additive:raise ClarificationRequired('Use an additive count/sum for period contributions.')
         primary=scoped.compare_periods(groups[0],metric,data['date_basis'],data['periods'][:2],data['periods'][2:]);definitions=[definition]
+        if len(primary['rows'])>execution_bound(data) or primary['truncated']:raise PlanError('Complete period-comparison results exceed the existing intermediate-row safety limit. No partial result was returned.')
     # Metadata-derived tables retain the underlying executed-query evidence too.
     evidence=[primary,*evidence]
     primary['method']={'plan':data,'measure_definitions':definitions,'execution':primary.get('method'),
         'selected_sidebar_metric':asdict(selected_metric),'question_specific_filters':data['filters'],
-        'complete_grouped_result':op=='aggregate' and bool(groups) and data['limit'] is None,
+        'complete_grouped_result':OPERATIONS[op].limit_kind in ('aggregate','groups','complete') and bool(groups) and data['limit'] is None,
+        'result_scope':'bounded_preview' if OPERATIONS[op].limit_kind=='preview' else 'explicit_top_n' if data['limit'] is not None and bool(groups) else 'complete',
+        'preview_limit':data['limit'] if OPERATIONS[op].limit_kind=='preview' else None,
         'followup_cohort_rows':len(cohort),'full_selected_rows_before_cohort':total}
     answer=summarize(primary,data,definitions,total)
     if op=='distribution' and len(evidence)>1:
@@ -219,6 +228,8 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
 
 def summarize(result,plan,definitions,total):
     rows=result['rows'];cols=result['columns'];op=plan['operation']
+    if OPERATIONS[op].limit_kind=='preview':
+        return f'Bounded {op.replace("_"," ")} preview: {len(rows):,} rows shown, up to {plan["limit"]:,}; {total:,} selected source rows.'+(' Additional eligible rows are not shown.' if result['truncated'] else '')
     if not rows:return f'No eligible results for {total:,} selected rows. Review the current filters and missing inputs.'
     if op=='aggregate':
         first=dict(zip(cols,rows[0]));items=[]

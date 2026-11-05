@@ -1,0 +1,340 @@
+{
+  "at": "2026-11-05T15:53:58.366021+01:00",
+  "base_commit": "c2cfd89efb4ea6b6bd9cc7a571984406f9c2e0f6",
+  "branch": "codex/insightpilot-local-ai",
+  "schema_sha256": "bc1f6ce1fa87341b9bcbbdc31572d1d7bf5fb48c96a00ae73e9afebfde4f6bbc",
+  "envelope_sha256": "df80ae6e021d53318f24c9c6dd6d4cd2f37569aa5853a5e4727950e78412284e",
+  "system_prompt_sha256": "05ed014f086afa9a087636068fc34ff8f2a3998d715b827022bfd80277f5e0df",
+  "schema_serialization": "json.dumps(value, sort_keys=True), UTF-8",
+  "wire_schema_bytes": 36689,
+  "operation_policy": {
+    "aggregate": {
+      "groups": [
+        0,
+        2
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        4
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "bar",
+        "pie"
+      ],
+      "sorts": [
+        "records",
+        "group",
+        "m0",
+        "m1",
+        "m2",
+        "m3"
+      ],
+      "limit_kind": "aggregate",
+      "limit_bound": 100,
+      "required": [
+        "measures"
+      ]
+    },
+    "records": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 100,
+      "required": []
+    },
+    "schema": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": []
+    },
+    "missing": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": []
+    },
+    "summary": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": [
+        "fields"
+      ]
+    },
+    "distribution": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "histogram"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": [
+        "fields"
+      ]
+    },
+    "group_distribution": {
+      "groups": [
+        1,
+        1
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "box"
+      ],
+      "sorts": [
+        "records",
+        "group"
+      ],
+      "limit_kind": "groups",
+      "limit_bound": 100,
+      "required": [
+        "group_by",
+        "fields"
+      ]
+    },
+    "scatter": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        2,
+        2
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "scatter"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 2000,
+      "required": [
+        "fields"
+      ]
+    },
+    "trend": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        1
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "line"
+      ],
+      "sorts": [
+        "period"
+      ],
+      "limit_kind": "series",
+      "limit_bound": 1000,
+      "required": [
+        "measures"
+      ]
+    },
+    "compare_periods": {
+      "groups": [
+        1,
+        1
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        1
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "bar"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "complete",
+      "limit_bound": 10000,
+      "required": [
+        "group_by",
+        "measures",
+        "periods"
+      ]
+    },
+    "outliers": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 1000,
+      "required": [
+        "fields"
+      ]
+    }
+  },
+  "null_semantics": "Automatic operation policy for every operation; scalar aggregate 1, records preview 100, complete grouping/series or operation-specific previews as declared.",
+  "admission_and_execution": "Closed typed envelope is repair data only. The operation schema sent to Ollama is checked before/after canonical defaults; full live semantics and explicit request checks precede execution. Wire failure is reported separately from a repaired final plan.",
+  "repair": "At most one extra same-model request across all reasons, remaining time budget, constant precise feedback; no raw response copied, no guessing fields/business definitions or bypassing approvals.",
+  "unchanged_paths_verified": [
+    "src/insightpilot/universal/engine.py",
+    "src/insightpilot/universal/sql_lab.py",
+    "src/insightpilot/universal/metrics.py",
+    "scripts/benchmark_local_ai.py",
+    "scripts/local_ai_benchmark_cases.py",
+    "Start InsightPilot.command",
+    "Check Local AI.command"
+  ],
+  "acceptance_oracles": {
+    "fixture_questions_reference_SQL_checker_unchanged": true,
+    "existing_51_questions_expected_statuses_reference_tables_unchanged": true,
+    "canonical_expected_results_sha256": "8a7b3a83077be03078e03c92debf3394cccd222ef80216637d2dcaf3f92b9e38"
+  },
+  "user_reported_real_model": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.14",
+    "hardware": "MacBook Air, 16 GB RAM",
+    "commit": "c2cfd89",
+    "passed": 14,
+    "total": 16,
+    "failed_cases": [
+      "count",
+      "rows"
+    ]
+  },
+  "new_actual_qwen_acceptance_passed": null,
+  "new_actual_bank_acceptance_passed": null,
+  "publication": "Local commit only; no push, merge, deploy, rebuild or model change."
+}

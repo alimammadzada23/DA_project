@@ -6,10 +6,12 @@ No model installation, download, automatic approval or external provider.
 import argparse
 from datetime import datetime,timezone
 import json
+import hashlib
 import math
 from pathlib import Path
 import platform
 import sys
+import subprocess
 import uuid
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -23,8 +25,24 @@ from insightpilot.universal.engine import Engine,frame_of
 from insightpilot.universal.metrics import Metric,save_metric
 from insightpilot.universal.analyst_session import Conversation,analyze_question
 from insightpilot.universal.local_ai import LocalConfig,OllamaClient,LocalAIError
+from insightpilot.universal.analyst_plan import PLAN_SCHEMA
+from insightpilot.universal.analyst_planner import SYSTEM
 
 ORIGINAL='Count the records in each job category. Show only the five categories with the highest counts, sorted from highest to lowest. Display the exact counts and create a bar chart.'
+
+
+def runtime_contract():
+    result={'schema_sha256':hashlib.sha256(json.dumps(PLAN_SCHEMA,sort_keys=True).encode()).hexdigest(),
+            'system_prompt_sha256':hashlib.sha256(SYSTEM.encode()).hexdigest(),'code_commit':None,'tracked_changes':None}
+    try:
+        revision=subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,text=True,capture_output=True,timeout=2)
+        candidate=revision.stdout.strip()
+        if revision.returncode==0 and len(candidate)==40 and all(c in '0123456789abcdef' for c in candidate):
+            result['code_commit']=candidate
+            status=subprocess.run(['git','diff','--quiet','HEAD'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=2)
+            if status.returncode in (0,1):result['tracked_changes']=bool(status.returncode)
+    except (OSError,subprocess.TimeoutExpired):pass
+    return result
 
 
 def fixture(directory):
@@ -116,7 +134,7 @@ def run(config,*,client=None,directory=None,diagnostics=False):
     directory.mkdir(parents=True,exist_ok=True,mode=0o700);path=directory/'report.json'
     report={'model':config.model,'endpoint':config.endpoint,'platform':platform.platform(),'actual_model_test':client is None,
         'data':'Isolated SYNTHETIC fixture; existing user workspaces are never selected or changed.','status':'running','results':[],'cases_run':0,
-        'diagnostics_enabled':diagnostics,'diagnostics_file':None}
+        'diagnostics_enabled':diagnostics,'diagnostics_file':None,'contract':runtime_contract()}
     def save():path.write_text(json.dumps(report,default=str,indent=2)+'\n')
     try:
         planner=client or OllamaClient(config);report['model_metadata']=planner.inspect_model()
@@ -160,13 +178,14 @@ def run(config,*,client=None,directory=None,diagnostics=False):
                 if observer is not None:
                     reported_plan=observer.project_plan(reported_plan)
                     reported_actual=None if reported_actual is None else {k:reported_actual.get(k) for k in ('columns','rows','version','source_sha256')}
-                    reported_backend={k:backend.get(k) for k in ('model_attempts','repair_attempted','model_response_received','model_request_completed','constraint_repairs')}
+                    reported_backend={k:backend.get(k) for k in ('model_attempts','repair_attempted','model_response_received','model_request_completed','wire_schema_valid','constraint_repairs')}
                 report['results'].append({'id':case['id'],'question':case['question'],'passed':passed,'reason':reason,'status':response['status'],
                     'model_attempts':backend.get('model_attempts',0),'repair_attempted':backend.get('repair_attempted',False),
                     'model_response_received':backend.get('model_response_received',False),
                     'application_constraint_repairs':backend.get('constraint_repairs',[]),
                     'handling':'local_model' if backend.get('model_attempts') else 'application_guard',
                     'valid_model_output':backend.get('model_request_completed') if backend.get('model_attempts') else None,
+                    'wire_schema_valid':backend.get('wire_schema_valid') if backend.get('model_attempts') else None,
                     'plan_validated':bool(response.get('plan')),'execution_succeeded':response['status']=='ok',
                     'correct_numbers':numbers_correct,'appropriate_chart':passed if case.get('chart') else None,'chart_count':len(response.get('figures',[])),
                     'clarification':response['status']=='clarify','refusal':response['status']=='unsupported',
@@ -190,10 +209,17 @@ def main(argv=None):
     parser.add_argument('--model',default='qwen3.5:4b');parser.add_argument('--endpoint',default='http://127.0.0.1:11434')
     parser.add_argument('--timeout',type=float,default=90)
     parser.add_argument('--diagnostics',action='store_true',help='Explicitly capture redacted model-plan projections for the built-in synthetic fixture only.')
+    parser.add_argument('--runs',type=int,default=1,help='1–5 fresh complete runs. Use 3 for the real-model reliability target.')
+    parser.add_argument('--bank-data',type=Path,help='Official public UCI Bank Marketing ZIP or bank-full.csv; adds the original top-five question to each pass. Never enables real-data diagnostics.')
     args=parser.parse_args(argv)
     try:config=LocalConfig(endpoint=args.endpoint,model=args.model,timeout_seconds=args.timeout).validated()
     except LocalAIError as exc:print(str(exc));return 2
-    return run(config,diagnostics=args.diagnostics)[0]
+    if not 1<=args.runs<=5:parser.error('--runs must be between 1 and 5.')
+    if args.runs==1 and args.bank_data is None:return run(config,diagnostics=args.diagnostics)[0]
+    import importlib.util
+    spec=importlib.util.spec_from_file_location('insightpilot_acceptance_protocol',Path(__file__).with_name('local_ai_acceptance_protocol.py'))
+    protocol=importlib.util.module_from_spec(spec);spec.loader.exec_module(protocol)
+    return protocol.run_series(config,acceptance_run=run,checker=check,question=ORIGINAL,runs=args.runs,bank_data=args.bank_data,diagnostics=args.diagnostics)[0]
 
 
 if __name__=='__main__':raise SystemExit(main())
