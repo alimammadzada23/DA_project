@@ -1,0 +1,42 @@
+{
+  "at": "2026-11-05T11:46:50.456470+00:00",
+  "base_commit": "7099841450d0a16c2742379a9ff218af0d3ae1ef",
+  "branch": "codex/insightpilot-local-ai",
+  "schema_sha256": "d3d1b5d7a39c671d1ec72949c2682cc46975217f46ce4252894ec86c8f17e546",
+  "system_prompt_sha256": "6fcbe7dd5652b2284e9bdd7c3550e2c034d905375a39586abf43a2cb88efcf4f",
+  "schema_unchanged": true,
+  "read_only_engine_and_ollama_adapter_unchanged": true,
+  "unchanged_paths_verified": [
+    "src/insightpilot/universal/analyst_plan.py",
+    "src/insightpilot/universal/analyst_execute.py",
+    "src/insightpilot/universal/engine.py",
+    "src/insightpilot/universal/local_ai.py",
+    "scripts/benchmark_local_ai.py",
+    "scripts/local_ai_benchmark_cases.py",
+    "docs/local-ai-plan-schema.json"
+  ],
+  "constraints": "Literal numeric/written limits, explicit ordering, named grouped measures and application-owned prior group membership. No acceptance dataset names or case IDs in constraint code.",
+  "deterministic_repair_keys": [
+    "limit",
+    "descending",
+    "sort_by",
+    "operation",
+    "inherit"
+  ],
+  "repair_policy": "One deterministic pass per candidate, followed by full structural/live semantic/request validation. At most one additional same-model request, sharing the existing two-total-attempt and remaining-time budget. Never strip invalid measure arguments or invent measures/filters/approvals.",
+  "scope": "Only Local AI planning receives the new constraint reconciler. Standard retains its existing parser; saved canonical plans and parameterized DuckDB cohort execution retain their existing format.",
+  "diagnostic_policy": "Opt-in byte-verified synthetic fixture only; received redacted plans captured before reconciliation; static correction keys reported separately.",
+  "user_reported_real_model": {
+    "model": "qwen3.5:4b",
+    "ollama_version": "0.40.14",
+    "platform": "MacBook Air",
+    "commit": "7099841",
+    "passed": 13,
+    "total": 16
+  },
+  "new_real_qwen_run_performed": false,
+  "new_real_qwen_score": null,
+  "published": false,
+  "merged": false,
+  "deployed": false
+}

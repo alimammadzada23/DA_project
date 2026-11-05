@@ -160,10 +160,11 @@ def run(config,*,client=None,directory=None,diagnostics=False):
                 if observer is not None:
                     reported_plan=observer.project_plan(reported_plan)
                     reported_actual=None if reported_actual is None else {k:reported_actual.get(k) for k in ('columns','rows','version','source_sha256')}
-                    reported_backend={k:backend.get(k) for k in ('model_attempts','repair_attempted','model_response_received','model_request_completed')}
+                    reported_backend={k:backend.get(k) for k in ('model_attempts','repair_attempted','model_response_received','model_request_completed','constraint_repairs')}
                 report['results'].append({'id':case['id'],'question':case['question'],'passed':passed,'reason':reason,'status':response['status'],
                     'model_attempts':backend.get('model_attempts',0),'repair_attempted':backend.get('repair_attempted',False),
                     'model_response_received':backend.get('model_response_received',False),
+                    'application_constraint_repairs':backend.get('constraint_repairs',[]),
                     'handling':'local_model' if backend.get('model_attempts') else 'application_guard',
                     'valid_model_output':backend.get('model_request_completed') if backend.get('model_attempts') else None,
                     'plan_validated':bool(response.get('plan')),'execution_succeeded':response['status']=='ok',

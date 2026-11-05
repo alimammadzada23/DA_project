@@ -1,5 +1,11 @@
 # Qwen acceptance failure: measure contract and safe diagnostics
 
+This page records the `7099841` repair, which was subsequently published. The
+user's later real Mac acceptance improved to **13/16**. See the current
+[request-constraint and follow-up repair](LOCAL_AI_REQUEST_CONSTRAINTS.md) for
+the remaining three interpretation failures and the next Mac rerun. The receipts
+below describe the earlier repair's evidence and verification at that time.
+
 This focused repair starts at `3be7f67` on `codex/insightpilot-local-ai`.
 It changes the existing planner, validation and acceptance tools. The model,
 analytics engine, application structure and deployment are unchanged. This

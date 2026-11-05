@@ -21,6 +21,7 @@ Filters add to shared scope; never remove shared filters. Only eq/ne, finite num
 For grouped record counts use operation aggregate, group_by with the exact category field, measures [{"aggregation":"records"}], sort_by records and chart bar. Highest to lowest means descending true, lowest to highest means false. Set limit to the exact requested count, including a spelled-out number. Show records where a condition holds means operation records, explicit filters, no measures or grouping, and chart table. Do not substitute a count for requested source rows.
 Sort other metric rankings by m0/m1/m2/m3. Stable limits 1–100. Numeric distributions use histogram; grouped quantiles use box; scatter needs two numeric fields. One bar per metric with its own units. Time uses ONLY shared date basis and grain; if absent or different ask clarification. Month labels alone are not a date.
 For a follow-up set inherit true, repeat the previous operation, and supply changed analytical properties; the application binds prior valid intent and preserves question-specific filters. "Their" after a ranked result means those displayed groups, not a newly selected cohort. Chart-only follow-ups inherit the prior calculation. If a sorting direction or replacement measure is unspecified, ask clarification rather than guess.
+Respect application_constraints derived from explicit question wording. A sort of previous results keeps their grouping, measures, filters and selection size; it never starts a new ranking or expands membership. A grouped mean, median, sum, min, max or count uses aggregate and measures, not group_distribution. group_distribution is for explicitly requested distributions/box summaries using fields. Omitted limits or ordering must not override explicit numbers, written numbers or ranking directions.
 No examples contain domain-specific columns or sample rows. Propose a precise plan or a concise clarification, never a speculative finding.'''
 
 
@@ -80,7 +81,7 @@ def validate_question_intent(engine,question,validated):
         raise PlanError('The plan did not preserve the requested missing-value exclusion/count. No calculation ran.',reason='missing_scope',repair_feedback='Preserve the original request: exclude missing values with a not_missing filter on the requested field; a remaining-record count uses aggregate with records. Do not substitute operation missing or an unfiltered count.')
 
 
-def planning_messages(engine,profile,metric,question,previous=None,*,field_scope=None):
+def planning_messages(engine,profile,metric,question,previous=None,*,field_scope=None,request_constraints=None):
     fields=field_scope or engine.info['columns']
     if len(fields)>60:raise ClarificationRequired('Select at most 60 relevant fields in Local AI settings to keep the model context bounded. The full dataset still stays in the analytics engine.')
     if set(fields)-set(engine.info['columns']):raise ClarificationRequired('A selected prompt field is no longer available. Refresh the field scope.')
@@ -99,6 +100,7 @@ def planning_messages(engine,profile,metric,question,previous=None,*,field_scope
         'shared_filter_notice':'Shared filter VALUES stay in the calculator. Every plan is executed inside that scope.',
         'date_purpose':str(semantics.get('date_purposes',{}).get(engine.context.date_basis,''))[:200],
         'approved_relationships':relationships,'last_validated_plan':previous.data if hasattr(previous,'data') else previous}
+    if request_constraints is not None:context['application_constraints']=request_constraints
     # Prior plan filters are user-provided literals, not sampled source values.
     payload=json.dumps({'question':question,'context':context},ensure_ascii=False,separators=(',',':'))
     if len(payload.encode('utf-8'))>20_000:raise ClarificationRequired('The local schema/context is too large. Select fewer fields or a shorter question.')

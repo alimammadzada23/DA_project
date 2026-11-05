@@ -1,0 +1,75 @@
+{
+  "source": "User-provided redacted plan properties from actual Mac acceptance at 7099841. Full response envelopes were not pasted; omitted envelope properties are unknown.",
+  "environment": {
+    "ollama": "0.40.14",
+    "model": "Qwen3.5 4B",
+    "hardware": "MacBook Air",
+    "branch": "codex/insightpilot-local-ai",
+    "commit": "7099841",
+    "passed": 13,
+    "total": 16
+  },
+  "reported_failures": [
+    {
+      "case": "Follow-up sorting",
+      "properties": {
+        "operation": "aggregate",
+        "group_by": [
+          "job"
+        ],
+        "measures": [
+          {
+            "aggregation": "records"
+          }
+        ],
+        "sort_by": "records",
+        "limit": 10
+      },
+      "reported_omissions": [
+        "explicit ascending direction"
+      ],
+      "expected": "Same three previously displayed members, ordered ascending; no expansion."
+    },
+    {
+      "case": "Grouped median",
+      "properties": {
+        "operation": "group_distribution",
+        "group_by": [
+          "education"
+        ],
+        "measures": [
+          {
+            "aggregation": "median",
+            "column": "age"
+          }
+        ],
+        "chart": "bar"
+      },
+      "expected": "Grouped aggregate with the reviewed numeric age field and median measure."
+    },
+    {
+      "case": "Ten smallest groups",
+      "properties": {
+        "operation": "aggregate",
+        "group_by": [
+          "job"
+        ],
+        "measures": [
+          {
+            "aggregation": "records"
+          }
+        ],
+        "sort_by": "records"
+      },
+      "reported_omissions": [
+        "explicit limit",
+        "explicit ascending direction"
+      ],
+      "expected": {
+        "limit": 10,
+        "descending": false
+      }
+    }
+  ],
+  "test_reconstruction": "Explicit HTTP mocks supply a complete version/table envelope around these reported shapes. No new real model inference is represented."
+}

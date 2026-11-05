@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-05T11:50:35.906510+00:00",
+  "base_commit": "7099841450d0a16c2742379a9ff218af0d3ae1ef",
+  "scope": "Exact intended staged snapshot, plus path and provenance review.",
+  "scanner": "Gitleaks 8.24.3 default rules, fully redacted reports under ignored outputs/constraint-repair-security; ignore comments not accepted.",
+  "intended_snapshot_leaks": 0,
+  "unresolved_credential_pattern_matches": 0,
+  "existing_credential_like_test_urls": {
+    "count": 2,
+    "classification": "Unchanged explicit dummy URLs testing credential rejection; no real credentials."
+  },
+  "raw_private_generated_data_paths_in_intended_files": 0,
+  "existing_synthetic_csv_files": {
+    "count": 3,
+    "unchanged_from_parent": true,
+    "files": [
+      "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "tests/fixtures/SYNTHETIC-complaints.csv",
+      "tests/fixtures/SYNTHETIC-sales.csv"
+    ]
+  },
+  "new_evidence": "Only code/prompt contracts, public synthetic test results and user-provided redacted synthetic plan properties. No raw model responses or user workspaces are included.",
+  "diagnostics": "Same opt-in byte-verified synthetic fixture, unknown/free-text redaction, no global logging. Report correction keys are application-generated schema property names.",
+  "publication": "Local commit only; no push, merge or deployment.",
+  "limits": "Scanner and path/provenance review, not proof about every possible secret."
+}

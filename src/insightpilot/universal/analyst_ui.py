@@ -80,7 +80,10 @@ def render_result(response,entry_id,workspace,*,question=None):
     if backend.get('model'):st.caption('Model proposed the plan. Every number and chart below comes from executed local calculations.')
     else:st.caption('Deterministic guided analyst; no model or tokens used')
     if response.get('cache_hit'):st.caption('Reused the existing verified result in the unchanged context; no repeated inference.')
-    if backend.get('repair_attempted'):st.caption('One incomplete model plan was corrected and fully revalidated before calculation.')
+    if backend.get('repair_attempted'):st.caption('One model correction request was used; the final plan passed all checks.')
+    if backend.get('constraint_repairs'):
+        labels={'limit':'result limit','descending':'sort direction','sort_by':'ranking measure','operation':'analysis operation','inherit':'previous analysis context'}
+        st.caption('Applied and validated explicit request constraints: '+', '.join(labels.get(k,'requested constraint') for k in backend['constraint_repairs'])+'. Referenced groups retain their membership.')
     primary=response['primary']
     st.caption(primary['table']+' · version '+primary['version'][-10:]+' · source '+primary['source_sha256'][:12])
     st.caption('Applied filters: '+json.dumps(primary['filters'],default=str,ensure_ascii=False)+' · date basis: '+str(primary['context']['date_basis']))

@@ -1,0 +1,72 @@
+{
+  "at": "2026-11-05T11:50:35.906510+00:00",
+  "base_commit": "7099841450d0a16c2742379a9ff218af0d3ae1ef",
+  "branch": "codex/insightpilot-local-ai",
+  "baseline": {
+    "passed": 552,
+    "source": "Previous complete suite at parent 7099841, recorded in local-ai-measure-validation.json; not rerun as a separate baseline this turn."
+  },
+  "final": {
+    "tests": 640,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 640,
+    "seconds": 175.081
+  },
+  "final_junit": "outputs/constraint-repair-final.xml",
+  "focused": {
+    "passed": 111,
+    "failed": 0,
+    "seconds": 61.11,
+    "kind": "Deterministic and HTTP-mock tests, not Qwen"
+  },
+  "new_automated_cases": 88,
+  "acceptance": {
+    "original_cases": 16,
+    "mock_passed": 16,
+    "model_planned_cases": 13,
+    "application_guard_cases": 3,
+    "captured_failure_shapes_and_normal_plans_tested": true,
+    "diagnostics_on_and_off_tested": true,
+    "original_fixture_questions_SQL_and_checker_AST_unchanged": true,
+    "actual_qwen": false
+  },
+  "existing_benchmarks": {
+    "all_51_questions_statuses_references_unchanged": true,
+    "canonical_expected_results_sha256": "8a7b3a83077be03078e03c92debf3394cccd222ef80216637d2dcaf3f92b9e38",
+    "mock_passed": 51,
+    "standard_passed": 48,
+    "standard_failures": [
+      "s18",
+      "s19",
+      "s22"
+    ]
+  },
+  "regression_scope": [
+    "Written/numeric limits and explicit ordering",
+    "Reported three shapes reconstructed as HTTP mocks",
+    "Different schema names, values, ties and missing group label",
+    "Application-owned cohort membership without model inheritance",
+    "Shrinking selection, explicit new ranking, empty selection",
+    "Sorting cannot invent filters/grouping or replace measures",
+    "Named grouped averages/medians/sums/min/max/count/distinct/quantile",
+    "One model correction maximum across repair reasons",
+    "Unreviewed numbers and new-rate approvals remain blocked",
+    "Canonical saved-analysis replay and workspace persistence"
+  ],
+  "actual_model_evidence": {
+    "source": "User-reported real Mac result",
+    "commit": "7099841",
+    "passed": 13,
+    "total": 16,
+    "model": "Qwen3.5 4B",
+    "ollama": "0.40.14",
+    "hardware": "MacBook Air"
+  },
+  "new_actual_model_run_performed": false,
+  "new_actual_model_score": null,
+  "native_mac_rerun_performed": false,
+  "remaining_acceptance": "Repeat Check Local AI.command --diagnostics on the existing Mac after this commit is transferred. Inspect received projections, application corrections, membership/order and independent results. No new real-Qwen success claimed.",
+  "publication": "Local commit only; no push, merge, model change, rebuild or deployment."
+}

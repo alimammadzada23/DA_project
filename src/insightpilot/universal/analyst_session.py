@@ -8,6 +8,7 @@ import uuid
 
 from .analyst_plan import PlanError,ClarificationRequired,validate_plan
 from .analyst_execute import execute_plan
+from .analyst_constraints import request_constraints
 from .analyst_planner import preflight_question,planning_messages,standard_plan,validate_question_intent
 from .local_ai import OllamaClient,LocalConfig,LocalAIError
 from .metrics import load_metrics
@@ -79,7 +80,7 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
     if conversation.entries and conversation.entries[-1]['question']==question and conversation.entries[-1]['response']['status']=='ok':
         response=deepcopy(conversation.entries[-1]['response']);response['cache_hit']=True
         return response
-    started=time.perf_counter();backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False,'model_response_received':False,'model_attempts':0,'repair_attempted':False}
+    started=time.perf_counter();constraints=None;backend={'backend':'Standard deterministic planner','model':None,'model_request_completed':False,'model_response_received':False,'model_attempts':0,'repair_attempted':False,'constraint_repairs':[]}
     try:
         assert_current(engine)
         observer=getattr(client,'observer',None)
@@ -87,11 +88,12 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
         guarded=preflight_question(engine,question)
         if guarded:raw=guarded
         elif mode=='local':
+            constraints=request_constraints(engine,question,conversation.last_plan,conversation.last_response)
             effective=question
             if conversation.clarification:
                 effective='Previous clarification: '+json.dumps(conversation.clarification,ensure_ascii=False)+'\nUser reply: '+question
                 if len(effective)>2000:raise ClarificationRequired('Restate the complete question in fewer than 2,000 characters.')
-            messages=planning_messages(engine,profile,metric,effective,conversation.last_plan,field_scope=field_scope)
+            messages=planning_messages(engine,profile,metric,effective,conversation.last_plan,field_scope=field_scope,request_constraints=constraints.summary())
             planner=client or OllamaClient(config)
             backend.update(backend='Ollama local REST',model=config.model)
             current_messages=messages
@@ -101,7 +103,10 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
                 try:
                     raw,metadata=planner.plan(current_messages)
                     backend.update(metadata);backend['model_request_completed']=True
+                    raw,repairs=constraints.repair(raw)
+                    backend['constraint_repairs']=repairs
                     preliminary=validate_plan(engine,profile,raw,metric,conversation.last_plan)
+                    constraints.validate(preliminary)
                     validate_question_intent(engine,question,preliminary)
                     if observer is not None:observer.decision('validated')
                     break
@@ -125,11 +130,14 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
             raw=standard_plan(engine,profile,metric,effective,conversation.last_plan)
         else:raise PlanError('Choose Standard analysis or Local AI explicitly; no automatic external provider routing is available.')
         validated=validate_plan(engine,profile,raw,metric,conversation.last_plan)
+        if constraints is not None:constraints.validate(validated)
         validate_question_intent(engine,question,validated)
         assert_current(engine)
         if context_signature(engine,metric)!=conversation.signature:raise PlanError('The workspace context changed while the plan was being produced. Ask again in the new context.')
         cohort=()
-        if validated.inherited and conversation.last_response:
+        if constraints is not None and constraints.preserve and validated.data['action']=='analyze':
+            cohort=constraints.cohort
+        elif constraints is None and validated.inherited and conversation.last_response:
             old=conversation.last_response
             changed=any(validated.data.get(k)!=old['plan'].get(k) for k in ('measures','sort_by','descending','chart'))
             if validated.data.get('operation')=='aggregate' and validated.data.get('group_by')==old['plan'].get('group_by') and (changed or old.get('applied_cohort')):

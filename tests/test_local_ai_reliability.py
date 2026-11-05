@@ -192,7 +192,8 @@ def test_version_change_before_repair_prevents_retry(data):
 
 
 @pytest.mark.parametrize('diagnostics',[False,True])
-def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(tmp_path,diagnostics):
+@pytest.mark.parametrize('captured_failures',[False,True])
+def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(tmp_path,diagnostics,captured_failures):
     plans=[]
     for case in accept.questions():
         name=case['id']
@@ -213,6 +214,12 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
         elif name=='rows':value.update(operation='records',group_by=[],measures=[],chart='table',limit=100,filters=[{'column':'age','operator':'gt','value':40}])
         elif name=='missing':value.update(group_by=[],chart='auto',filters=[{'column':'age','operator':'not_missing'}])
         elif name=='smallest':value.update(limit=10,descending=False)
+        if captured_failures:
+            # Reconstructed from user-reported redacted properties, not a new
+            # real Qwen execution. Original questions/oracles remain unchanged.
+            if name=='resort':value=counted(limit=10);value.pop('descending')
+            elif name=='median':value['operation']='group_distribution'
+            elif name=='smallest':value.pop('limit');value.pop('descending')
         plans.append(value)
     client,chats=client_for(plans)
     code,report,path=accept.run(client.config,client=client,directory=tmp_path/'mock-acceptance',diagnostics=diagnostics)
@@ -222,6 +229,9 @@ def test_acceptance_runner_exercises_real_pipeline_with_explicit_mock_identity(t
     assert all('plan_validated' in r and 'correct_numbers' in r and 'appropriate_chart' in r and 'model_attempts' in r for r in report['results'])
     assert report['diagnostics_enabled']==diagnostics
     assert (path.parent/'rejected-plans.jsonl').exists()==diagnostics
+    if captured_failures:
+        for case in report['results']:
+            if case['id'] in ('resort','median','smallest'):assert case['application_constraint_repairs']
 
 
 def test_plotly_typed_numeric_arrays_export_actual_values_after_json_roundtrip():

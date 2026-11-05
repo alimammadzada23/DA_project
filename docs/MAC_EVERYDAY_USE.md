@@ -4,8 +4,8 @@ Keep using **`~/DA_project`**, your existing clone and its existing environment.
 There is no need to download another ZIP, clone again, reinstall Python, reinstall
 Ollama or download Qwen again.
 
-The previous reliability repairs and launchers are in `3be7f67` on
-`codex/insightpilot-local-ai`. The new measure-contract fixes are **local until
+The previous measure-contract repairs and launchers are in `7099841` on
+`codex/insightpilot-local-ai`. The new request-constraint fixes are **local until
 you authorize a new push**. A pull cannot retrieve unpublished files. After
 publication, update the existing clone using the safe steps below.
 
@@ -59,9 +59,10 @@ there is no automatic external AI fallback.
 
 ## Verify the real Qwen repair
 
-The first real Mac acceptance was **2/16**. The new focused fix and its tests do
-not replace that result. Follow the [measure-contract diagnostic procedure](LOCAL_AI_MEASURE_CONTRACT.md)
-to capture sanitized actual plan shapes and obtain a new real-model result.
+The latest real Mac acceptance was **13/16 at `7099841`**, improved from 2/16.
+The new focused fix and its tests do not replace that result. Follow the
+[request-constraint diagnostic procedure](LOCAL_AI_REQUEST_CONSTRAINTS.md)
+to compare actual plan shapes, application corrections and a new real-model result.
 
 After Ollama is running, double-click **Check Local AI.command**. No complicated
 commands or personal dataset setup are needed. It exercises InsightPilot's actual
