@@ -1,0 +1,36 @@
+{
+  "baseline": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "baseline_runtime": "/workspace/DA_project/outputs/ux-upgrade/baseline-b9451ca/src/insightpilot/universal/analyst_planner.py",
+  "baseline_passed": 48,
+  "current_passed": 48,
+  "total": 51,
+  "identical_failures": [
+    {
+      "id": "s18",
+      "question": "What share of all selected rows has result equal to \"yes\"?",
+      "expected_status": "ok",
+      "status": "clarify",
+      "reason": "Expected an executed result, got clarify",
+      "answer": "Standard analysis does not parse this conditional-rate wording. Use a reviewed saved metric, or ask Local AI to propose the numerator, eligible denominator and missing-value policy for your approval. No rate was calculated or replaced with group shares."
+    },
+    {
+      "id": "s19",
+      "question": "Exclude result \"unknown\"; among nonmissing result codes, what share is \"yes\"?",
+      "expected_status": "ok",
+      "status": "clarify",
+      "reason": "Expected an executed result, got clarify",
+      "answer": "Standard analysis does not parse this conditional-rate wording. Use a reviewed saved metric, or ask Local AI to propose the numerator, eligible denominator and missing-value policy for your approval. No rate was calculated or replaced with group shares."
+    },
+    {
+      "id": "s22",
+      "question": "Compare record-count contributions by job between January 1\u201331 and March 1\u201331, 2025.",
+      "expected_status": "ok",
+      "status": "clarify",
+      "reason": "Expected an executed result, got clarify",
+      "answer": "For period comparisons, ask Local AI with four explicit start/end dates or use Advanced period comparison. Standard analysis will not discard a requested period boundary."
+    }
+  ],
+  "reference_tables_unchanged": true,
+  "failure_results_byte_equivalent_after_normalization": true,
+  "approval": "User explicitly approved a separate reliability commit with these three existing limitations before UX work."
+}

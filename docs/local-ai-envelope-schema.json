@@ -25,6 +25,7 @@
             "aggregate",
             "records",
             "schema",
+            "column_maxima",
             "missing",
             "summary",
             "distribution",

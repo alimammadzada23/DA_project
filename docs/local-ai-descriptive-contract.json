@@ -1,0 +1,336 @@
+{
+  "at": "2026-11-05T19:03:40.180576+01:00",
+  "base_commit": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "branch": "codex/insightpilot-local-ai",
+  "schema_sha256": "230889cf0d928714eb8bbe190ecd26c1a6b33d8fa0ecfc65d61f7dd428018eec",
+  "envelope_sha256": "efaacbdd99f65aa661e6d979f49234d527fc5f43dce25e35fdd033140642d86a",
+  "system_prompt_sha256": "b97da851e1b9dfc03a870e8da24e0dd5766e9322da69ef742a536b8616fde101",
+  "schema_serialization": "json.dumps(value, sort_keys=True), UTF-8",
+  "operation_policy": {
+    "aggregate": {
+      "groups": [
+        0,
+        2
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        4
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "bar",
+        "pie"
+      ],
+      "sorts": [
+        "records",
+        "group",
+        "m0",
+        "m1",
+        "m2",
+        "m3"
+      ],
+      "limit_kind": "aggregate",
+      "limit_bound": 100,
+      "required": [
+        "measures"
+      ]
+    },
+    "records": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 100,
+      "required": []
+    },
+    "schema": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": []
+    },
+    "column_maxima": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": []
+    },
+    "missing": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        40
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": []
+    },
+    "summary": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": [
+        "fields"
+      ]
+    },
+    "distribution": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "histogram"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "none",
+      "limit_bound": 100,
+      "required": [
+        "fields"
+      ]
+    },
+    "group_distribution": {
+      "groups": [
+        1,
+        1
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "box"
+      ],
+      "sorts": [
+        "records",
+        "group"
+      ],
+      "limit_kind": "groups",
+      "limit_bound": 100,
+      "required": [
+        "group_by",
+        "fields"
+      ]
+    },
+    "scatter": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        2,
+        2
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "scatter"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 2000,
+      "required": [
+        "fields"
+      ]
+    },
+    "trend": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        1
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "line"
+      ],
+      "sorts": [
+        "period"
+      ],
+      "limit_kind": "series",
+      "limit_bound": 1000,
+      "required": [
+        "measures"
+      ]
+    },
+    "compare_periods": {
+      "groups": [
+        1,
+        1
+      ],
+      "fields": [
+        0,
+        0
+      ],
+      "measures": [
+        1,
+        1
+      ],
+      "charts": [
+        "auto",
+        "table",
+        "bar"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "complete",
+      "limit_bound": 10000,
+      "required": [
+        "group_by",
+        "measures",
+        "periods"
+      ]
+    },
+    "outliers": {
+      "groups": [
+        0,
+        0
+      ],
+      "fields": [
+        1,
+        1
+      ],
+      "measures": [
+        0,
+        0
+      ],
+      "charts": [
+        "auto",
+        "table"
+      ],
+      "sorts": [
+        "records"
+      ],
+      "limit_kind": "preview",
+      "limit_bound": 1000,
+      "required": [
+        "fields"
+      ]
+    }
+  },
+  "numeric_authority": "Existing full-table profile verifies eligibility; trusted finite plans and DuckDB execute all calculations inside active filters. No model SQL.",
+  "technical_numeric": "Every nonblank value finite numeric; no identifier name, binary code or explicit nonnumeric role. No roles, units, grain or approvals inferred or persisted.",
+  "business_review": "Saved non-count metrics, outcome rates, eligible denominators and date meanings retain existing review/approval requirements.",
+  "real_qwen_success": null,
+  "publication": "Local only; no push, merge or deployment."
+}

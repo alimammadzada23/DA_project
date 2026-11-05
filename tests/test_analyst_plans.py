@@ -133,12 +133,14 @@ def test_unknown_or_prohibited_plan_data_never_executes(analysis_model,change):
     with pytest.raises((PlanError,ClarificationRequired)):validate_plan(e,p,value,Metric('Records'))
 
 
-def test_unreviewed_mean_clarifies_and_never_approves_fields(analysis_model):
+def test_verified_unreviewed_mean_calculates_without_approving_fields(analysis_model):
     w,_=analysis_model;info=w.info('facts');info['semantics']={'reviewed':False};info['roles']={}
     with w.connect(write=True) as con:w._save_info(con,'facts',info)
     e,p=engine_and_profile((w,analysis_model[1]));c=Conversation()
     r=analyze_question(e,p,Metric('Records'),'What is the average value?',c)
-    assert r['status']=='clarify' and not w.info('facts')['semantics']['reviewed']
+    assert r['status']=='ok' and not w.info('facts')['semantics']['reviewed']
+    assert r['primary']['rows'][0][0]==pytest.approx(analysis_model[1].value.mean())
+    assert r['definitions'][0]['semantic_status']=='technical_descriptive' and not w.info('facts')['roles']
 
 
 def test_wrong_time_meaning_or_grain_requires_explicit_change(analysis_model):

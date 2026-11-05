@@ -16,7 +16,7 @@ from .analyst_session import Conversation,analyze_question,approve_pending,conte
 from .analyst_plan import PlanError
 from .engine import frame_of
 from .local_ai import LocalConfig,OllamaClient,LocalAIError,DEFAULT_MODEL,DEFAULT_ENDPOINT
-from .metrics import NUMERIC_ROLES
+from .profile import numeric_status
 from .report import configuration,csv_export,excel_export,safe_spreadsheet_frame
 
 
@@ -60,7 +60,7 @@ def local_controls():
 
 
 def examples(engine,profile):
-    numeric=[c['column'] for c in profile['columns'] if c['numeric_values'] and engine.info['roles'].get(c['column']) in NUMERIC_ROLES]
+    numeric=[c['column'] for c in profile['columns'] if numeric_status(c,profile,engine.info)]
     result=['What columns are available?','Which columns have missing values?']
     if engine.context.comparison:result.insert(0,'Compare the number of records across '+engine.context.comparison+'.')
     if numeric:
@@ -88,6 +88,8 @@ def render_result(response,entry_id,workspace,*,question=None):
     st.caption(primary['table']+' · version '+primary['version'][-10:]+' · source '+primary['source_sha256'][:12])
     st.caption('Applied filters: '+json.dumps(primary['filters'],default=str,ensure_ascii=False)+' · date basis: '+str(primary['context']['date_basis']))
     definitions=response.get('definitions',[])
+    if any(d.get('semantic_status')=='technical_descriptive' for d in definitions):
+        st.caption('Descriptive statistics of verified stored numbers. Business meaning and units remain unreviewed.')
     if definitions:
         with st.expander('Measure definitions and eligible denominators'):
             for definition in definitions:st.json(definition)
@@ -129,7 +131,7 @@ def render_result(response,entry_id,workspace,*,question=None):
 
 def render(engine,profile,metric,scope):
     st.subheader('Ask. Verify. Follow the evidence.')
-    st.write('Ask about counts, reviewed measures, groups, distributions and time. The model plans; InsightPilot calculates.')
+    st.write('Ask about record counts, verified numeric statistics, reviewed business measures, groups, distributions and time. The model plans; InsightPilot calculates.')
     mode=st.radio('Analyst mode',['Standard analysis','Local AI Analyst'],horizontal=True,key='analyst-mode')
     config=None;available=True
     if mode=='Local AI Analyst':

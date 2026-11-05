@@ -11,8 +11,9 @@ import math
 
 from jsonschema import Draft202012Validator
 
-from .metrics import Metric, NUMERIC_ROLES, load_metrics
+from .metrics import Metric, load_metrics
 from .sql_lab import SQLLab
+from .profile import numeric_status
 from .analyst_contract import MAX_GROUPS, OPERATIONS, defaults, legacy_saved_plan, operation_variants
 
 SCALAR={'type':['string','number','boolean','null'],'maxLength':200}
@@ -145,8 +146,8 @@ def validate_structure(value,*,envelope=False):
 def reviewed_numeric(engine,profile,column):
     if column not in engine.info['columns']:raise PlanError('The plan references an unavailable field.')
     item=next((c for c in profile['columns'] if c['column']==column),{})
-    if not engine.info.get('semantics',{}).get('reviewed') or engine.info['roles'].get(column) not in NUMERIC_ROLES:
-        raise ClarificationRequired(f'Review {column!r} as a numeric measure and confirm the row grain in Quality & Preparation before calculating it.')
+    if not numeric_status(item,profile,engine.info):
+        raise ClarificationRequired(f'{column!r} is not a verified descriptive numeric field or a reviewed numeric measure. Review identifiers, category codes or failed numeric conversions in Quality & Preparation.')
     if not item.get('numeric_values'):raise ClarificationRequired(f'{column!r} has no finite numeric values. Review its type conversion first.')
 
 
@@ -249,6 +250,11 @@ def validate_plan(engine,profile,value,selected_metric,previous=None,*,legacy=Fa
         if len(fields)!=1:raise ClarificationRequired('Choose one numeric field for this analysis.')
         reviewed_numeric(engine,profile,fields[0])
         if op=='group_distribution' and len(groups)!=1:raise ClarificationRequired('Choose one grouping dimension for the distribution comparison.')
+    if op=='column_maxima':
+        chosen=fields or [c['column'] for c in profile['columns'] if numeric_status(c,profile,engine.info)]
+        if not chosen:raise ClarificationRequired('No verified numeric fields are available for a maximum comparison. Choose a field or review its numeric conversion.')
+        if len(chosen)>40:raise ClarificationRequired('Choose at most 40 numeric fields for a maximum comparison; no columns were silently omitted.')
+        for field in chosen:reviewed_numeric(engine,profile,field)
     if op=='scatter':
         if len(fields)!=2:raise ClarificationRequired('Choose two numeric fields for the relationship view.')
         for field in fields:reviewed_numeric(engine,profile,field)

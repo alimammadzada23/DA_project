@@ -1,0 +1,134 @@
+{
+  "at": "2026-11-05T18:28:44.350844+00:00",
+  "branch": "codex/insightpilot-local-ai",
+  "baseline_commit": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "current_head": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "tracked_work_uncommitted": false,
+  "original_uncommitted_files_preserved": true,
+  "backup": "outputs/descriptive-resume-20261105/initial-uncommitted-work.tar",
+  "full_suite": {
+    "tests": 892,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 892,
+    "seconds": 249.92
+  },
+  "focused_regressions_and_mocked_acceptance_protocol": {
+    "tests": 74,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 74,
+    "seconds": 42.51
+  },
+  "mock_acceptance_protocol": {
+    "synthetic_passed_per_run": [
+      16,
+      16,
+      16
+    ],
+    "bank_shaped_synthetic_checks": 3,
+    "model": "HTTP test double, not Qwen",
+    "real_UCI_data_used": false,
+    "evidence": "test_three_fresh_pipeline_runs_with_mocked_model_and_bank_shape passed in the focused and full suites"
+  },
+  "benchmarks": {
+    "http_mock": {
+      "passed": 51,
+      "total": 51,
+      "exit_code": 0,
+      "actual_model_quality_measured": false
+    },
+    "standard": {
+      "passed": 48,
+      "total": 51,
+      "exit_code": 1,
+      "failures": [
+        {
+          "id": "s18",
+          "question": "What share of all selected rows has result equal to \"yes\"?",
+          "expected_status": "ok",
+          "actual_status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "existing_baseline_limitation": true
+        },
+        {
+          "id": "s19",
+          "question": "Exclude result \"unknown\"; among nonmissing result codes, what share is \"yes\"?",
+          "expected_status": "ok",
+          "actual_status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "existing_baseline_limitation": true
+        },
+        {
+          "id": "s22",
+          "question": "Compare record-count contributions by job between January 1\u201331 and March 1\u201331, 2025.",
+          "expected_status": "ok",
+          "actual_status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "existing_baseline_limitation": true
+        }
+      ]
+    },
+    "questions_expected_statuses_and_reference_tables_unchanged": true
+  },
+  "security": {
+    "scanner": "Gitleaks 8.24.3, default rules, redacted output",
+    "scope": "All tracked working-tree files plus intended untracked changes; no .git, ignored datasets, generated logs or environment dump.",
+    "exit_code": 0,
+    "findings": 0,
+    "scanned_files": 309,
+    "final_snapshot_scan": {
+      "exit_code": 0,
+      "findings": 0,
+      "scanned_files": 311,
+      "scope": "Complete intended tree, including validation/security receipts.",
+      "report": "outputs/descriptive-resume-20261105/gitleaks-final.json"
+    }
+  },
+  "contract_fingerprints_and_snapshots_match": true,
+  "protected_paths_unchanged": {
+    "scripts/accept_local_ai.py": true,
+    "scripts/benchmark_local_ai.py": true,
+    "scripts/local_ai_benchmark_cases.py": true,
+    "src/insightpilot/universal/engine.py": true,
+    "src/insightpilot/universal/sql_lab.py": true,
+    "src/insightpilot/universal/local_ai.py": true,
+    "Start InsightPilot.command": true,
+    "Check Local AI.command": true
+  },
+  "tracked_datasets": [
+    {
+      "path": "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "unchanged": true,
+      "sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-complaints.csv",
+      "unchanged": true,
+      "sha256": "b4fd01d8d6bd7ea2a6b2912a9f56c2f1cbeb8100a6105b67194344c522bdadcc"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-sales.csv",
+      "unchanged": true,
+      "sha256": "7f804abe5ad7ded3c29cc1c794d189db877585dd052f9cead6277b35bc6cd652"
+    }
+  ],
+  "real_qwen": {
+    "cases_run": 0,
+    "new_score": null,
+    "native_Mac_tested": false,
+    "remaining": "Repeat existing three-pass protocol and the additional unreviewed synthetic workflow in LOCAL_AI_DESCRIPTIVE_ANALYSIS.md on the existing Mac with qwen3.5:4b."
+  },
+  "all_requested_checks_passed": false,
+  "commit_created": true,
+  "commit_sha": null,
+  "commit_blocker": null,
+  "pushed": false,
+  "merged": false,
+  "deployed": false,
+  "known_standard_limitations_accepted": true,
+  "baseline_reproduction": "local-ai-descriptive-baseline-comparison.json",
+  "commit_note": "This receipt is included in the separate reliability commit; use git log to identify that commit. Its own SHA cannot be embedded without changing the commit."
+}

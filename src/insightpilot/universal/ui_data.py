@@ -11,6 +11,7 @@ import streamlit as st
 
 from .connectors import database_tables, import_api, import_database, import_postgres
 from .metrics import Metric, save_metric
+from .profile import safe_role_suggestions
 from .relationships import inspect_relationship, join_preview, load_relationships, save_relationship, suggest_relationships
 
 ROLES=['unassigned','date','identifier','customer','product','transaction','revenue','expense','quantity',
@@ -169,6 +170,7 @@ def quality_editor(workspace,table,report):
         if query.lower() in c['column'].lower()]
     st.dataframe(pd.DataFrame(catalog),hide_index=True,width='stretch')
     st.info(report['semantic_notice'])
+    st.caption('Basic descriptive statistics on verified numeric fields and grouped record counts need no semantic approval. Review business metrics, units, outcomes and date meanings when those interpretations are needed.')
     for warning in info.get('import_warnings',[]):st.warning(warning+' Original bytes and this table remain intact; re-import with an explicit separator if appropriate.')
     col=st.selectbox('Inspect field meaning and statistics',info['columns'])
     detail=next(c for c in report['columns'] if c['column']==col)
@@ -204,14 +206,16 @@ def quality_editor(workspace,table,report):
             st.write('**Observed date coverage**')
             for field,(start,end) in date_fields.items(): st.write(f'{field}: {start} to {end}. Source completeness is not inferred.')
     with st.expander('Review and correct semantic roles'):
+        suggestions=safe_role_suggestions(report,info)
+        st.caption('The editor prefills generic measure/category suggestions from automatic profiling. Review several together, confirm the row grain and save once. Suggestions do not approve units, financial meanings, outcomes or dates; nothing is saved until you confirm.')
         with st.form('universal-roles-'+str(workspace.directory)+'-'+table):
             grain=st.text_input('What does one row represent?',info['grain'])
             semantics=info.get('semantics',{})
-            frame=pd.DataFrame({'column':info['columns'],'role':[info['roles'].get(c,'unassigned') for c in info['columns']],
+            frame=pd.DataFrame({'column':info['columns'],'role':[suggestions.get(c,info['roles'].get(c,'unassigned')) for c in info['columns']],
                 'units':[semantics.get('units',{}).get(c,'') for c in info['columns']],
                 'date purpose':[semantics.get('date_purposes',{}).get(c,'') for c in info['columns']]})
             changed=st.data_editor(frame,hide_index=True,disabled=['column'],width='stretch',
-                column_config={'role':st.column_config.SelectboxColumn('Approved role',options=ROLES,required=True)})
+                column_config={'role':st.column_config.SelectboxColumn('Role to review',options=ROLES,required=True)})
             date_options=[None]+[c['column'] for c in report['columns'] if c['recognized_dates']]
             basis=st.selectbox('Default analytical date basis',date_options,
                 index=date_options.index(semantics.get('date_basis')) if semantics.get('date_basis') in date_options else 0,
@@ -221,6 +225,7 @@ def quality_editor(workspace,table,report):
             submitted=st.form_submit_button('Save reviewed definitions')
         if submitted:
             if not approved: st.warning('Review the definitions before approval.')
+            elif not grain.strip() or grain.startswith('Unconfirmed'):st.warning('Describe what one row represents before approving business definitions. Basic descriptive statistics are already available without this approval.')
             else:
                 workspace.approve_semantics(table,dict(zip(changed.column,changed.role)),grain,
                     units=dict(zip(changed.column,changed.units)),date_purposes=dict(zip(changed.column,changed['date purpose'])),date_basis=basis); st.rerun()

@@ -20,6 +20,7 @@
         "aggregate",
         "records",
         "schema",
+        "column_maxima",
         "missing",
         "summary",
         "distribution",
@@ -1704,6 +1705,181 @@
         },
         "operation": {
           "const": "schema"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 0,
+          "uniqueItems": true,
+          "minItems": 0
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/measure"
+          },
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "filters": {
+          "$ref": "#/$defs/filters"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 40,
+          "uniqueItems": true,
+          "minItems": 0
+        },
+        "sort_by": {
+          "enum": [
+            "records"
+          ]
+        },
+        "descending": {
+          "$ref": "#/$defs/descending"
+        },
+        "limit": {
+          "type": "null"
+        },
+        "bins": {
+          "$ref": "#/$defs/bins"
+        },
+        "date_basis": {
+          "$ref": "#/$defs/date_basis"
+        },
+        "grain": {
+          "$ref": "#/$defs/grain"
+        },
+        "relationship": {
+          "type": "null"
+        },
+        "inherit": {
+          "const": true
+        },
+        "chart": {
+          "enum": [
+            "auto",
+            "table"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "operation"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "action": {
+          "const": "analyze"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "operation": {
+          "const": "column_maxima"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 0,
+          "uniqueItems": true,
+          "minItems": 0
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/measure"
+          },
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "filters": {
+          "$ref": "#/$defs/filters"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 40,
+          "uniqueItems": true,
+          "minItems": 0
+        },
+        "sort_by": {
+          "enum": [
+            "records"
+          ]
+        },
+        "descending": {
+          "$ref": "#/$defs/descending"
+        },
+        "limit": {
+          "type": "null"
+        },
+        "bins": {
+          "$ref": "#/$defs/bins"
+        },
+        "date_basis": {
+          "$ref": "#/$defs/date_basis"
+        },
+        "grain": {
+          "$ref": "#/$defs/grain"
+        },
+        "relationship": {
+          "type": "null"
+        },
+        "inherit": {
+          "const": false
+        },
+        "chart": {
+          "enum": [
+            "auto",
+            "table"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "action",
+        "table",
+        "operation",
+        "inherit"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "action": {
+          "const": "analyze"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "operation": {
+          "const": "column_maxima"
         },
         "group_by": {
           "type": "array",

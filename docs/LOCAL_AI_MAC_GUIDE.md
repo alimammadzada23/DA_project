@@ -2,8 +2,9 @@
 
 Keep using your existing **`~/DA_project`** clone and its installed environment.
 No new clone, ZIP, Python installation or model download is required for everyday
-use. The published baseline is `b8d562e`; this reliability repair remains local
-until a separately authorized push.
+use. The published baseline is `b9451ca`; this descriptive-analysis repair remains
+local until a separately authorized push. See the [unreviewed workflow and real-Mac
+checks](LOCAL_AI_DESCRIPTIVE_ANALYSIS.md).
 
 ## Start tomorrow
 

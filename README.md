@@ -10,6 +10,7 @@ complaint and mapped-upload front doors are retired. Existing databases, sources
 reports and backend/CLI compatibility remain intact.
 
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
+[Descriptive questions without manual setup and Mac checks](docs/LOCAL_AI_DESCRIPTIVE_ANALYSIS.md) ·
 [Mac launcher and updates](docs/MAC_EVERYDAY_USE.md) ·
 [Complete operation-contract audit and three-run verification](docs/LOCAL_AI_OPERATION_AUDIT.md) ·
 [Complete grouped results repair](docs/LOCAL_AI_COMPLETE_GROUPS.md) ·
@@ -26,10 +27,10 @@ reports and backend/CLI compatibility remain intact.
 ## Run on your Mac
 
 Keep your existing **`~/DA_project`** clone on **`codex/insightpilot-local-ai`**.
-The previous complete-group repair and permanent launchers are in `c2cfd89`. The
-new operation-contract audit and repair in this revision is local until a new push is
-explicitly authorized. After publication, update that clone; no new ZIP or clone
-is needed.
+The operation-contract baseline is `b9451ca`. This revision adds descriptive
+numeric analysis without business-role approval and fixes highest-column
+ambiguity. It remains local until a new push is explicitly authorized. After
+publication, update that clone; no new ZIP or clone is needed.
 
 ```bash
 cd ~/DA_project
@@ -63,8 +64,11 @@ synthetic diagnostics and independent DuckDB references. See the
 1. **Data Hub:** import a CSV/TSV/XLSX/Parquet/JSON/JSONL file or read-only database
    snapshot. Original source bytes, SHA-256, row count and versions are retained.
 2. **Quality & Preparation:** search every field, inspect values and missingness,
-   and confirm row grain, field roles, units and each timestamp's purpose. Choose
-   a date basis explicitly. Reversible preparation retains rejected conversions.
+   and review generic suggestions for several fields together when needed. Basic
+   numeric statistics and grouped record counts already work without semantic
+   approval. Business metrics, units, outcomes and timestamp meanings still need
+   review. Choose a date basis explicitly. Reversible preparation retains rejected
+   conversions.
 3. Define a metric using the ordinary metric builder. A record count is a
    structural description; rates need an explicit eligible denominator.
 4. **Overview / Explore:** choose the shared metric and comparison field. Review

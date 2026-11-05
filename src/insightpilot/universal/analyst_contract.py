@@ -31,6 +31,7 @@ OPERATIONS = {
                            ('records', 'group', 'm0', 'm1', 'm2', 'm3'), 'aggregate', required=('measures',)),
     'records': Operation((0, 0), (0, 40), (0, 0), ('auto', 'table'), limit_kind='preview', limit_bound=MAX_RECORDS),
     'schema': Operation((0, 0), (0, 40), (0, 0), ('auto', 'table')),
+    'column_maxima': Operation((0, 0), (0, 40), (0, 0), ('auto', 'table')),
     'missing': Operation((0, 0), (0, 40), (0, 0), ('auto', 'table')),
     'summary': Operation((0, 0), (1, 1), (0, 0), ('auto', 'table'), required=('fields',)),
     'distribution': Operation((0, 0), (1, 1), (0, 0), ('auto', 'table', 'histogram'), required=('fields',)),

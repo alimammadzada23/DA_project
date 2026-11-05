@@ -5,9 +5,7 @@ import json
 import math
 
 from ..datasets import quote
-from .profile import identifier_name, numeric_expression
-
-NUMERIC_ROLES={'measure','quantity','duration','price','revenue','expense'}
+from .profile import NUMERIC_ROLES, identifier_name, numeric_expression
 
 @dataclass(frozen=True)
 class Metric:

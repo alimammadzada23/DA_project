@@ -199,7 +199,11 @@ def test_repaired_operation_does_not_approve_unreviewed_numbers(model):
     model = (Engine(workspace, 'facts', context=model[0].context), *model[1:])
     client, _ = client_for([plan(model, operation='group_distribution', measures=[{'aggregation': 'median', 'column': model[5]}])])
     result = ask(model, client, f'Show median {model[5]} for each {model[4]} category.')
-    assert result['status'] == 'clarify' and not result['evidence'] and workspace.info('facts')['semantics']['reviewed'] is False
+    assert result['status'] == 'ok' and result['evidence'] and workspace.info('facts')['semantics']['reviewed'] is False
+    actual=frame_of(result['primary']).sort_values('group_0',na_position='last')
+    expected=model[3].groupby(model[4],dropna=False)[model[5]].median()
+    assert list(actual.m0)==pytest.approx(list(expected))
+    assert result['definitions'][0]['semantic_status']=='technical_descriptive'
 
 
 def test_new_rate_still_requires_human_approval(model, monkeypatch):

@@ -62,6 +62,10 @@ def record_count(text):
     return bool(re.search(r'\b(?:record|row|observation|entry) counts?\b|\bcounts? (?:the |of )?(?:records|rows|observations|entries)\b|\b(?:number of|how many|most|fewest|total) (?:records|rows|observations|entries)\b', text))
 
 
+def group_size_request(text, groups, other_fields):
+    return bool(groups) and not other_fields and bool(re.search(r'\b(?:rank|top|bottom|largest|smallest|biggest|most common|least common)\b|\b(?:highest to lowest|lowest to highest)\b',text)) and not re.search(r'\b(?:revenue|profit|conversion|success|risk|retention|best|metric|score)\b',text)
+
+
 def requested_filters(question, columns):
     """Literal comparisons only; never infer outcomes or eligible populations."""
     rate=bool(re.search(r'\b(?:rate|proportion|percent(?:age)?|share|risk)\b',question,re.I))
@@ -270,8 +274,9 @@ def request_constraints(engine, question, previous=None, response=None):
     if other or re.search(r'\bbetween\b.+\band\b', text): return constraints
     measures = []
     count_inputs = [name for start, _, name in fields if name not in groups and re.search(r'\bcounts?\s+(?:of\s+)?(?:(?:nonmissing|nonblank|non null)\s+)?$', text[:start])]
-    if record_count(text) or re.search(r'\bcounts?\s+(?:by|per|for each)\b', text) or groups and re.search(r'\bcounts\b', text) and not count_inputs: measures.append({'aggregation': 'records'})
     inputs = list(dict.fromkeys(name for _, _, name in fields if name not in groups))
+    size_ranking=group_size_request(text,groups,inputs)
+    if record_count(text) or re.search(r'\bcounts?\s+(?:by|per|for each)\b', text) or groups and re.search(r'\bcounts\b', text) and not count_inputs or size_ranking: measures.append({'aggregation': 'records'})
     for match in re.finditer(r'\b(' + '|'.join(MEASURES) + r')\b', text):
         if any(start <= match.start() < end for start, end, _ in fields): continue
         if match[1] == 'total' and re.match(r'\s+(?:records|rows|observations|entries)\b', text[match.end():]): continue
@@ -298,7 +303,7 @@ def request_constraints(engine, question, previous=None, response=None):
         constraints.measures = measures
         if groups or constraints.preserve: constraints.operation = 'aggregate'
     ranking = constraints.descending is not None or constraints.limit is not None
-    constraints.sort_records = ranking and bool(record_count(text))
+    constraints.sort_records = ranking and bool(record_count(text) or size_ranking)
     if ranking and not constraints.sort_records and len(measures) == 1:
         constraints.sort_measure = measures[0]
     # "Now top N" changes only selection size. Bind its other inputs even if

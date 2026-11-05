@@ -13,7 +13,7 @@ from .analyst_plan import MAX_GROUPS, PlanError, ClarificationRequired, Validate
 from .analyst_contract import OPERATIONS, execution_bound
 from .engine import Engine,Filter,frame_of
 from .metrics import Metric,load_metrics
-from .profile import numeric_expression,date_expression,profile as full_profile
+from .profile import numeric_expression,date_expression,numeric_status,profile as full_profile
 from .sql_lab import SQLLab
 from .story import format_value
 from .report import configuration
@@ -44,9 +44,16 @@ def conditional_sql(engine,condition):
     return left+' '+{'eq':'=','ne':'<>','gt':'>','gte':'>=','lt':'<','lte':'<='}[op]+' ?',[value]
 
 
-def measure_expression(engine,spec,selected,*,total):
+def numeric_metadata(engine,profile,column):
+    item=next(c for c in profile['columns'] if c['column']==column)
+    status=numeric_status(item,profile,engine.info)
+    units=engine.info.get('semantics',{}).get('units',{}).get(column) if status=='reviewed_numeric' else None
+    return {'units':units or 'units unconfirmed','semantic_status':status,
+            'validation':'reviewed numeric definition' if status=='reviewed_numeric' else 'verified stored numbers; business meaning and units unreviewed'}
+
+
+def measure_expression(engine,spec,selected,*,total,profile):
     agg=spec['aggregation'];column=spec.get('column');params=[];parts=[]
-    units=engine.info.get('semantics',{}).get('units',{})
     if agg=='saved':
         definitions={m.name:m for m in load_metrics(engine.workspace,engine.table)}|{selected.name:selected,'Records':Metric('Records')}
         metric=definitions[spec['metric']]
@@ -76,11 +83,12 @@ def measure_expression(engine,spec,selected,*,total):
         else:
             formula='quantile('+json.dumps(column)+','+str(spec['quantile'])+')' if agg=='quantile' else agg+'('+json.dumps(column)+')'
             label={'avg':'Mean','sum':'Sum','median':'Median','min':'Minimum','max':'Maximum','distinct':'Distinct values','count':'Nonmissing values','quantile':'Quantile'}[agg]+' of '+column
-            metric=Metric(label,formula,'Explicit question-specific aggregate; original row grain and reviewed units remain authoritative.',
-                'records' if agg in ('distinct','count') else units.get(column) or 'units unconfirmed')
+            metric=Metric(label,formula,'Explicit question-specific aggregate of stored values; no business interpretation inferred.',
+                'records' if agg in ('distinct','count') else numeric_metadata(engine,profile,column)['units'])
     expression,required=metric.compile(engine.info['columns'],engine.info['roles'])
     definition=metric.dictionary(engine.info)
     definition.update(label=metric.name,missing_policy='Finite numeric inputs only for numeric aggregates; NULL and blank excluded for count(field); count() includes every selected row.')
+    if column and agg not in ('count','distinct'):definition.update(numeric_metadata(engine,profile,column))
     for component,formula in metric.components.items():
         expr,_=Metric(component,formula).compile(engine.info['columns'],engine.info['roles'],allow_scalar=True)
         parts.append((expr,[],component))
@@ -134,7 +142,7 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         grouping=[quote(c)+' AS '+quote('group_'+str(i)) for i,c in enumerate(groups)] if op=='aggregate' else [f"date_trunc('{data['grain']}',{date_expression(data['date_basis'])})::DATE AS period"]
         clauses=list(grouping);params=[]
         for index,spec in enumerate(data['measures']):
-            expr,p,definition,parts=measure_expression(scoped,spec,selected_metric,total=total)
+            expr,p,definition,parts=measure_expression(scoped,spec,selected_metric,total=total,profile=profile)
             clauses.append(expr+' AS '+quote('m'+str(index)));params.extend(p);definitions.append(definition)
             for subexpr,subparams,label in parts:clauses.append(subexpr+' AS '+quote(label+'_'+str(index)));params.extend(subparams)
         clauses.append('count(*) AS records')
@@ -170,10 +178,24 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
             rows.append((column,catalog[column]['inferred_type'],scoped.info['roles'].get(column,'unassigned'),missing,counts[0]))
         primary=calculation|{'columns':['field','type_hypothesis','reviewed_role','missing_rows','selected_rows'],'rows':rows,'truncated':False}
         extra.append('Type hypotheses describe the full immutable version; missing counts respect the active filters. NULL/blank are missing; literal NA-like markers require explicit preparation.')
+    elif op=='column_maxima':
+        chosen=fields or [c['column'] for c in profile['columns'] if numeric_status(c,profile,scoped.info)]
+        clauses=[]
+        for i,column in enumerate(chosen):
+            value=numeric_expression(column)
+            clauses.extend([f'max({value}) AS maximum_{i}',f'count({value}) AS finite_{i}'])
+        calculation=lab.execute('SELECT '+','.join(clauses)+' FROM '+quote(scoped.table))
+        evidence.append(calculation);values=calculation['rows'][0];rows=[]
+        for i,column in enumerate(chosen):
+            metadata=numeric_metadata(scoped,profile,column)
+            definitions.append({'label':'Maximum of '+column,**metadata})
+            rows.append((column,values[2*i],values[2*i+1],metadata['units'],metadata['semantic_status']))
+        primary=calculation|{'columns':['field','maximum','finite_values','units','semantic_status'],'rows':rows,'truncated':False}
+        extra.append('Separate maxima in original field order, not a ranking. Units may be incompatible or unreviewed; numerical magnitude alone cannot identify a highest-value column. Profiling verifies eligible fields; DuckDB recalculates maxima within the active filters.')
     elif op=='summary':
-        primary=numeric_statistics(scoped,fields[0]);definitions=[{'label':'Summary of '+fields[0],'units':scoped.info.get('semantics',{}).get('units',{}).get(fields[0]) or 'units unconfirmed'}]
+        primary=numeric_statistics(scoped,fields[0]);definitions=[{'label':'Summary of '+fields[0],**numeric_metadata(scoped,profile,fields[0])}]
     elif op=='distribution':
-        primary=scoped.distribution(fields[0],data['bins']);definitions=[{'label':'Distribution of '+fields[0],'units':scoped.info.get('semantics',{}).get('units',{}).get(fields[0]) or 'units unconfirmed'}]
+        primary=scoped.distribution(fields[0],data['bins']);definitions=[{'label':'Distribution of '+fields[0],**numeric_metadata(scoped,profile,fields[0])}]
         evidence.append(numeric_statistics(scoped,fields[0]));extra.append('Equal-width finite-value bins; missing/nonfinite values excluded. Exact maximum can occupy its own boundary bin.')
     elif op=='group_distribution':
         value=numeric_expression(fields[0]);group=quote(groups[0])
@@ -183,19 +205,21 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
             quantile_cont({value},.25) AS q1,median({value}) AS median,quantile_cont({value},.75) AS q3,max({value}) AS maximum,
             count(*) AS records FROM {quote(scoped.table)} GROUP BY 1 ORDER BY {ordering} LIMIT {limit+1}''',size=limit)
         if data['limit'] is None and primary['truncated']:raise PlanError(f'Complete grouped results exceed the {limit}-group safety limit. No partial result was returned.')
-        definitions=[{'label':fields[0]+' by '+groups[0],'units':scoped.info.get('semantics',{}).get('units',{}).get(fields[0]) or 'units unconfirmed'}]
+        definitions=[{'label':fields[0]+' by '+groups[0],**numeric_metadata(scoped,profile,fields[0])}]
         extra.append('Full-data quartiles; whiskers show observed min/max, not Tukey fences. This is descriptive, not a significance test.')
     elif op=='scatter':
+        definitions=[{'label':column,**numeric_metadata(scoped,profile,column)} for column in fields]
         x,y=map(numeric_expression,fields)
         primary=lab.execute(f'SELECT _row_id,{x} AS x,{y} AS y FROM {quote(scoped.table)} ORDER BY _row_id',size=data['limit'])
         extra.append(f'Scatter is a bounded preview of at most {data["limit"]} selected records in stable source order, not a representative random sample.')
     elif op=='outliers':
+        definitions=[{'label':fields[0],**numeric_metadata(scoped,profile,fields[0])}]
         result=advanced.outliers(scoped,fields[0],limit=data['limit']);primary=result['evidence']
         # Existing method returns actual flagged records and full-scope summary.
         if 'data' in result:primary=primary|{'columns':list(result['data'].columns),'rows':list(result['data'].itertuples(index=False,name=None))}
         extra.append(result.get('limitations','IQR screening is descriptive; extreme values are not automatically errors.'))
     else:
-        spec=data['measures'][0];expr,p,definition,_=measure_expression(scoped,spec,selected_metric,total=total)
+        spec=data['measures'][0];expr,p,definition,_=measure_expression(scoped,spec,selected_metric,total=total,profile=profile)
         if p or spec['aggregation'] in ('share','rate') or spec['aggregation']=='saved' and not next((m for m in [selected_metric,*load_metrics(scoped.workspace,scoped.table)] if m.name==spec.get('metric')),Metric('Records')).additive:
             raise ClarificationRequired('Period contribution analysis requires an additive count/sum metric; averages and rates cannot be decomposed as additive totals.')
         if spec['aggregation']=='saved':metric=next((m for m in [selected_metric,Metric('Records'),*load_metrics(scoped.workspace,scoped.table)] if m.name==spec['metric']))
@@ -204,6 +228,8 @@ def execute_plan(engine,profile,validated,selected_metric,*,approved=False,cohor
         if not metric.additive:raise ClarificationRequired('Use an additive count/sum for period contributions.')
         primary=scoped.compare_periods(groups[0],metric,data['date_basis'],data['periods'][:2],data['periods'][2:]);definitions=[definition]
         if len(primary['rows'])>execution_bound(data) or primary['truncated']:raise PlanError('Complete period-comparison results exceed the existing intermediate-row safety limit. No partial result was returned.')
+    if any(d.get('semantic_status')=='technical_descriptive' for d in definitions):
+        extra.append('Technical descriptive statistics of finite stored numbers, not reviewed business metrics. Units, row meaning and special missing-value codes are unreviewed; no meanings, conversions or missing codes were inferred.')
     # Metadata-derived tables retain the underlying executed-query evidence too.
     evidence=[primary,*evidence]
     primary['method']={'plan':data,'measure_definitions':definitions,'execution':primary.get('method'),
@@ -240,6 +266,7 @@ def summarize(result,plan,definitions,total):
         return '; '.join(items)+f'. Calculated from {total:,} selected rows'+(f'; {len(rows):,} groups displayed.' if plan['group_by'] else '.')
     if op=='missing':return f'{len(rows):,} fields contain NULL or blank values within {total:,} selected rows.'
     if op=='schema':return f'{len(rows):,} available fields; metadata and missing counts for {total:,} selected rows.'
+    if op=='column_maxima':return f'Separate numerical maxima for {len(rows):,} verified fields within {total:,} selected rows. No overall winner: units may be incompatible or unreviewed.'
     if op=='summary':
         values=dict(zip(cols,rows[0]));return f'{plan["fields"][0]}: mean {format_value(values["mean"])}, median {format_value(values["median"])}, range {format_value(values["minimum"])} to {format_value(values["maximum"])}; {values["valid"]:,} finite of {total:,} selected rows. Sample skewness {format_value(values.get("sample_skewness"))}; descriptive, not a significance test.'
     if op=='trend':return f'{definitions[0]["label"]} across {len(rows):,} observed {plan["grain"]} periods; date basis {plan["date_basis"]}. Edge periods may be incomplete; gaps are not zero.'
@@ -269,8 +296,8 @@ def figures(result,plan,definitions,engine):
         item=result|{'columns':['period','value','records'],'rows':[(r[data.columns.get_loc('period')],r[data.columns.get_loc('m0')],r[data.columns.get_loc('records')]) for r in result['rows']], 'method':{'time_grain':plan['grain']}}
         fig=[visuals.trend(item,definitions[0]['label']+' by '+plan['grain']+' · '+plan['date_basis'],definitions[0]['units'])]
     elif op=='scatter':
-        units=engine.info.get('semantics',{}).get('units',{});x,y=plan['fields']
-        fig=[visuals.style(px.scatter(data,x='x',y='y',hover_data=['_row_id'],opacity=.6,color_discrete_sequence=[visuals.TEAL]),y+' against '+x,x+' · '+(units.get(x) or 'units unconfirmed'),y+' · '+(units.get(y) or 'units unconfirmed'))]
+        x,y=plan['fields']
+        fig=[visuals.style(px.scatter(data,x='x',y='y',hover_data=['_row_id'],opacity=.6,color_discrete_sequence=[visuals.TEAL]),y+' against '+x,x+' · '+definitions[0]['units'],y+' · '+definitions[1]['units'])]
     elif op=='group_distribution':
         box=go.Figure(go.Box(q1=data.q1,median=data['median'],q3=data.q3,lowerfence=data.minimum,upperfence=data.maximum,x=data.group_0.map(str),name=plan['fields'][0],marker_color=visuals.TEAL))
         fig=[visuals.style(box,definitions[0]['label'],plan['group_by'][0],definitions[0]['units'])]

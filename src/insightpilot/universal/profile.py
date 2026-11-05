@@ -3,6 +3,38 @@ import re
 
 from ..datasets import quote
 
+NUMERIC_ROLES={'measure','quantity','duration','price','revenue','expense'}
+
+
+def technical_numeric(item, rows, role=None):
+    """Verified stored numbers, not approval of business meaning or units."""
+    if role not in (None,'unassigned') and role not in NUMERIC_ROLES:return False
+    if identifier_name(item['column']) or item['inferred_type']!='numeric':return False
+    present=rows-item['missing']
+    if not present or item['numeric_values']!=present:return False
+    stats=item.get('statistics') or {}
+    # Binary codes may be outcomes/categories; never turn them into implicit rates.
+    if item['distinct']<=2 and stats.get('min') in (0,1) and stats.get('max') in (0,1):return False
+    return True
+
+
+def numeric_status(item, report, info):
+    role=info.get('roles',{}).get(item['column'])
+    if info.get('semantics',{}).get('reviewed') and role in NUMERIC_ROLES and item['numeric_values']:
+        return 'reviewed_numeric'
+    if technical_numeric(item,report['rows'],role):return 'technical_descriptive'
+    return None
+
+
+def safe_role_suggestions(report, info):
+    """Generic editor defaults only. Nothing is approved or persisted here."""
+    suggestions={}
+    for item in report['columns']:
+        if info.get('roles',{}).get(item['column']) not in (None,'unassigned'):continue
+        if technical_numeric(item,report['rows']):suggestions[item['column']]='measure'
+        elif item['inferred_type']=='category' and not item['numeric_values'] and not item['recognized_dates'] and not any(c['role']=='identifier' for c in item['candidates']):
+            suggestions[item['column']]='category'
+    return suggestions
 
 ROLE_NAMES = {
     'date': {'date', 'timestamp', 'order_date', 'event_time', 'year','month','day','hour','minute'},
@@ -108,7 +140,7 @@ def profile(con, table):
     if {'year','month','day'} <= {c.lower() for c in names}:
         result['possible_analyses'].append('Split year/month/day fields are present: review their meaning, then assemble a date in reversible preparation. They do not establish an event timestamp by themselves.')
     if any(c['inferred_type'] == 'numeric' for c in result['columns']):
-        result['possible_analyses'].append('distributions, numeric comparisons; approve metric definitions first')
+        result['possible_analyses'].append('Basic descriptive statistics on verified numeric fields need no business-role approval; business metrics still require reviewed definitions.')
     if any(c['recognized_dates'] for c in result['columns']):
         result['possible_analyses'].append('time trends after date-role review')
     result['unsupported_without_definitions'] = [

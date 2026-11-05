@@ -1,0 +1,42 @@
+{
+  "at": "2026-11-05T18:28:44.350844+00:00",
+  "baseline_commit": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "branch": "codex/insightpilot-local-ai",
+  "scanner": "Gitleaks 8.24.3",
+  "configuration": "Default rules; no custom exclusions, injected GITLEAKS_* variables removed for the scan; redacted reports.",
+  "pre_receipt_scan": {
+    "scanner": "Gitleaks 8.24.3, default rules, redacted output",
+    "scope": "All tracked working-tree files plus intended untracked changes; no .git, ignored datasets, generated logs or environment dump.",
+    "exit_code": 0,
+    "findings": 0,
+    "scanned_files": 309
+  },
+  "final_snapshot_scan_report": "outputs/descriptive-resume-20261105/gitleaks-final.json",
+  "intended_changes": "Application source, regression tests, schema snapshots, documentation and these verification receipts. No generated data, credentials or secrets added.",
+  "tracked_data": [
+    {
+      "path": "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "unchanged": true,
+      "sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-complaints.csv",
+      "unchanged": true,
+      "sha256": "b4fd01d8d6bd7ea2a6b2912a9f56c2f1cbeb8100a6105b67194344c522bdadcc"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-sales.csv",
+      "unchanged": true,
+      "sha256": "7f804abe5ad7ded3c29cc1c794d189db877585dd052f9cead6277b35bc6cd652"
+    }
+  ],
+  "source_review": "Only the three unchanged explicitly SYNTHETIC CSV fixtures are tracked. Tests and Mac instructions generate isolated synthetic data under temporary or ignored outputs paths. No real user datasets inspected or added.",
+  "publication": "Separate local reliability commit authorized with documented baseline limitations; no push, merge or deployment.",
+  "final_snapshot_scan": {
+    "exit_code": 0,
+    "findings": 0,
+    "scanned_files": 311,
+    "scope": "Complete intended tree, including validation/security receipts.",
+    "report": "outputs/descriptive-resume-20261105/gitleaks-final.json"
+  }
+}
