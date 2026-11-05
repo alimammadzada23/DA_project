@@ -17,7 +17,7 @@ def identity(workspace):return hashlib.sha256(str(workspace.directory).encode())
 
 def metadata(workspace):
     identifier=identity(workspace)
-    fallback={'id':identifier,'name':'Untitled workspace · '+str(int(identifier[:8],16)%100_000).zfill(5),'description':'','status':'unnamed'}
+    fallback={'id':identifier,'name':'Untitled workspace · '+str(int(identifier[:8],16)%100_000).zfill(5),'description':'','purpose':'','status':'unnamed'}
     path=workspace.directory/METADATA
     if not path.exists():return fallback
     try:
@@ -25,7 +25,7 @@ def metadata(workspace):
         value=json.loads(path.read_text(encoding='utf-8'))
         if not isinstance(value,dict) or value.get('format_version')!=1 or not isinstance(value.get('id'),str) or len(value['id'])!=24:raise ValueError
         name=valid_name(value['name']);description=valid_description(value.get('description',''))
-        return {'id':value['id'],'name':name,'description':description,'status':'named'}
+        return {'id':value['id'],'name':name,'description':description,'purpose':valid_description(value.get('purpose','')),'status':'named'}
     except (ValueError,KeyError,TypeError,OSError):return fallback|{'status':'invalid','notice':'Display-name metadata could not be read. Data and saved analyses are still available; no file was changed.'}
 
 
@@ -46,12 +46,12 @@ def catalog(root):
     return [Workspace(p.parent) for p in sorted(root.glob('*/workspace.duckdb'))]
 
 
-def save_name(workspace,name,description='',*,peers=()):
+def save_name(workspace,name,description='',*,peers=(),purpose=None):
     name=valid_name(name);description=valid_description(description);old=metadata(workspace)
     if old['status']=='invalid':raise ValueError('The display metadata needs repair before renaming. The existing metadata file and all data have been preserved.')
     for peer in peers:
         if peer.directory!=workspace.directory and metadata(peer)['name'].casefold()==name.casefold():raise ValueError('Another workspace already uses that display name. Choose a distinct name; workspaces are never merged.')
-    value={'format_version':1,'id':old['id'],'name':name,'description':description,'updated_at':now()}
+    value={'format_version':1,'id':old['id'],'name':name,'description':description,'purpose':valid_description(purpose if purpose is not None else old.get('purpose','')),'updated_at':now()}
     # Atomic replacement affects only this feature's namespaced metadata file.
     with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',prefix='.workspace-display-',dir=workspace.directory,delete=False) as stream:
         json.dump(value,stream,ensure_ascii=False,indent=2);stream.write('\n');temporary=stream.name
@@ -59,11 +59,11 @@ def save_name(workspace,name,description='',*,peers=()):
     return metadata(workspace)
 
 
-def create_named(root,name,description=''):
-    name=valid_name(name);description=valid_description(description);peers=catalog(root)
+def create_named(root,name,description='',*,purpose=''):
+    name=valid_name(name);description=valid_description(description);purpose=valid_description(purpose);peers=catalog(root)
     if any(metadata(p)['name'].casefold()==name.casefold() for p in peers):raise ValueError('Another workspace already uses that name. Choose a distinct name.')
     workspace=Workspace.create(Path(root)/uuid.uuid4().hex[:12])
-    save_name(workspace,name,description,peers=peers)
+    save_name(workspace,name,description,peers=peers,purpose=purpose)
     return workspace
 
 

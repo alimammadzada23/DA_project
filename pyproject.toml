@@ -41,3 +41,4 @@ pythonpath = ["src"]
 
 [tool.setuptools.package-data]
 insightpilot = ["*.sql"]
+"insightpilot.universal" = ["command_hub/*.html"]

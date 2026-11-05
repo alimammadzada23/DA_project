@@ -96,14 +96,14 @@ def test_friendly_names_survive_actual_streamlit_reruns(tmp_path,monkeypatch):
     monkeypatch.chdir(tmp_path);monkeypatch.delenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',raising=False)
     monkeypatch.setenv('INSIGHTPILOT_WORKSPACE_ROOT',str(root))
     app=AppTest.from_file(APP).run(timeout=30)
-    box=next(s for s in app.selectbox if s.label=='Analytics workspace')
+    box=next(s for s in app.selectbox if s.label=='Active project')
     assert 'Initial name' in box.options and not any('data/universal' in str(v) for v in box.options)
-    next(t for t in app.text_input if t.label=='Workspace display name').set_value('Renamed review')
-    next(b for b in app.button if b.label=='Save workspace name').click().run(timeout=30)
+    next(t for t in app.text_input if t.label=='Project display name').set_value('Renamed review')
+    next(b for b in app.button if b.label=='Save project name').click().run(timeout=30)
     assert not app.exception and metadata(w)['name']=='Renamed review'
-    renamed=next(s for s in app.selectbox if s.label=='Analytics workspace')
+    renamed=next(s for s in app.selectbox if s.label=='Active project')
     assert renamed.value==str(w.directory) and renamed.key!=box.key
     assert 'Renamed review' in renamed.options
     fresh=AppTest.from_file(APP).run(timeout=30)
-    assert 'Renamed review' in next(s for s in fresh.selectbox if s.label=='Analytics workspace').options
+    assert 'Renamed review' in next(s for s in fresh.selectbox if s.label=='Active project').options
     assert w.directory.exists()

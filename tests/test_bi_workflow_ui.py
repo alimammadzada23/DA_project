@@ -55,7 +55,8 @@ def test_central_project_creation_preserves_the_original_workspace(tmp_path,monk
     assert not app.exception and app.radio(key='universal-page').value=='Data Hub'
     assert original.exists() and len(catalog(root))==2
     project=next(w for w in catalog(root) if metadata(w)['name']=='Supplier review')
-    assert not project.tables() and metadata(project)['description']=='Investigate observed delivery differences.'
+    assert not project.tables() and metadata(project)['purpose']=='Investigate observed delivery differences.'
+    assert metadata(project)['description']==''
 
 
 def test_home_and_investigation_round_trip_preserve_shared_filters(app_workspace):
@@ -259,3 +260,13 @@ def test_one_observed_period_keeps_the_real_values_without_suggesting_a_trend(ap
     assert any('Fewer than two observed periods' in item.value for item in app.info)
     result=next(frame.value for frame in app.dataframe if 'period' in frame.value.columns)
     assert len(result)==1 and result.value.iloc[0]==21 and result.records.iloc[0]==6
+
+
+def test_home_recent_work_accepts_investigation_evidence_references(app_workspace):
+    saved_blocks(app_workspace)
+    app_workspace.save_object('layout','ux.investigation:Observed change',{
+        'kind':'ux.investigation','title':'Observed change','question':'What changed?',
+        'evidence':['Full comparison'],'updated_at':'2026-11-05T12:00:00+00:00'})
+    app=open_page('Workspace Home')
+    assert not app.exception and not app.error
+    assert any('Recent work' in h.value for h in app.subheader)

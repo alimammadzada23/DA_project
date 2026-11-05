@@ -28,34 +28,26 @@ def choose_workspace():
     if pending in paths:st.session_state[selector_key]=pending
     old=st.session_state.get(selector_key)
     if old not in paths:st.session_state.pop(selector_key,None)
-    selected=st.sidebar.selectbox('Analytics workspace',paths,index=paths.index(str(current)) if str(current) in paths else 0,
-        format_func=labels.get,key=selector_key,disabled=bool(configured))
+    selected=st.sidebar.selectbox('Active project',paths,index=paths.index(str(current)) if str(current) in paths else 0,
+        format_func=lambda path:labels[path] if metadata(Workspace(path))['status']=='named' else 'Unnamed project',key=selector_key,disabled=bool(configured))
     workspace=Workspace(selected);st.session_state['universal-directory']=selected
     item=metadata(workspace);tag=hashlib.sha256(selected.encode()).hexdigest()[:10]
     if item['description']:st.sidebar.text(item['description'])
-    if not configured:
-        with st.sidebar.expander('New workspace'):
-            with st.form('create-friendly-workspace'):
-                name=st.text_input('New workspace name',placeholder='Choose a name')
-                description=st.text_input('Workspace description (optional)',max_chars=240)
-                submitted=st.form_submit_button('Create workspace')
-            if submitted:
-                try:
-                    created=create_named(root,name,description)
-                    st.session_state['universal-directory']=str(created.directory)
-                    st.session_state['workspace-selector-pending']=str(created.directory)
-                    st.session_state['universal-page']='Data Hub';st.rerun()
-                except ValueError as exc:st.warning(str(exc))
-    with st.sidebar.expander('Workspace settings'):
+    if not configured and st.sidebar.button('＋ New project',width='stretch'):
+        st.session_state['ux-create-expanded']=True
+        st.session_state['pending-view-layout']={'page':'Workspace Home','presets':{}}
+        st.rerun()
+    with st.sidebar.expander('Project settings'):
         with st.form('rename-friendly-workspace-'+tag):
-            name=st.text_input('Workspace display name',item['name'])
+            name=st.text_input('Project display name',item['name'])
             description=st.text_input('Description',item['description'],max_chars=240)
-            submitted=st.form_submit_button('Save workspace name')
+            purpose=st.text_input('Business purpose',item.get('purpose',''),max_chars=240)
+            submitted=st.form_submit_button('Save project name')
         st.caption('Changes the name shown here; datasets and saved analyses stay in place.')
         if submitted:
-            try:save_name(workspace,name,description,peers=peers);st.rerun()
+            try:save_name(workspace,name,description,peers=peers,purpose=purpose);st.rerun()
             except ValueError as exc:st.warning(str(exc))
-    with st.sidebar.expander('Workspace details'):
+    with st.sidebar.expander('Project details'):
         st.caption('Stable identity: '+item['id'])
         st.code(str(workspace.directory),language=None)
         st.caption(f'{len(workspace.tables()):,} imported tables')

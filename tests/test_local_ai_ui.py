@@ -104,7 +104,7 @@ def test_filter_and_dataset_changes_do_not_reuse_answers(ai_workspace,monkeypatc
 def test_workspace_display_rename_does_not_invalidate_existing_analyst(ai_workspace):
     a=open_analyst();ask(a,'How many records?')
     before=a.session_state['analyst-conversation'].signature
-    field(a,'text_input','Workspace display name').set_value('Renamed research')
-    field(a,'button','Save workspace name').click().run(timeout=30)
+    field(a,'text_input','Project display name').set_value('Renamed research')
+    field(a,'button','Save project name').click().run(timeout=30)
     assert not a.exception and a.session_state['analyst-conversation'].signature==before
     assert len(a.session_state['analyst-conversation'].entries)==1

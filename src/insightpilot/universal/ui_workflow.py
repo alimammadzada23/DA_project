@@ -1,5 +1,6 @@
 """Workflow presentation over the existing workspace, profile and Engine services."""
 from datetime import datetime, timezone
+from html import escape
 import hashlib
 import json
 import os
@@ -37,15 +38,66 @@ def go(page, *, table=None, presets=None):
     st.rerun()
 
 
+PAGE_COPY = {
+    'Workspace Home': ('YOUR ANALYTICAL COMMAND CENTER', 'Good questions. Clear evidence.', 'Turn complexity into understanding. Bring your data, follow the evidence, and make your next decision with confidence.'),
+    'Data Hub': ('01 / CONNECT', 'Your data, in one place.', 'Import sources, inspect their structure, and keep every original intact.'),
+    'Quality & Preparation': ('02 / PREPARE', 'Build on trusted foundations.', 'Review data quality, define field meaning, and prepare reversible versions.'),
+    'Explore': ('03 / DISCOVER', 'Find the signal.', 'Compare segments, explore relationships, and save the evidence that matters.'),
+    'Investigate': ('04 / UNDERSTAND', 'From a question to a finding.', 'Establish what changed. Separate observations, hypotheses, and limitations.'),
+    'Reports': ('05 / COMMUNICATE', 'Make your evidence count.', 'Bring reproducible findings together into a clear, defensible report.'),
+    'Overview': ('ANALYTICAL OVERVIEW', 'The bigger picture.', 'Your selected metric and data scope, brought into focus.'),
+    'AI Analyst': ('LOCAL INTELLIGENCE', 'A thinking partner. Grounded in data.', 'Plan locally with Ollama and Qwen. Review calculations and limitations.'),
+    'SQL Lab': ('QUERY WORKBENCH', 'Ask precisely. Verify everything.', 'Read-only SQL over your selected data, with bounded results and execution evidence.'),
+    'Advanced': ('ANALYTICAL METHODS', 'Go beyond the surface.', 'Apply statistical methods with explicit assumptions and applicability checks.'),
+}
+
+
 def navigation(workspace):
+    from .command_navigation import wheel
     item=metadata(workspace)
-    st.title(item['name'])
-    if item['description']:st.text(item['description'])
     st.session_state.setdefault('universal-page','Workspace Home')
-    with st.container(key='workflow-nav'):
-        page=st.radio('Analysis workflow',PAGES,key='universal-page',horizontal=True,label_visibility='collapsed')
-    st.caption('Select a stage to continue. Your dataset and shared filters stay active across the workflow.')
-    return page
+    active=st.session_state['universal-page']
+    if active not in PAGES:active='Workspace Home';st.session_state['universal-page']=active
+    eyebrow,title,copy=PAGE_COPY[active]
+    def alternative():
+        with st.container(key='workflow-nav'):
+            return st.radio('Analysis workflow',PAGES,key='universal-page',horizontal=True,label_visibility='collapsed')
+    def hero():
+        tables=workspace.tables()
+        tag=hashlib.sha256(str(workspace.directory).encode()).hexdigest()[:8]
+        selected=st.session_state.get('universal-table-'+tag)
+        info=tables.get(selected) or next(iter(tables.values()),None)
+        project=item['name'] if item['status']=='named' else 'Your next great question starts here'
+        badge='PROJECT / '+project if item['status']=='named' else 'LOCAL-FIRST BUSINESS INTELLIGENCE'
+        stats=(f'<div class="ip-statline"><div><strong>{len(tables):02d}</strong><span>Connected datasets</span></div>'
+               f'<div><strong>{sum(t["rows"] for t in tables.values()):,}</strong><span>Source records</span></div>'
+               f'<div><strong>{len(workspace.saved_objects("block")):02d}</strong><span>Saved evidence</span></div></div>') if active=='Workspace Home' else ''
+        st.markdown('<div class="ip-hero"><div class="ip-path">INSIGHTPILOT &nbsp; / &nbsp; '+escape(active.upper())+'</div>'
+            '<span class="ip-tag">'+escape(badge)+'</span><div class="eyebrow" style="margin-top:22px">'+eyebrow+'</div>'
+            '<h1>'+escape(title)+'</h1><div class="objective">'+escape(item.get('purpose') or item['description'] or copy)+'</div>'+stats+'</div>',unsafe_allow_html=True)
+        if info and active=='Workspace Home':st.caption('ACTIVE DATASET · '+info.get('display_name',info['source'].get('filename','Dataset'))+' · '+f'{info["rows"]:,} rows / {len(info["columns"])} fields')
+    with st.container(key='command-header'):
+        if active=='Workspace Home':
+            left,right=st.columns([1.5,1],gap='large',vertical_alignment='center')
+            with left:hero()
+            with right:
+                with st.container(key='command-wheel'):wheel(active,PAGES)
+            with st.expander('All destinations · keyboard navigation'):
+                alternative()
+        else:
+            hero()
+            with st.expander('Command hub · all destinations'):
+                left,right=st.columns([1,1.7],vertical_alignment='center')
+                with left:wheel(active,PAGES)
+                with right:
+                    st.caption('SIX WORKFLOW STAGES / FOUR SUPPORTING TOOLS')
+                    alternative()
+                    st.caption('Choose a destination. Your dataset, selected metric and filters stay active.')
+    # On narrow screens the wheel is replaced with full-size native navigation.
+    with st.container(key='hub-mobile'):
+        chosen=st.selectbox('Navigate to',PAGES,index=PAGES.index(active),key='mobile-route-'+active)
+        if chosen!=active:go(chosen)
+    return st.session_state['universal-page']
 
 
 def project_summary(workspace):
@@ -59,35 +111,49 @@ def project_summary(workspace):
 
 
 def home(workspace):
-    st.subheader('Your analytical workspace')
-    st.write('Bring your data, investigate an observed problem, and build a report you can defend.')
     configured=bool(os.environ.get('INSIGHTPILOT_UNIVERSAL_WORKSPACE'))
     root=Path(os.environ.get('INSIGHTPILOT_WORKSPACE_ROOT','data/universal')).resolve()
     peers=[workspace] if configured else catalog(root)
     recent=workspace if workspace.tables() else next((p for p in sorted(peers,key=lambda p:(p.directory/'workspace.duckdb').stat().st_mtime,reverse=True) if p.tables()),None)
-    a,b,c=st.columns(3)
-    if a.button('Upload dataset',type='primary',width='stretch'):go('Data Hub')
-    if b.button('Continue recent analysis',width='stretch'):
-        if recent:
-            st.session_state['universal-directory']=str(recent.directory)
-            st.session_state['workspace-selector-pending']=str(recent.directory)
-        go('Explore' if recent else 'Data Hub')
-    if c.button('View saved reports',width='stretch'):go('Reports')
-    with st.expander('Create new analysis project',expanded=not any(p.tables() for p in peers) and not configured):
+    st.markdown('<div class="eyebrow">MAKE YOUR NEXT MOVE</div>',unsafe_allow_html=True)
+    actions=[('01 / CONNECT','Bring your data','CSV, Excel, Parquet, JSON, and supported connectors.','Upload dataset','Data Hub'),
+             ('02 / DISCOVER','Follow your curiosity','Compare groups, distributions, and trends.','Continue recent analysis','Explore'),
+             ('03 / INVESTIGATE','Understand a change','Build a question around reproducible evidence.','Investigate a problem','Investigate'),
+             ('04 / COMMUNICATE','Tell the whole story','Turn saved findings into a defensible report.','View saved reports','Reports')]
+    for col,(number,title,copy,button,target) in zip(st.columns(4),actions):
+        with col.container(border=True):
+            st.markdown('<div class="ip-card-number">'+number+'</div><div class="ip-card-title">'+title+'</div><div class="ip-card-copy">'+copy+'</div>',unsafe_allow_html=True)
+            if st.button(button,width='stretch',type='primary' if target=='Data Hub' else 'secondary'):
+                if target=='Explore' and recent:
+                    st.session_state['universal-directory']=str(recent.directory)
+                    st.session_state['workspace-selector-pending']=str(recent.directory)
+                go(target if workspace.tables() or target in ('Data Hub','Explore') else 'Data Hub')
+    item=metadata(workspace)
+    if item['status']=='unnamed' and workspace.tables():
+        with st.expander('Give this project a name',expanded=True):
+            with st.form('name-existing-project'):
+                title=st.text_input('Project display name',placeholder='e.g. Retail revenue investigation')
+                purpose=st.text_input('Project objective',max_chars=240)
+                if st.form_submit_button('Save project name',type='primary'):
+                    from .workspace_labels import save_name
+                    try:save_name(workspace,title,purpose,peers=peers);st.rerun()
+                    except ValueError as exc:st.warning(str(exc))
+    with st.expander('Create new analysis project',expanded=st.session_state.pop('ux-create-expanded',False) or (not any(p.tables() for p in peers) and not configured)):
         if configured:st.caption('This session is bound to an existing workspace. Its datasets and saved work remain in place.')
         else:
             with st.form('ux-create-project'):
                 name=st.text_input('Project name',placeholder='Give this investigation a recognizable name')
                 purpose=st.text_input('Business purpose (optional)',max_chars=240,placeholder='The question you want to understand')
+                description=st.text_input('Project description (optional)',max_chars=240,placeholder='Background, scope, or intended audience')
                 create=st.form_submit_button('Create analysis project',type='primary')
             if create:
                 try:
-                    created=create_named(root,name,purpose)
+                    created=create_named(root,name,description,purpose=purpose)
                     st.session_state['universal-directory']=str(created.directory)
                     st.session_state['workspace-selector-pending']=str(created.directory)
                     go('Data Hub')
                 except ValueError as exc:st.warning(str(exc))
-    st.subheader('Projects & saved work')
+    st.subheader('Your project collection')
     query=st.text_input('Find a project',placeholder='Search by name or purpose')
     visible=[p for p in peers if query.casefold() in (metadata(p)['name']+' '+metadata(p)['description']).casefold()]
     if not visible:st.info('No project matches that search. Create a project or clear the search.')
@@ -97,7 +163,7 @@ def home(workspace):
     for index,peer in enumerate(visible[:12]):
         info=metadata(peer);summary=project_summary(peer);tag=info['id']
         with columns[index%2].container(border=True,key='ux-project-'+tag):
-            st.text(info['name']);st.caption(info['description'] or 'Add the business purpose in Workspace settings when you are ready.')
+            st.text(info['name'] if info['status']=='named' else 'Project awaiting a name');st.caption(info['description'] or 'Add the business purpose in Workspace settings when you are ready.')
             st.write(f'{len(summary["tables"]):,} datasets · {summary["blocks"]:,} saved evidence · {summary["reports"]:,} report drafts')
             st.caption('Stage: '+summary['stage']+' · Activity: '+summary['activity'])
             st.text('Datasets: '+(', '.join(t.get('display_name') or t['source'].get('filename',name) for name,t in summary['tables'].items()) or 'No data imported yet'))
@@ -110,6 +176,15 @@ def home(workspace):
                 st.session_state['universal-directory']=str(peer.directory)
                 st.session_state['workspace-selector-pending']=str(peer.directory)
                 go('Reports')
+    st.subheader('Recent work')
+    objects=[]
+    for kind,category in [('view','Analysis'),('block','Evidence'),('layout','Document')]:
+        for name,value in workspace.saved_objects(kind).items():
+            if kind=='layout' and not name.startswith(('ux.report:','ux.investigation:')):continue
+            objects.append({'Name':name.removeprefix('ux.report:').removeprefix('ux.investigation:'),'Type':category,
+                            'Saved at':value.get('updated_at') or ((value.get('evidence') or {}).get('executed_at') if isinstance(value.get('evidence'),dict) else None) or 'Retained in project'})
+    if objects:st.dataframe(pd.DataFrame(objects[-8:][::-1]),hide_index=True,width='stretch')
+    else:st.markdown('<div class="ip-empty"><h3>A clean slate. A world of possibilities.</h3><p>Import a dataset to begin. Saved analyses, findings, and reports will appear here as you work.</p></div>',unsafe_allow_html=True)
     if any(t['source']['origin']=='synthetic' for t in workspace.tables().values()):
         st.warning('SYNTHETIC DATA · This project contains software-validation data; no business findings are implied.')
 
@@ -149,11 +224,26 @@ def quality_findings(report,info):
 
 def quality_overview(report,info):
     review,optional,usable=quality_findings(report,info)
+    rows=report['rows']
     cells=report['rows']*len(report['columns']);missing=sum(c['missing'] for c in report['columns'])
     a,b,c=st.columns(3)
     a.metric('Missing cells',f'{missing:,}',help=f'{missing/cells:.1%} of cells are NULL or blank.' if cells else 'No cells.')
     b.metric('Exact duplicate rows',f'{report["exact_duplicate_rows"]:,}',help='Retained until you explicitly choose reversible deduplication.')
     c.metric('Technically usable fields',str(len(usable)),help='Numeric descriptions or category counts; not approval of business meanings.')
+    with st.expander('Field completeness · visual comparison',expanded=True):
+        import plotly.graph_objects as go
+        from .visuals import style
+        columns=sorted(report['columns'],key=lambda c:c['missing'],reverse=True)[:30]
+        if len(report['columns'])>30:st.caption('Showing the 30 fields with the most missing values. The complete field catalog remains available below.')
+        rates=[(1-c['missing']/rows)*100 if rows else 0 for c in columns]
+        figure=go.Figure(go.Bar(x=rates,y=[c['column'] for c in columns],orientation='h',
+            marker_color=['#67e0cd' if x==100 else '#f1bc73' for x in rates],
+            hovertemplate='%{y}<br>%{x:.1f}% nonmissing<extra></extra>'))
+        style(figure,'Completeness by field','Nonmissing cells (%)',None)
+        figure.update_xaxes(range=[0,100],ticksuffix='%')
+        figure.update_layout(height=min(850,max(260,len(columns)*25+100)))
+        st.plotly_chart(figure,width='stretch',theme=None,key='quality-completeness')
+        st.caption('Full active version, before analytical filters. Nonmissing does not mean accurate or valid. Blank and NULL values count as missing.')
     tabs=st.tabs([f'Review potential issues · {len(review)}',f'Optional improvements · {len(optional)}',f'Usable fields · {len(usable)}'])
     for tab,items,empty in zip(tabs,[review,optional,usable],['No signals of these parsing/missingness issues. Source accuracy still needs review.','No additional suggestions from these checks.','Review conversions or field roles to enable further calculations.']):
         with tab:
@@ -195,9 +285,11 @@ def explore_guidance(engine,report):
     elif len(numeric)>1:recommendations.append(('Inspect a relationship','Numeric relationship','Compare paired numbers; association does not establish causation.',{}))
     if not recommendations:recommendations.append(('Inspect underlying records','Records','Start with the actual source rows; no chart or business meaning is assumed.',{}))
     st.subheader('Explore your data')
-    st.caption('Start with a suggested view, then choose fields and inspect the calculation. All existing chart modes remain available below.')
-    cols=st.columns(len(recommendations[:3]))
-    for col,(title,target,reason,presets) in zip(cols,recommendations[:3]):
+    st.caption('COMPARISONS · DISTRIBUTIONS · RELATIONSHIPS · TIME · COMPOSITION')
+    st.caption('Start with a suggested view, or use the chart selector below. Every view keeps your metric, filters and source version.')
+    if categories:recommendations.append(('Understand concentration','Composition & Pareto','Shares and cumulative contribution with a full selected denominator.',{}))
+    cols=st.columns(len(recommendations[:4]))
+    for col,(title,target,reason,presets) in zip(cols,recommendations[:4]):
         with col.container(border=True):
             st.write('**'+title+'**');st.caption(reason)
             if st.button('Open '+target,key='ux-recommend-'+target,width='stretch'):
