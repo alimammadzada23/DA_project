@@ -34,7 +34,7 @@ def open_page(page):
 
 
 @pytest.mark.parametrize('page',PAGES)
-def test_all_eight_universal_workspaces_render(app_workspace,page):
+def test_all_universal_workspaces_render(app_workspace,page):
     app=open_page(page)
     assert not app.exception and not app.error
     if page!='Data Hub': assert any('SYNTHETIC DATA' in w.value for w in app.warning)
@@ -84,6 +84,7 @@ def test_multiple_tables_have_unique_join_preview_column_names(app_workspace,tmp
     p=tmp_path/'customers.csv'; p.write_text('customer,segment\nA,One\nB,Two\n')
     app_workspace.add_file(p,'customers')
     app=open_page('Data Hub')
+    next(r for r in app.radio if r.label=='Data Hub view').set_value('Dataset library').run(timeout=30)
     assert not app.exception and not app.error
 
 
@@ -145,6 +146,8 @@ def test_reviewed_metric_and_explicit_date_intent_survive_new_browser_session(ap
     next(s for s in app.selectbox if s.label=='Comparison field').select('region').run(timeout=30)
     next(s for s in app.selectbox if s.label=='Calendar grain').select('day').run(timeout=30)
     fresh=AppTest.from_file(APP).run(timeout=30)
+    assert fresh.radio(key='universal-page').value=='Workspace Home'
+    fresh.radio(key='universal-page').set_value('Overview').run(timeout=30)
     assert not fresh.exception and not fresh.error
     assert next(s for s in fresh.selectbox if s.label=='Comparison field').value=='region'
     assert next(s for s in fresh.selectbox if s.label=='Calendar grain').value=='day'

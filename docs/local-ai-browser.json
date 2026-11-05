@@ -1,14 +1,14 @@
 {
-  "at": "2026-11-04T20:58:02.143492+00:00",
+  "at": "2026-11-05T19:55:28.465113+00:00",
   "status": "passed",
   "browser": "System Chromium via Playwright, Linux",
   "model_execution": "Explicit Ollama HTTP test double; no model weights, no actual Qwen execution. Numerical calculations are real.",
-  "screenshots": "outputs/local-ai-browser/20261104T205714-3f6609/screenshots",
-  "run_directory": "outputs/local-ai-browser/20261104T205714-3f6609",
+  "screenshots": "outputs/local-ai-browser/20261105T195432-bea2e5/screenshots",
+  "run_directory": "outputs/local-ai-browser/20261105T195432-bea2e5",
   "events": [
     {
       "friendly_workspace_selected": true,
-      "stable_id": "b332a7d087b9e12ff27b13ff"
+      "stable_id": "45efd7e5cb8c90c22fd0703c"
     },
     {
       "standard_compound": true,
@@ -64,5 +64,5 @@
   ],
   "javascript_errors": [],
   "browser_external_requests": [],
-  "elapsed_seconds": 46.64
+  "elapsed_seconds": 55.203
 }

@@ -1,0 +1,401 @@
+{
+  "at": "2026-11-05T20:31:08.001496+00:00",
+  "branch": "codex/insightpilot-local-ai",
+  "original_baseline_commit": "b9451caff9b6428a872669233a704c1d77ae4847",
+  "separate_reliability_commit": "716bd426051aabc2c63d16a9dd9dc0cccba8757b",
+  "scope": "Separate local UX upgrade; no push, merge, deployment, dependency change or AI architecture replacement.",
+  "automated_suite": {
+    "command": ".venv/bin/python -m pytest -q --junitxml=outputs/ux-upgrade/release-tests.xml",
+    "passed": 918,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 274.775,
+    "junit": "outputs/ux-upgrade/release-tests.xml",
+    "log": "outputs/ux-upgrade/release-tests.log"
+  },
+  "focused_regressions": [
+    "Central navigation and empty-state upload",
+    "Create/open projects without modifying old workspaces",
+    "Shared filters preserved through Home, Investigate and Reports",
+    "Actual dataset preview and explicit handoff; preview does not change analysis",
+    "Technical profiling priorities never approve business definitions",
+    "Persistent investigation scope and classified commentary",
+    "Frozen ordered report evidence and retained source versions",
+    "Saved report rejects mismatched source/table/version before new calculation",
+    "Report appendix uses saved scope rather than live filters",
+    "Commentary and JSON safely escaped",
+    "Saved draft reopening, note transfer, finding order and stale-preview invalidation",
+    "Report size and section limits",
+    "Explicit date review applies shared basis once",
+    "Reversible preparation and undo",
+    "A single observed period shows correct table values without a misleading trend"
+  ],
+  "benchmarks": {
+    "mock_integration": {
+      "passed": 51,
+      "total": 51,
+      "actual_model_quality_measured": false,
+      "reference": "Independent Pandas/NumPy calculations on the original input frames; manually specified reference intents. Mock plans prove software integration, not language understanding.",
+      "receipt": "outputs/ux-upgrade/benchmark-mock.json"
+    },
+    "standard": {
+      "passed": 48,
+      "total": 51,
+      "failures": [
+        {
+          "id": "s18",
+          "question": "What share of all selected rows has result equal to \"yes\"?",
+          "expected_status": "ok",
+          "status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "answer": "Standard analysis does not parse this conditional-rate wording. Use a reviewed saved metric, or ask Local AI to propose the numerator, eligible denominator and missing-value policy for your approval. No rate was calculated or replaced with group shares."
+        },
+        {
+          "id": "s19",
+          "question": "Exclude result \"unknown\"; among nonmissing result codes, what share is \"yes\"?",
+          "expected_status": "ok",
+          "status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "answer": "Standard analysis does not parse this conditional-rate wording. Use a reviewed saved metric, or ask Local AI to propose the numerator, eligible denominator and missing-value policy for your approval. No rate was calculated or replaced with group shares."
+        },
+        {
+          "id": "s22",
+          "question": "Compare record-count contributions by job between January 1–31 and March 1–31, 2025.",
+          "expected_status": "ok",
+          "status": "clarify",
+          "reason": "Expected an executed result, got clarify",
+          "answer": "For period comparisons, ask Local AI with four explicit start/end dates or use Advanced period comparison. Standard analysis will not discard a requested period boundary."
+        }
+      ],
+      "same_as_actual_baseline_run": true,
+      "baseline_receipt": "outputs/ux-upgrade/baseline-standard.json",
+      "receipt": "outputs/ux-upgrade/benchmark-standard.json"
+    },
+    "unchanged_question_expected_status_and_numerical_reference_tables": true,
+    "expected_results_changed_to_hide_failures": false
+  },
+  "actual_UI": {
+    "command": ".venv/bin/python scripts/browser_bi_workflow.py --output outputs/ux-upgrade/browser-release",
+    "receipt": "outputs/ux-upgrade/browser-release/verification.json",
+    "platform": "Linux, system Chromium with Playwright; actual running Streamlit app",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 1280,
+        "height": 832
+      }
+    ],
+    "evidence": {
+      "at": "2026-11-05T20:23:21.155371+00:00",
+      "actual_Chromium_UI": true,
+      "native_Mac": false,
+      "Qwen_tested": false,
+      "uci_verification": "Pending on user Mac; official archive blocked by cloud network policy. No UCI source fabricated.",
+      "sources": [
+        {
+          "dataset": "taxis",
+          "path": "data/unified-evaluation/sources/taxis.csv",
+          "sha256": "08d6d71784dbaa2651fee37fc03389754194c05d72d2d19cbc2c799dea6ac09d"
+        },
+        {
+          "dataset": "penguins",
+          "path": "data/real-cases/penguins.csv",
+          "sha256": "f204db2c753b0937caac3cb35258562c14f073e4bbc76be24b4c51ce22767a93"
+        }
+      ],
+      "events": [
+        {
+          "create_project": true,
+          "real_browser_upload": "taxis.csv",
+          "rows": 6433,
+          "source_sha256": "08d6d71784dbaa2651fee37fc03389754194c05d72d2d19cbc2c799dea6ac09d"
+        },
+        {
+          "filtered_public_trip_rows": 4577,
+          "payment_filter": "credit card",
+          "independent_category_counts": {
+            "green": 577,
+            "yellow": 4000
+          },
+          "chart_values_reconciled": true,
+          "saved_chart_and_table": true
+        },
+        {
+          "actual_pointer_chart_selection": true,
+          "drilled_rows": 4000,
+          "category": "yellow"
+        },
+        {
+          "histogram_rows_reconciled": 4577,
+          "no_semantic_approval_required": true
+        },
+        {
+          "reviewed_timestamp_explicitly": true,
+          "daily_trend_matches_independent_reference": true,
+          "named_analysis_saved": true
+        },
+        {
+          "business_report_downloaded": true,
+          "report_draft_saved": true,
+          "ordered_findings": [
+            "Records by day · pickup · 8079e872",
+            "Records by color · d5e148fa",
+            "Records · taxis · 8ee000e8"
+          ],
+          "self_contained_HTML": true
+        },
+        {
+          "second_public_dataset": "Palmer penguins",
+          "rows": 344,
+          "category_counts_reconciled": true,
+          "reversible_preparation_and_undo": true,
+          "no_auto_join": true
+        },
+        {
+          "fresh_browser_reopened_report": true,
+          "restored_saved_analysis_and_filters": true,
+          "viewport_checked": {
+            "width": 1280,
+            "height": 832
+          },
+          "source_hashes_unchanged": true
+        }
+      ],
+      "browser_errors": [],
+      "passed": true
+    },
+    "offline_report_check": "Downloaded self-contained HTML bytes rendered with browser offline; two interactive Plotly figures rendered, no external requests or page horizontal overflow. Managed file-URL policy unchanged.",
+    "numeric_authority": "Real application DuckDB; rendered chart arrays independently checked using Pandas on checksum-verified original inputs.",
+    "private_projects_modified": false
+  },
+  "mocked_AI_browser_regression": {
+    "receipt": "docs/local-ai-browser.json",
+    "status": "passed",
+    "model_execution": "Explicit Ollama HTTP test double; no model weights, no actual Qwen execution. Numerical calculations are real.",
+    "javascript_errors": [],
+    "external_requests": [],
+    "events": [
+      {
+        "friendly_workspace_selected": true,
+        "stable_id": "45efd7e5cb8c90c22fd0703c"
+      },
+      {
+        "standard_compound": true,
+        "top_group_records": 7,
+        "top_group_mean_age": 22.5,
+        "two_verified_charts": true
+      },
+      {
+        "local_transport": "Explicit HTTP test double; no Qwen execution",
+        "model": "test-double:latest",
+        "followup_preserves_top_five": true,
+        "duplicate_inference_prevented": true
+      },
+      {
+        "saved_plan_charts_evidence": true
+      },
+      {
+        "shared_filter_invalidates_history": true
+      },
+      {
+        "heldout_reference_reconciled": true,
+        "cross_workspace_context_isolation": true,
+        "heldout_rows": 344
+      },
+      {
+        "workspace_rename_preserves_identity_data_and_history": true
+      },
+      {
+        "malformed_model_output_rejected": true
+      },
+      {
+        "stopped_test_service_detected": true,
+        "standard_fallback_correct": 344,
+        "cloud_fallback_used": false
+      },
+      {
+        "existing_sql_lab_works_without_ollama": true
+      },
+      {
+        "delimiter_warning_before_import": true,
+        "manual_separator_two_fields": true,
+        "duplicate_imports_retained_with_context": true
+      },
+      {
+        "friendly_creation_and_persistence_after_reload": true,
+        "existing_workspaces_preserved": true
+      },
+      {
+        "tablet_width": 768,
+        "horizontal_overflow": false,
+        "keyboard_focus": true
+      }
+    ]
+  },
+  "public_source_provenance": [
+    {
+      "name": "NYC TLC March 2019 trip sample via pinned seaborn-data mirror",
+      "rows": 6433,
+      "url": "https://raw.githubusercontent.com/mwaskom/seaborn-data/71e2436a092d714350de0fc409ca8a8714e7e78f/taxis.csv",
+      "sha256": "08d6d71784dbaa2651fee37fc03389754194c05d72d2d19cbc2c799dea6ac09d",
+      "license": "NYC TLC public-use trip records; original source usage terms apply. Seaborn provides no separate dataset license. Raw file not added to Git.",
+      "coverage": "Sample collection/modification details and population completeness not established; no current business or population claim."
+    },
+    {
+      "name": "Palmer penguins",
+      "rows": 344,
+      "url": "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/8957207b78d6ccd1b4654a9dd9c9041b657478ab/inst/extdata/penguins.csv",
+      "sha256": "f204db2c753b0937caac3cb35258562c14f073e4bbc76be24b4c51ce22767a93",
+      "license": "CC0; raw file not added to Git.",
+      "citation": "Horst, Hill & Gorman (2020), palmerpenguins; Gorman, Williams & Fraser (2014), PLoS ONE 9(3):e90081."
+    }
+  ],
+  "visual_review": {
+    "captures": [
+      {
+        "path": "docs/screenshots/bi-workflow/workspace-home.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/16-macbook-size-project-home.png",
+        "sha256": "098c83585697ec7c56bb8cdcca952dad6699ee5656036032d571a493a3ebf394",
+        "bytes": 128865,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/dataset-library.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/03-imported-public-data.png",
+        "sha256": "a31dc9e293cbc185d3c9195db462f604e5986d0dc9090d8a01b67b7909d26798",
+        "bytes": 131931,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/quality-priorities.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/04-quality-priorities.png",
+        "sha256": "e053f130d8de90e81603d65078b5d0622d9a95afa58d1f48751d1bab6b47b854",
+        "bytes": 143783,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/filtered-exploration.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/05-category-comparison-filtered.png",
+        "sha256": "5b3e36126c3071a1750a390b17b99b091d9e9425517e311e34225fd67f6f48fe",
+        "bytes": 75195,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/reviewed-time-trend.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/08b-reviewed-calendar-trend.png",
+        "sha256": "7be88c9d2acd4cdacf8720fb497531d9bfe146073c963561e60b02c61243af6b",
+        "bytes": 118317,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/investigation.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/09-investigation-brief.png",
+        "sha256": "36952594d52e5c2bd186c5f81ee61f4a9ed699c05e8ffee5ea1567b9c3ba452c",
+        "bytes": 122017,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/report-builder.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/11-report-builder.png",
+        "sha256": "24899ad0265e75fcbe925f82c5e6efbb859a2f3ba15d26f0be53a57a4931c235",
+        "bytes": 125308,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/standalone-report.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/12b-standalone-report.png",
+        "sha256": "ae2619a289bc38a20796aec51a86e7366fc6e6f7385ab430aa0063e2ce6ffaf7",
+        "bytes": 92920,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      },
+      {
+        "path": "docs/screenshots/bi-workflow/different-public-schema.png",
+        "source_capture": "outputs/ux-upgrade/browser-release/14-different-public-schema.png",
+        "sha256": "9d518c8388c2069a24b4b4ac8fa445a351ad7d663954395b36d6063bb8aa2ae6",
+        "bytes": 68207,
+        "image_type": "Unedited actual Chromium screenshot; verified public test data only."
+      }
+    ],
+    "inspected_by": "Codex image inspection of actual browser screenshots; not generated UI mockups.",
+    "checks": [
+      "Central workflow and clear primary actions",
+      "Profile/quality information hierarchy",
+      "Filtered bars and readable daily trend",
+      "Visible scope and accessible evidence-saving controls",
+      "Classified analyst notes and ordered report builder",
+      "Bounded scrolling tables in exported report",
+      "Different schema and fresh-browser restoration at 1280x832"
+    ],
+    "issues_found_and_fixed": [
+      "Plotly alias shadowed by routing helper in first report export",
+      "Wide exported evidence tables caused document overflow; now scroll inside a bounded pane",
+      "Single observed calendar period appeared as a trend; now shown as calculated table"
+    ],
+    "earlier_browser_attempts_retained_under": "outputs/ux-upgrade/",
+    "limitations": "Cloud Chromium visual checks do not establish native Mac interaction, device performance or first-time usability for all users."
+  },
+  "preserved_backend": {
+    "reliability_commit": "716bd426051aabc2c63d16a9dd9dc0cccba8757b",
+    "unchanged": {
+      "src/insightpilot/universal/analyst_planner.py": true,
+      "src/insightpilot/universal/analyst_plan.py": true,
+      "src/insightpilot/universal/analyst_contract.py": true,
+      "src/insightpilot/universal/analyst_constraints.py": true,
+      "src/insightpilot/universal/analyst_execute.py": true,
+      "src/insightpilot/universal/analyst_session.py": true,
+      "src/insightpilot/universal/analyst_ui.py": true,
+      "src/insightpilot/universal/local_ai.py": true,
+      "src/insightpilot/universal/engine.py": true,
+      "src/insightpilot/universal/sql_lab.py": true,
+      "src/insightpilot/universal/metrics.py": true,
+      "src/insightpilot/universal/profile.py": true,
+      "src/insightpilot/universal/store.py": true,
+      "src/insightpilot/universal/report.py": true,
+      "src/insightpilot/universal/advanced.py": true,
+      "src/insightpilot/universal/statistics.py": true,
+      "src/insightpilot/universal/context.py": true,
+      "src/insightpilot/universal/relationships.py": true,
+      "uv.lock": true,
+      "pyproject.toml": true,
+      "Start InsightPilot.command": true,
+      "Check Local AI.command": true,
+      "scripts/accept_local_ai.py": true,
+      "scripts/local_ai_benchmark_cases.py": true,
+      "scripts/benchmark_local_ai.py": true
+    }
+  },
+  "tracked_data": [
+    {
+      "path": "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+      "unchanged": true,
+      "sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-complaints.csv",
+      "unchanged": true,
+      "sha256": "b4fd01d8d6bd7ea2a6b2912a9f56c2f1cbeb8100a6105b67194344c522bdadcc"
+    },
+    {
+      "path": "tests/fixtures/SYNTHETIC-sales.csv",
+      "unchanged": true,
+      "sha256": "7f804abe5ad7ded3c29cc1c794d189db877585dd052f9cead6277b35bc6cd652"
+    }
+  ],
+  "pending": [
+    "UCI Bank Marketing UI workflow on user Mac using ~/DA_project/outputs/uci-bank-marketing.zip; official cloud source download blocked, no bypass or fabricated UCI data.",
+    "Real Qwen acceptance on Mac; no real model weights executed in these tests.",
+    "Native MacBook Air launcher/device performance and Finder download opening."
+  ],
+  "known_limits": [
+    "Standard s18/s19 conditional-rate wording and s22 period-boundary wording still safely clarify and remain benchmark failures.",
+    "Business units, date purposes, KPIs and outcome denominators still need explicit review.",
+    "Investigation commentary is analyst authored; association and hypotheses do not establish causality.",
+    "Native PDF generation and new predictive/causal engines are not implemented.",
+    "Twelve project cards per search, twenty findings per report, five thousand characters per section, existing five-megabyte saved-object bound."
+  ],
+  "Mac_steps": "docs/BI_WORKFLOW_UPGRADE.md#try-the-improved-workflow-on-the-existing-mac"
+}

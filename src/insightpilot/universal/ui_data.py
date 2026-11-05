@@ -18,12 +18,37 @@ ROLES=['unassigned','date','identifier','customer','product','transaction','reve
        'price','geography','company','category','status','duration','text','measure']
 
 
-def data_hub(workspace):
+def data_hub(workspace,active_table=None,profile=None):
+    from .ui_workflow import dataset_overview
     st.subheader('Import and organize related tables')
-    st.write('Each table keeps its own row grain, original file and version history. Imports are local; nothing is sent to an AI provider.')
+    st.caption('Add data or inspect a dataset. Source files, previous versions and separate table identities are retained.')
     message_key='universal-import-messages-'+str(workspace.directory)
-    for level,message in st.session_state.pop(message_key,[]):
-        getattr(st,level)(message)
+    for level,message in st.session_state.pop(message_key,[]):getattr(st,level)(message)
+    mode_key='ux-data-mode-'+str(workspace.directory)
+    pending=st.session_state.pop('ux-data-mode-pending-'+str(workspace.directory),None)
+    if pending:st.session_state[mode_key]=pending
+    mode=st.radio('Data Hub view',['Upload datasets','Dataset library'],horizontal=True,key=mode_key)
+    if mode=='Upload datasets':
+        _import_datasets(workspace,message_key)
+        return
+    tables=workspace.tables()
+    if not tables:
+        st.info('No datasets imported yet. Choose Upload datasets to add your first source.')
+        return
+    recent=st.session_state.get('ux-last-import-'+str(workspace.directory))
+    names=list(tables);preferred=recent if recent in names else active_table if active_table in names else names[0]
+    inspect=st.selectbox('Inspect a dataset',names,index=names.index(preferred),format_func=lambda name:tables[name]['source'].get('filename',name)+' · '+name)
+    st.caption('Previewing a dataset does not change the active analysis. Use an action below to open that dataset in the selected workflow.')
+    dataset_overview(workspace,inspect,profile if inspect==active_table else None,new=inspect==recent)
+    with st.expander('Dataset catalog and relationships'):
+        st.subheader('Table catalog')
+        st.dataframe(pd.DataFrame([{'table':k,'rows':v['rows'],'fields':len(v['columns']),
+            'source':v['source']['origin'],'grain':v['grain'],'versions':len(v['versions']),'original file':v['source']['filename'],'imported at':v['created_at']} for k,v in tables.items()]),hide_index=True,width='stretch')
+        if len(tables)>=2:relationship_editor(workspace)
+
+
+def _import_datasets(workspace,message_key):
+    st.markdown('### Upload a dataset')
     tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL','Event logs'])
     with tabs[0]:
         from .import_preview import parsing_preview
@@ -60,6 +85,8 @@ def data_hub(workspace):
                         info=workspace.add_file(path,name,sheet=sheet or 0,delimiter=delimiter,provenance={
                             'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
                     messages.append(('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.'))
+                    st.session_state['ux-last-import-'+str(workspace.directory)]=name
+                    st.session_state['ux-data-mode-pending-'+str(workspace.directory)]='Dataset library'
                     for warning in info.get('import_warnings',[]):messages.append(('warning',warning+' Source bytes were retained; re-import with the intended separator into a new table if needed.'))
                 except Exception as exc: messages.append(('error',f'{file.name}: {exc}. Other successful imports are retained; this file did not create a partial table.'))
                 finally: path.unlink(missing_ok=True)
@@ -122,12 +149,6 @@ def data_hub(workspace):
                 path=incoming/(uuid.uuid4().hex+suffix); path.write_bytes(xes.getvalue())
                 import_xes(workspace,path,prefix)
                 path.unlink(); st.success('Imported cases and events into the shared catalog.'); st.rerun()
-    tables=workspace.tables()
-    if tables:
-        st.subheader('Table catalog')
-        st.dataframe(pd.DataFrame([{'table':k,'rows':v['rows'],'fields':len(v['columns']),
-            'source':v['source']['origin'],'grain':v['grain'],'versions':len(v['versions']),'original file':v['source']['filename'],'imported at':v['created_at']} for k,v in tables.items()]),hide_index=True,width='stretch')
-    if len(tables)>=2: relationship_editor(workspace)
 
 
 def relationship_editor(workspace):
@@ -161,6 +182,8 @@ def relationship_editor(workspace):
 
 def quality_editor(workspace,table,report):
     info=workspace.info(table)
+    from .ui_workflow import quality_overview
+    quality_overview(report,info)
     st.subheader('Understand every field')
     st.write(f'{report["rows"]:,} rows · {len(report["columns"])} fields · {report["exact_duplicate_rows"]:,} exact duplicate rows retained')
     query=st.text_input('Search the column catalog')
@@ -194,8 +217,10 @@ def quality_editor(workspace,table,report):
             else:
                 roles=info['roles']|{col:role}; units=sem.get('units',{})|{col:unit}; purposes=sem.get('date_purposes',{})|{col:purpose}
                 selected=col if basis else None if sem.get('date_basis')==col else sem.get('date_basis')
-                workspace.approve_semantics(table,roles,grain,units=units,date_purposes=purposes,date_basis=selected); st.rerun()
-    with st.expander('Dataset understanding report',expanded=True):
+                workspace.approve_semantics(table,roles,grain,units=units,date_purposes=purposes,date_basis=selected)
+                st.session_state['ux-date-basis-'+str(workspace.directory)+'-'+table]=selected
+                st.rerun()
+    with st.expander('Dataset understanding report'):
         st.write(report['understanding']['type_hypothesis'])
         st.write(report['understanding']['row_grain_hypothesis'])
         st.write('Row grain: '+info['grain'])
@@ -228,8 +253,10 @@ def quality_editor(workspace,table,report):
             elif not grain.strip() or grain.startswith('Unconfirmed'):st.warning('Describe what one row represents before approving business definitions. Basic descriptive statistics are already available without this approval.')
             else:
                 workspace.approve_semantics(table,dict(zip(changed.column,changed.role)),grain,
-                    units=dict(zip(changed.column,changed.units)),date_purposes=dict(zip(changed.column,changed['date purpose'])),date_basis=basis); st.rerun()
-    with st.expander('Prepare data reversibly'):
+                    units=dict(zip(changed.column,changed.units)),date_purposes=dict(zip(changed.column,changed['date purpose'])),date_basis=basis)
+                st.session_state['ux-date-basis-'+str(workspace.directory)+'-'+table]=basis
+                st.rerun()
+    with st.expander('Prepare data reversibly',expanded=True):
         operation=st.selectbox('Preparation operation',['numeric','date','date_parts','trim','nullify','deduplicate','rename','select'])
         col=st.selectbox('Preparation column',info['columns'],key='prepare-column-'+table)
         spec={'kind':operation,'column':col}

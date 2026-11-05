@@ -30,6 +30,7 @@ def ranked(result,title,unit,scope=''):
     fig.data[0].customdata=[[value,scope] for value in categories]
     fig.update_traces(hovertemplate='%{y}<br>%{x:,.3g} '+unit+'<extra></extra>')
     fig=style(fig,title,unit,None)
+    fig.update_layout(height=min(850,max(430,len(categories)*24+110)))
     if scope: fig.update_layout(dragmode='select',selectionrevision=scope)
     return fig
 

@@ -4,17 +4,19 @@ Keep using **`~/DA_project`**, your existing clone and its existing environment.
 There is no need to download another ZIP, clone again, reinstall Python, reinstall
 Ollama or download Qwen again.
 
-The previous complete-group repairs and launchers are in `c2cfd89` on
-`codex/insightpilot-local-ai`. The operation-contract audit and fixes are **local until
-you authorize a new push**. A pull cannot retrieve unpublished files. After
-publication, update the existing clone using the safe steps below.
+The published baseline is `b9451ca` on `codex/insightpilot-local-ai`. The separate
+reliability repair `716bd42` and BI workflow upgrade are **local until you authorize
+a push**. A pull cannot retrieve unpublished commits. After publication, update
+the existing clone using the safe steps below. See the [workflow and screenshot
+guide](BI_WORKFLOW_UPGRADE.md); no new installation or data migration is needed.
 
 ## Everyday startup
 
 1. In Finder, open your Home folder, then **DA_project**.
 2. Double-click **Start InsightPilot.command**.
 3. Leave its Terminal window open. Your browser opens when Streamlit is ready.
-4. Choose your existing workspace and continue. For model assistance, open
+4. Use **Workspace Home** to open your project and continue through Data Hub,
+   Quality, Explore, Investigate and Reports. For model assistance, open
    **AI Analyst → Local AI Analyst**, refresh models and select `qwen3.5:4b`.
 
 To stop, press **Control-C** in the launcher's Terminal. You can then close that

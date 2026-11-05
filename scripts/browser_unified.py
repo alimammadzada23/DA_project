@@ -38,6 +38,7 @@ def fill(page,label,value):
 
 def ready(page):
     page.wait_for_timeout(350)
+    expect(page.get_by_test_id('stApp')).to_have_attribute('data-test-script-state','notRunning',timeout=60000)
     expect(page.get_by_test_id('stStatusWidget')).not_to_be_visible(timeout=60000)
     expect(page.get_by_test_id('stException')).to_have_count(0)
     expect(page.get_by_test_id('stAlert').filter(has_text='could not complete')).to_have_count(0)
@@ -75,6 +76,7 @@ def workflow(browser,case,folder):
         page=browser.new_page(viewport={'width':1512,'height':1050});page.on('pageerror',lambda e:errors.append(str(e)))
         response=page.goto(url,wait_until='domcontentloaded')
         expect(page.get_by_role('combobox',name='Analysis table',exact=True)).to_be_visible(timeout=60000)
+        page.get_by_text('Overview',exact=True).click();ready(page)
         select(page,'Analysis table',case['table']);ready(page)
         select(page,'Analysis metric',case['metric']['name'])
         select(page,'Comparison field',case['context']['comparison']);ready(page)

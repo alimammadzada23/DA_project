@@ -15,11 +15,13 @@ def test_fresh_launch_has_one_product_and_no_synthetic_substitution(tmp_path,mon
     monkeypatch.delenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',raising=False)
     app=AppTest.from_file(APP).run(timeout=30)
     assert not app.exception and not app.error
-    assert app.radio(key='universal-page').value=='Data Hub'
+    assert app.radio(key='universal-page').value=='Workspace Home'
     assert not any(s.key=='dataset_workspace' for s in app.selectbox)
     assert not app.metric
     text=' '.join(m.value for m in app.markdown)
     assert 'Customer Experience' not in text and 'Procurement Intelligence' not in text
+    next(button for button in app.button if button.label=='Upload dataset').click().run(timeout=30)
+    assert app.radio(key='universal-page').value=='Data Hub'
     assert any(w.label=='Dataset files' for w in app.get('file_uploader'))
 
 

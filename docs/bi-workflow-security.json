@@ -1,0 +1,56 @@
+{
+  "at": "2026-11-05T20:32:04.565547+00:00",
+  "branch": "codex/insightpilot-local-ai",
+  "parent_reliability_commit": "716bd426051aabc2c63d16a9dd9dc0cccba8757b",
+  "scanner": "Gitleaks 8.24.3",
+  "configuration": "Default built-in rules, no custom exclusions; GITLEAKS_* overrides removed for this invocation; redacted output. No credential values or process environment dumped.",
+  "pre_receipt_scan": {
+    "version": "8.24.3",
+    "exit_code": 0,
+    "findings": 0,
+    "tracked_files": 328,
+    "staged_changed_files": 27,
+    "snapshot": "outputs/ux-upgrade/staged-security-pre-yksjcxmn",
+    "report": "outputs/ux-upgrade/ux-secrets-pre-receipt.json",
+    "log": "outputs/ux-upgrade/ux-secrets-pre-receipt.log",
+    "snapshot_tree": "2c3320c226e40f4984419bea2d6a7f48dbe17f51"
+  },
+  "scope": "Full staged snapshot exported with git checkout-index, including unchanged tracked files and all intended new source/tests/docs. Git internals, ignored workspaces, public raw dataset files and generated test output are not included in the commit.",
+  "intended_changes": "Workflow presentation, investigation/report assembly, browser verification scripts, regression tests, documentation, fresh explicitly mocked browser receipt and nine unedited public-data screenshots.",
+  "data_review": {
+    "tracked_data": [
+      {
+        "path": "tests/fixtures/SYNTHETIC-cfpb-timestamps.csv",
+        "unchanged": true,
+        "sha256": "effd6adab309c3eb4c1f6cb20dd0200462a6277d4508f4b86ca94ad2c8b38ed1"
+      },
+      {
+        "path": "tests/fixtures/SYNTHETIC-complaints.csv",
+        "unchanged": true,
+        "sha256": "b4fd01d8d6bd7ea2a6b2912a9f56c2f1cbeb8100a6105b67194344c522bdadcc"
+      },
+      {
+        "path": "tests/fixtures/SYNTHETIC-sales.csv",
+        "unchanged": true,
+        "sha256": "7f804abe5ad7ded3c29cc1c794d189db877585dd052f9cead6277b35bc6cd652"
+      }
+    ],
+    "new_raw_dataset_files": 0,
+    "private_user_data_added": false,
+    "screenshots": "Actual isolated public taxi and penguin workflows; visually inspected. No credentials or private workspaces captured. Binary screenshots are not text-searchable by the secret scanner.",
+    "generated_credentials_or_secret_files_added": false
+  },
+  "safeguards": "The 25 protected analytical, local-AI, storage, dependency and launcher paths listed in bi-workflow-validation.json remain byte-identical to the reliability commit. No arbitrary model-generated SQL or new network AI connection added.",
+  "reference_review": "No benchmark case, golden reference or expected result was edited. Standard s18/s19/s22 remain failures.",
+  "publication": "Local UX commit only. No push, merge, deployment or changes to other branches authorized or performed.",
+  "scan_limit": "Automated secret detection and manual source/screenshot review reduce risk; this is not a guarantee that every possible secret pattern is detectable.",
+  "final_snapshot_scan": {
+    "exit_code": 0,
+    "findings": 0,
+    "scanned_files": 329,
+    "report": "outputs/ux-upgrade/ux-secrets-final.json",
+    "report_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "scope": "Complete staged tree, including verification/security receipts and intended new files.",
+    "self_reference_note": "The final staged tree is rescanned after this receipt is updated; exact tree and index identity are recorded under ignored outputs/ux-upgrade/ux-secret-final-summary.json."
+  }
+}

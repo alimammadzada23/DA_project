@@ -10,6 +10,7 @@ complaint and mapped-upload front doors are retired. Existing databases, sources
 reports and backend/CLI compatibility remain intact.
 
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
+[BI workflow upgrade, screenshots and Mac walkthrough](docs/BI_WORKFLOW_UPGRADE.md) ·
 [Descriptive questions without manual setup and Mac checks](docs/LOCAL_AI_DESCRIPTIVE_ANALYSIS.md) ·
 [Mac launcher and updates](docs/MAC_EVERYDAY_USE.md) ·
 [Complete operation-contract audit and three-run verification](docs/LOCAL_AI_OPERATION_AUDIT.md) ·
@@ -27,10 +28,11 @@ reports and backend/CLI compatibility remain intact.
 ## Run on your Mac
 
 Keep your existing **`~/DA_project`** clone on **`codex/insightpilot-local-ai`**.
-The operation-contract baseline is `b9451ca`. This revision adds descriptive
-numeric analysis without business-role approval and fixes highest-column
-ambiguity. It remains local until a new push is explicitly authorized. After
-publication, update that clone; no new ZIP or clone is needed.
+The reliability repair is local commit `716bd42`, based on `b9451ca`. This
+separate UX revision adds a central workflow, project home, guided exploration,
+investigation notes and ordered evidence reports. These changes remain local
+until a push is explicitly authorized. After publication, update that clone;
+no new ZIP, clone, dependency installation or workspace migration is needed.
 
 ```bash
 cd ~/DA_project
@@ -61,23 +63,28 @@ synthetic diagnostics and independent DuckDB references. See the
 
 ## First minute
 
-1. **Data Hub:** import a CSV/TSV/XLSX/Parquet/JSON/JSONL file or read-only database
+1. **Workspace Home:** create or open a named project and define its purpose.
+   Upload data, continue a recent analysis or reopen saved reports from the main area.
+2. **Data Hub:** import a CSV/TSV/XLSX/Parquet/JSON/JSONL file or read-only database
    snapshot. Original source bytes, SHA-256, row count and versions are retained.
-2. **Quality & Preparation:** search every field, inspect values and missingness,
+   Inspect the automatic library preview and choose the next workflow action.
+3. **Quality & Preparation:** review prioritized signals and usable fields,
    and review generic suggestions for several fields together when needed. Basic
    numeric statistics and grouped record counts already work without semantic
    approval. Business metrics, units, outcomes and timestamp meanings still need
    review. Choose a date basis explicitly. Reversible preparation retains rejected
    conversions.
-3. Define a metric using the ordinary metric builder. A record count is a
-   structural description; rates need an explicit eligible denominator.
-4. **Overview / Explore:** choose the shared metric and comparison field. Review
-   calculated interpretations, select a bar and inspect its supporting records.
-5. **SQL Lab:** generate a query or edit a read-only SELECT/CTE. Inspect its plan,
-   save it, chart the result or send executed evidence to Reports.
-6. **Reports:** download standalone HTML, replay a manifest, assemble saved chart
-   and query blocks, or export the current selection as CSV/XLSX with a Power
-   Query template and metric dictionary.
+4. **Explore:** start from type-supported chart recommendations or any existing
+   view. Adjust shared filters, select bars, inspect records and save useful evidence.
+   Business metrics can be defined in the existing metric builder when needed.
+5. **Investigate:** save the question, observed facts, associations, hypotheses,
+   limitations and possible validation steps. Use the comparison tab for supported
+   period/group breakdowns; associations do not establish causality.
+6. **Reports:** order saved findings, copy investigation notes explicitly, write
+   the narrative, save a draft and export self-contained HTML with retained evidence.
+   Existing manifest replay, selection exports and Power BI preparation remain.
+7. **Supporting tools:** Overview, AI Analyst, SQL Lab and Advanced remain directly
+   accessible in the second navigation row, with their existing safeguards.
 
 No industry wizard or demonstration filename controls the analytics. Multiple
 timestamps remain ambiguous until reviewed. Short observed date ranges suggest
