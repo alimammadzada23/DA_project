@@ -57,6 +57,8 @@ def stacked(result, group='company', category='product', value='complaints'):
     data = frame(result); fig = go.Figure()
     # Keep the most represented companies and combine excess categories explicitly.
     if not data.empty:
+        data[group] = data[group].fillna('Not recorded')
+        data[category] = data[category].fillna('Not recorded')
         companies = data.groupby(group, dropna=False)[value].sum().nlargest(8).index
         data = data[data[group].isin(companies)].copy()
         data[group] = data[group].fillna('Not recorded'); data[category] = data[category].fillna('Not recorded')

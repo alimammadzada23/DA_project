@@ -321,7 +321,8 @@ def test_histogram_exact_and_neighboring_float_edges_match_numpy(tmp_path):
     for edge in edges[1:-1]:values.extend([np.nextafter(edge,-np.inf),edge,np.nextafter(edge,np.inf)])
     source=tmp_path/'SYNTHETIC.csv';pd.DataFrame({'x':values}).to_csv(source,index=False)
     w.add_file(source,'facts');result=Engine(w,'facts').distribution('x',25)
-    # Parse the retained CSV independently, then use NumPy interval membership.
-    series=pd.read_csv(source).x;counts,_=np.histogram(series[series<36.7],bins=edges)
+    # Preserve adjacent IEEE float values when parsing the retained CSV. The
+    # default fast parser can round a nextafter value across a histogram edge.
+    series=pd.read_csv(source,float_precision='round_trip').x;counts,_=np.histogram(series[series<36.7],bins=edges)
     expected={round(float(v),12):int(n) for v,n in zip(edges[:-1],counts) if n};expected[36.7]=int((series==36.7).sum())
     assert {round(float(v),12):int(n) for v,n in result['rows']}==expected
