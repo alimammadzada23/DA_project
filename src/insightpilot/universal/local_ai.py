@@ -146,3 +146,29 @@ class OllamaClient:
                     'wire_schema_valid':VALIDATOR.is_valid(plan),
                     'model_response_received':True,
                     'planning_seconds':round(time.perf_counter()-started,4),'server_metrics':stats,'numerical_authority':'InsightPilot engine; model proposed intent only'}
+
+    def interpret(self,messages):
+        """Word an already computed result. Same loopback/size/model checks as planning; no tools, no plan."""
+        from .analyst_interpret import INTERPRET_SCHEMA
+        if not isinstance(messages,list) or len(messages)>2 or len(json.dumps(messages,ensure_ascii=False).encode())>20_000:
+            raise LocalAIError('context_limit','The computed result is too large to interpret locally. The verified table is still shown.')
+        model=self.inspect_model();started=time.perf_counter()
+        capabilities=model.get('capabilities') if isinstance(model,dict) and isinstance(model.get('capabilities'),list) else []
+        payload={'model':self.config.model,'messages':messages,'format':INTERPRET_SCHEMA,'stream':False,'keep_alive':'2m',
+                 'truncate':False,'shift':False,
+                 'options':{'temperature':0,'seed':42,'num_ctx':self.config.context_tokens,'num_predict':self.config.output_tokens}}
+        if 'thinking' in capabilities:payload['think']=False
+        response=self._request('POST','/api/chat',payload,inference=True)
+        if response.get('remote_host') or response.get('remote_model'):
+            raise LocalAIError('remote_model','Ollama reported remote inference. The interpretation was rejected.')
+        if response.get('done') is not True or response.get('model')!=self.config.model:
+            raise LocalAIError('invalid_output','The local interpretation was incomplete or came from another model; it was discarded.')
+        if response.get('done_reason')=='length':raise LocalAIError('invalid_output','The model reached its output limit before finishing the interpretation.')
+        message=response.get('message')
+        if not isinstance(message,dict) or message.get('tool_calls') or not isinstance(message.get('content'),str):
+            raise LocalAIError('invalid_output','The model returned tools or an invalid message; the interpretation was discarded.')
+        try:value=json.loads(message['content'])
+        except (ValueError,RecursionError) as exc:raise LocalAIError('invalid_output','The interpretation was not valid JSON; it was discarded.') from exc
+        stats={k:v for k in ('load_duration','total_duration','eval_duration','prompt_eval_count','eval_count')
+               if type(v:=response.get(k)) in (int,float) and math.isfinite(v) and v>=0}
+        return value,{'model':self.config.model,'planning_seconds':round(time.perf_counter()-started,4),'server_metrics':stats}

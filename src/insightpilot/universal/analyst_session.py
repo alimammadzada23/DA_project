@@ -74,7 +74,7 @@ def validate_stored_plan(data):
     return ValidatedPlan(deepcopy(data))
 
 
-def analyze_question(engine,profile,metric,question,conversation,*,mode='standard',config=None,client=None,field_scope=None):
+def analyze_question(engine,profile,metric,question,conversation,*,mode='standard',config=None,client=None,field_scope=None,interpret_results=False):
     config=config or getattr(client,'config',None) or LocalConfig();mode_key=mode+(':'+_digest(asdict(config)) if mode=='local' else '')
     conversation.bind(engine,metric,mode_key)
     if conversation.entries and conversation.entries[-1]['question']==question and conversation.entries[-1]['response']['status']=='ok':
@@ -144,6 +144,8 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
                 cohort=old.get('cohort',())
         response=execute_plan(engine,profile,validated,metric,cohort=cohort)
         response.update(backend=backend,cache_hit=False,elapsed_seconds=round(time.perf_counter()-started,4),context_signature=conversation.signature,applied_cohort=list(cohort))
+        if mode=='local' and interpret_results:
+            response['interpretation']=_interpret(client or OllamaClient(config),question,response)
         if response['status']=='approval_required':
             conversation.pending={'question':question,'plan':validated.dictionary(),'backend':backend,'signature':conversation.signature,'cohort':list(cohort)}
             return response
@@ -153,6 +155,18 @@ def analyze_question(engine,profile,metric,question,conversation,*,mode='standar
     except ValueError as exc:response={'status':'error','answer':'The calculation could not finish: '+str(exc)[:400],
         'error_code':'execution_failed','evidence':[],'figures':[],'definitions':[],'backend':backend}
     return conversation.add(question,response,backend)
+
+
+def _interpret(client,question,response):
+    """Optional second local inference over the computed result; never blocks or alters the verified answer."""
+    from .analyst_interpret import InterpretationError,eligible,interpret
+    if not hasattr(client,'interpret'):return {'status':'skipped','message':'This planner does not provide local interpretation.'}
+    if not eligible(response):return {'status':'skipped','message':'Row-level previews and empty results are not sent to the model for interpretation.'}
+    try:return interpret(client,question,response)
+    except (InterpretationError,LocalAIError) as exc:
+        return {'status':'unavailable','message':'No verified AI interpretation: '+str(exc)[:300]+' The calculated answer above is unaffected.'}
+    except Exception:  # noqa: BLE001 - optional wording must never break a verified result
+        return {'status':'unavailable','message':'No verified AI interpretation: the local response could not be processed. The calculated answer above is unaffected.'}
 
 
 def approve_pending(engine,profile,metric,conversation):

@@ -55,7 +55,7 @@ def local_controls():
             available=True;st.success('Local AI available · '+model+' · server reports a local model; inference runs when you ask.')
         else:st.warning(inspection['message'])
     else:st.warning(state['message'])
-    st.caption('Official Ollama loopback API only. No account, paid API, automatic installation, model download or external fallback. Schema and question go to the local service; source rows do not.')
+    st.caption('Official Ollama loopback API only. No account, paid API, automatic installation, model download or external fallback. Schema and question go to the local service; source rows do not. With result explanations on, the computed aggregate table (at most 40 rows) is also read by the model on this computer.')
     return config,available
 
 
@@ -76,6 +76,7 @@ def render_result(response,entry_id,workspace,*,question=None):
     if status in ('clarify','unsupported'):st.info(text);return
     if status=='approval_required':st.info(text);st.json(response['plan']['measures']);return
     st.markdown(text)
+    render_interpretation(response.get('interpretation'),entry_id)
     backend=response.get('backend',{});st.caption(backend.get('backend','Deterministic calculation')+(' · '+backend['model'] if backend.get('model') else ''))
     if backend.get('model'):st.caption('Model proposed the plan. Every number and chart below comes from executed local calculations.')
     else:st.caption('Deterministic guided analyst; no model or tokens used')
@@ -129,13 +130,43 @@ def render_result(response,entry_id,workspace,*,question=None):
                     st.success('Saved verified results, definitions and evidence in Reports.')
 
 
+def _ask(question):
+    # Callback runs before the next script pass, so the question box can be updated; the
+    # follow-up is then planned and validated exactly like a typed question.
+    st.session_state['analyst-question']=question;st.session_state['analyst-autorun']=True
+
+
+def render_interpretation(interpretation,entry_id):
+    """Model wording over computed values; every displayed number was matched to the result table."""
+    if not interpretation:return
+    if interpretation.get('status')!='ok':
+        if interpretation.get('status')=='unavailable':st.caption(plain(interpretation.get('message','')))
+        return
+    with st.container(border=True,key='ai-interpretation-'+entry_id):
+        st.markdown('**AI interpretation** · '+plain(interpretation['headline']))
+        if interpretation['findings']:st.markdown('\n'.join('- '+plain(item) for item in interpretation['findings']))
+        for caveat in interpretation['caveats']:st.caption('Caveat · '+plain(caveat))
+        checked=interpretation.get('numbers_checked',0);removed=interpretation.get('removed',[])
+        note=f'{checked} number(s) checked against the computed result.' if checked else 'No figures cited; wording only.'
+        if removed:note+=f' {len(removed)} statement(s) removed: '+', '.join(sorted({r["reason"] for r in removed}))+'.'
+        st.caption(note+' Observations, not causes. Local model · '+plain((interpretation.get('backend') or {}).get('model') or 'Ollama'))
+        if interpretation['follow_ups']:
+            st.caption('Suggested next questions · each is planned and validated before anything runs')
+            columns=st.columns(len(interpretation['follow_ups']))
+            for index,(column,question) in enumerate(zip(columns,interpretation['follow_ups'])):
+                column.button(question,key=f'ai-follow-{entry_id}-{index}',on_click=_ask,args=(question,),width='stretch')
+
+
 def render(engine,profile,metric,scope):
     st.subheader('Ask. Verify. Follow the evidence.')
     st.write('Ask about record counts, verified numeric statistics, reviewed business measures, groups, distributions and time. The model plans; InsightPilot calculates.')
     mode=st.radio('Analyst mode',['Standard analysis','Local AI Analyst'],horizontal=True,key='analyst-mode')
     config=None;available=True
+    explain=False
     if mode=='Local AI Analyst':
         config,available=local_controls()
+        explain=st.toggle('Explain results with the local model',value=True,key='ai-explain-results',
+            help='After the exact calculation, the local model words the computed result table (aggregates only, at most 40 rows; never record previews). Every number it writes is checked against that table, and causal claims are removed.')
         with st.expander('Fields sent to the local planner'):
             field_scope=st.multiselect('Planning fields',engine.info['columns'],default=engine.info['columns'][:60],max_selections=60,key='ai-field-scope-'+scope)
             st.caption('Only field metadata, reviewed definitions and bounded intent context are sent. Full-table calculations remain in DuckDB.')
@@ -158,7 +189,10 @@ def render(engine,profile,metric,scope):
                 st.session_state['analyst-question']=question
     question=st.text_input('Your analytical question',key='analyst-question',placeholder='Ask a question or follow up on the last validated analysis')
     st.caption('Shared grouping: '+str(engine.context.comparison)+' · date basis: '+str(engine.context.date_basis)+' · sidebar metric: '+metric.name+'. Explicit question-specific measures are labeled separately.')
-    if st.button('Calculate evidence-backed answer',type='primary',disabled=mode=='Local AI Analyst' and not available):
+    blocked=mode=='Local AI Analyst' and not available
+    clicked=st.button('Calculate evidence-backed answer',type='primary',disabled=blocked)
+    autorun=st.session_state.pop('analyst-autorun',False) and not blocked
+    if clicked or autorun:
         if external:
             assert_current(engine)
             legacy=assistant.answer(engine,question,metric,dimension=engine.context.comparison,date_column=engine.context.date_basis,use_provider=True,consent=consent)
@@ -172,7 +206,7 @@ def render(engine,profile,metric,scope):
             conversation.add(question,result,result['backend'])
         else:
             with st.spinner('Waiting for local model, then validating and calculating…' if config else 'Validating and calculating…'):
-                result=analyze_question(engine,profile,metric,question,conversation,mode='local' if config else 'standard',config=config,field_scope=field_scope)
+                result=analyze_question(engine,profile,metric,question,conversation,mode='local' if config else 'standard',config=config,field_scope=field_scope,interpret_results=explain)
             st.session_state['analyst-current-response']=result
     if conversation.pending:
         pending=conversation.pending
