@@ -152,6 +152,16 @@ def fields(report):
     return numeric,dates,dimensions
 
 
+def missing_date_basis(report):
+    """Explain why time analysis is unavailable without implying the data has no dates."""
+    recognized=[c['column'] for c in report['columns'] if c['recognized_dates']]
+    if recognized:
+        return ('Time analysis needs a reviewed date basis. Date values were recognized in: '+', '.join(recognized[:4])+
+                ('…' if len(recognized)>4 else '')+'. In Quality & Preparation, open “Review this field and row grain”, '
+                'set the role to date, describe what the date measures and select it as the shared date basis.')
+    return 'No recognized date field is available. Convert explicit slash or text dates in Quality & Preparation first.'
+
+
 def executive(engine,report,metric,scope):
     st.subheader(metric.name+' · '+engine.table)
     result=engine.metric(metric); values=dict(zip(result['columns'],result['rows'][0]))
@@ -208,10 +218,17 @@ def explorer(engine,report,metric,scope):
         concentration_view(engine,metric,scope,draw,evidence,preferred=engine.context.comparison or (dims[0] if dims else None))
     elif choice=='Ranked groups':
         choices=[None]+engine.info['columns']
-        dimension=st.selectbox('Group by',choices,index=choices.index(engine.context.comparison) if engine.context.comparison in choices else 0,
-                               format_func=lambda x:'Choose a grouping field' if x is None else x,key='explore-groupby')
+        # Presets, saved views and restored drafts write these keys directly. A
+        # widget must then take its value only from session state (passing a
+        # default as well triggers Streamlit's conflict warning), and a stale
+        # field from another table falls back to the shared comparison field.
+        if st.session_state.get('explore-groupby') not in choices:st.session_state.pop('explore-groupby',None)
+        default={} if 'explore-groupby' in st.session_state else {'index':choices.index(engine.context.comparison) if engine.context.comparison in choices else 0}
+        dimension=st.selectbox('Group by',choices,format_func=lambda x:'Choose a grouping field' if x is None else x,key='explore-groupby',**default)
         if dimension is None: st.info('Choose a field to compare. The shared comparison field supplies the default when selected.'); return
-        top=st.slider('Top categories',5,30,15,key='explore-top')
+        stored_top=st.session_state.get('explore-top')
+        if stored_top is not None and not (isinstance(stored_top,int) and 5<=stored_top<=30):st.session_state.pop('explore-top',None)
+        top=st.slider('Top categories',5,30,key='explore-top',**({} if 'explore-top' in st.session_state else {'value':15}))
         result=engine.groups(dimension,metric,top)
         selection_epoch=st.session_state.get('ue-selection-epoch',0)
         if st.button('Reset chart selection'):
@@ -232,15 +249,15 @@ def explorer(engine,report,metric,scope):
                 st.info(f'Chart selection: {dimension} = {value if value is not None else "Missing"}')
                 if numeric:
                     column=st.selectbox('Selected-segment numeric field',numeric)
-                    draw(visuals.histogram(drilled.distribution(column),'Selected segment: '+column),'ux-filtered-'+scope)
+                    draw(visuals.histogram(drilled.distribution(column),'Selected segment: '+column,summary=drilled.numeric_summary(column)),'ux-filtered-'+scope)
         evidence(result); record_view(drilled,scope+'-'+hashlib.sha256(repr(drilled.filters).encode()).hexdigest()[:10])
     elif choice=='Numeric distribution':
         if not numeric: st.info('No finite numeric fields are available. Review type conversions in Data Quality.'); return
         col=st.selectbox('Numeric field',numeric); bins=st.slider('Distribution bins',5,80,25)
-        result=engine.distribution(col,bins)
-        draw(visuals.histogram(result,'Distribution of '+label(col)),'ux-hist-'+scope,result=result)
+        result=engine.distribution(col,bins);summary=engine.numeric_summary(col)
+        draw(visuals.histogram(result,'Distribution of '+label(col),summary=summary),'ux-hist-'+scope,result=result)
         st.write(interpretation(result,metric))
-        st.dataframe(frame_of(engine.numeric_summary(col)),hide_index=True,width='stretch'); evidence(result)
+        st.dataframe(frame_of(summary),hide_index=True,width='stretch'); evidence(result)
     elif choice=='Numeric relationship':
         if len(numeric)<2: st.info('Two numeric fields are required.'); return
         x=st.selectbox('Horizontal field',numeric); y=st.selectbox('Vertical field',numeric,index=1)
@@ -250,7 +267,7 @@ def explorer(engine,report,metric,scope):
         draw(visuals.style(fig,label(y)+' against '+label(x),x+' · '+(units.get(x) or 'units unconfirmed'),y+' · '+(units.get(y) or 'units unconfirmed')),'ux-scatter-'+scope,result=result)
         st.caption(str(result['method'])); evidence(result)
     elif choice=='Calendar trend':
-        if not dates: st.info('A usable date field is required. Convert explicit slash dates in Data Quality.'); return
+        if not dates: st.info(missing_date_basis(report)); return
         col=engine.context.date_basis; grain=engine.context.time_grain; st.caption('Shared date basis: '+col+' · '+grain)
         result=engine.trend(col,metric,grain)
         if len(result['rows'])<2:
@@ -271,7 +288,7 @@ def explorer(engine,report,metric,scope):
             GROUP BY 1 ORDER BY n DESC LIMIT 15''')
         data=frame_of(result)
         fig=go.Figure(go.Box(q1=data.q1,median=data['median'],q3=data.q3,lowerfence=data.minimum,upperfence=data.maximum,
-            x=data.category.map(str),name=col,marker_color=visuals.TEAL))
+            x=data.category.map(visuals.category_label),name=col,marker_color=visuals.TEAL))
         unit=engine.info.get('semantics',{}).get('units',{}).get(col) if engine.info.get('semantics',{}).get('reviewed') else None
         draw(visuals.style(fig,label(col)+' distribution by '+label(group),group,col+' · '+(unit or 'units unconfirmed')),'ux-box-'+scope,result=result)
         st.caption('Full-data quartiles; whiskers show observed min/max, not Tukey fences. Top 15 groups by finite count.'); evidence(result)
@@ -285,7 +302,9 @@ def explorer(engine,report,metric,scope):
         data=frame_of(result)
         data['x']=data.x.map(lambda v:'Missing' if v is None else str(v)); data['y']=data.y.map(lambda v:'Missing' if v is None else str(v))
         pivot=data.pivot(index='y',columns='x',values='records').fillna(0)
-        draw(visuals.style(px.imshow(pivot,color_continuous_scale='Teal',labels={'color':'Records'}),'Where are recorded rows concentrated?',x,y),'ux-heat-'+scope,result=result)
+        heat=px.imshow(pivot,color_continuous_scale='Teal',labels={'color':'Records'},text_auto=',d' if pivot.size<=150 else False,aspect='auto')
+        heat.update_traces(hovertemplate=y+': %{y}<br>'+x+': %{x}<br>%{z:,} records<extra></extra>')
+        draw(visuals.style(heat,'Where are recorded rows concentrated?',x,y),'ux-heat-'+scope,result=result)
         evidence(result)
     else: record_view(engine,scope)
 
@@ -300,7 +319,7 @@ def advanced_page(engine,report,metric,scope):
         if not numeric and method!='Text frequencies': st.info('A finite numeric field is required; review type conversion in Data Quality.'); return
         col=st.selectbox('Text field' if method=='Text frequencies' else 'Analysis value field',columns if method=='Text frequencies' else numeric,key='ua-value-'+method)
     if method in ('Time-series changes','Monthly baseline forecast','Time anomaly screening','Customer RFM','Monthly retention cohorts','Ordered event funnel'):
-        if not dates: st.info('A recognized date field is required; review explicit date parsing in Data Quality.'); return
+        if not dates: st.info(missing_date_basis(report)); return
         dt=engine.context.date_basis; st.caption('Shared date basis: '+dt)
     if method in ('Welch group comparison','Customer RFM','Monthly retention cohorts','Ordered event funnel'):
         group=st.selectbox('Analysis grouping / entity',dims+[c for c in columns if c not in dims],key='ua-group-'+method)

@@ -216,5 +216,5 @@ def test_distribution_axes_use_reviewed_field_units(model):
     result=Engine(model,'observations').distribution('v')
     assert result['method']['units']=='USD'
     figure=histogram(result,'Observed values')
-    assert figure.layout.xaxis.title.text=='Bin lower boundary · USD'
+    assert figure.layout.xaxis.title.text=='Value · USD'  # bars span each bin, so the axis is the value scale
     assert figure.layout.yaxis.title.text=='Finite source rows'

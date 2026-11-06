@@ -19,7 +19,7 @@ def concentration_view(engine, metric, scope, draw, evidence_view, preferred=Non
     a.metric('Selected total',f'{result["total"]:,.3g}',help=metric.name+' · '+metric.units)
     b.metric('Groups to reach '+f'{threshold:.0%}',str(result['groups_to_threshold']))
     c.metric('Largest group share',f'{data.share.iloc[0]:.1%}')
-    labels=['Missing' if x is None else str(x) for x in data.category]
+    labels=[visuals.category_label(x) for x in data.category]
     if count<=8:
         chart=st.radio('Composition presentation',['Pareto','Donut'],horizontal=True)
     else:
@@ -31,12 +31,18 @@ def concentration_view(engine, metric, scope, draw, evidence_view, preferred=Non
         figure.update_layout(legend={'orientation':'v','x':1,'y':.8},margin={'l':20,'r':80,'t':65,'b':30})
     else:
         shown=data.head(20)
-        figure=go.Figure(go.Bar(x=labels[:20],y=shown.value.tolist(),name=metric.name,marker_color=visuals.TEAL))
+        needed=result['groups_to_threshold']
+        # Groups needed to reach the threshold are highlighted; the rest are muted.
+        colors=[visuals.TEAL if i<needed else '#3E5A74' for i in range(len(shown))]
+        figure=go.Figure(go.Bar(x=labels[:20],y=shown.value.tolist(),name=metric.name,marker_color=colors,
+            customdata=shown.share.tolist(),hovertemplate='<b>%{x}</b><br>%{y:,.4~g} '+metric.units+'<br>%{customdata:.1%} of the selected total<extra></extra>'))
         figure.add_trace(go.Scatter(x=labels[:20],y=shown.cumulative_share.tolist(),name='Cumulative share',
             yaxis='y2',line={'color':'#afbbef','width':2},mode='lines+markers',hovertemplate='%{y:.1%}<extra>Cumulative share</extra>'))
         visuals.style(figure,metric.name+' · concentration',dimension,metric.units)
         figure.update_layout(yaxis2={'overlaying':'y','side':'right','range':[0,1.05],'tickformat':'.0%','showgrid':False,'automargin':True},margin={'l':40,'r':65,'t':75,'b':80})
         figure.add_shape(type='line',xref='paper',yref='y2',x0=0,x1=1,y0=threshold,y1=threshold,line={'dash':'dot','color':'#899bad'})
+        figure.add_annotation(xref='paper',yref='y2',x=1,y=threshold,xanchor='right',yanchor='bottom',showarrow=False,
+            text=f'{threshold:.0%} reached by {needed} of {count:,} groups',font={'size':11,'color':'#C9D4E5'})
     draw(figure,'concentration-'+scope,result=result['evidence'])
     st.caption(result['limitations'])
     st.dataframe(data[['category','value','records','share','cumulative_share']],hide_index=True,width='stretch',

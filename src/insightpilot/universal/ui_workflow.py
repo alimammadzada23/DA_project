@@ -26,6 +26,21 @@ def scope_filters(filters):
     return '; '.join(descriptions) or 'No row filters'
 
 
+def saved_when(value):
+    """Readable local time for a stored UTC save timestamp; unknown stays unknown."""
+    if not value:return 'unknown · preserved legacy project'
+    try:moment=datetime.fromisoformat(str(value))
+    except ValueError:return str(value)
+    if moment.tzinfo is None:moment=moment.replace(tzinfo=timezone.utc)
+    local=moment.astimezone()
+    return local.strftime('%d %b %Y · %H:%M ')+(local.tzname() or '')
+
+
+def card_description(info,record):
+    if info.get('purpose') or info.get('description'):return info.get('purpose') or info['description']
+    return 'Preserved existing project' if record.get('legacy') else 'No purpose or description added'
+
+
 def go(page, *, table=None, presets=None):
     if page not in PAGES:raise ValueError('Choose an available workspace page.')
     st.session_state['pending-view-layout']={'page':page,'presets':presets or {}}
@@ -122,9 +137,9 @@ def home(workspace):
         info=metadata(peer);summary=project_summary(peer);tag=info['id'];record=saved_info(peer)
         with columns[index%2].container(border=True,key='ux-project-'+tag):
             st.text(info['name'] if info['status']=='named' else 'Legacy unnamed project')
-            st.caption(info.get('purpose') or info['description'] or 'Preserved existing project')
+            st.caption(card_description(info,record))
             st.text('Dataset: '+(', '.join(t.get('display_name') or t['source'].get('filename',name) for name,t in summary['tables'].items()) or 'No dataset'))
-            st.caption('Last saved: '+(record['last_saved'] or 'unknown · preserved legacy project'))
+            st.caption('Last saved: '+saved_when(record['last_saved']))
             left,right=st.columns(2)
             if left.button('Open',key='ux-open-'+tag,width='stretch'):request_transition('open',peer.directory)
             if right.button('Delete',key='project-delete-'+tag,width='stretch'):

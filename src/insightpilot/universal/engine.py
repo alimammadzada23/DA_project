@@ -128,7 +128,7 @@ class Engine:
                 (SELECT *,floor((x-lo)/NULLIF(width,0)) AS candidate FROM
                     (SELECT *,(hi-lo)/{bins} AS width FROM
                         (SELECT {expr} x,min({expr}) OVER () lo,max({expr}) OVER () hi FROM selected))))
-            WHERE x IS NOT NULL GROUP BY 1 ORDER BY 1''',method={'field':column,
+            WHERE x IS NOT NULL GROUP BY 1 ORDER BY 1''',method={'field':column,'bins':bins,
                 'units':self.info.get('semantics',{}).get('units',{}).get(column) or 'units unconfirmed',
                 'rule':'Equal-width left-closed/right-open bins; width is calculated once and boundary roundoff is corrected. NULL/nonfinite excluded; exact maximum occupies a separate boundary bin.'})
 

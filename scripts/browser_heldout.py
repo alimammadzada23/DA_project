@@ -7,6 +7,7 @@ from datetime import datetime,timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import uuid
 
@@ -114,7 +115,7 @@ def main():
         page.screenshot(path=str(folder/'sql-lab.png'),full_page=True)
         page.get_by_text('Advanced',exact=True).click();ready(page)
         select(page,'Analytical method','Time-series changes')
-        expect(page.get_by_text('A recognized date field is required;',exact=False)).to_be_visible(timeout=60000)
+        expect(page.get_by_text(re.compile('Time analysis needs a reviewed date basis|No recognized date field is available'))).to_be_visible(timeout=60000)
         steps.append({'inapplicable_time_analysis_gated':True})
         page.get_by_text('AI Analyst',exact=True).click()
         page.get_by_role('button',name='Calculate evidence-backed answer',exact=True).click();ready(page)
