@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "events": [
+    "Unsaved upload and analysis survive refresh in a temporary session, outside Saved Projects",
+    "Save / Discard / Cancel guard works; discard leaves only preserved legacy project, no inherited dataset",
+    "Explicit Save publishes data, evidence, investigation, report draft and editable fields; reopening restores them; discarded edits never change the saved snapshot",
+    "Save Changes is explicit; delete confirmation/cancel works; unrelated legacy project and original upload remain byte-for-byte intact; all ten destinations still navigate"
+  ],
+  "browser_errors": [],
+  "native_dialogs": [
+    "beforeunload"
+  ],
+  "synthetic_fixture": true,
+  "no_user_projects_modified": true
+}

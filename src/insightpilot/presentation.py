@@ -26,6 +26,7 @@ button:focus-visible,[role="radio"]:focus-visible,input:focus-visible{outline:2p
 [data-testid="stChatMessage"]{border:1px solid var(--ip-border);border-radius:var(--ip-radius);}
 [data-testid="stExpander"] details{border-color:var(--ip-border);border-radius:10px;}
 [data-baseweb="tab-list"]{gap:24px;border-bottom:1px solid var(--ip-border);}[data-baseweb="tab"]{font-size:13px;}
+.st-key-project-actions [data-testid="stElementContainer"]:has([data-project-unsaved]){display:none;}
 .st-key-active-scope{background:#0d202c;border-radius:12px;}.st-key-active-scope p{margin-bottom:.15rem;}
 .st-key-workflow-nav [role="radiogroup"]{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;}.st-key-workflow-nav [role="radiogroup"]>label{border:1px solid var(--ip-border);border-radius:8px;padding:7px;margin:0;min-height:40px;}.st-key-workflow-nav [role="radiogroup"]>label:has(input:checked){border-color:#61d5c5;background:#123836;}.st-key-workflow-nav p{font-size:12px!important;}
 .st-key-command-header{border-bottom:1px solid var(--ip-border);padding-bottom:12px;margin-bottom:12px;}

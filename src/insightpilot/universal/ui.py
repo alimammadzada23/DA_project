@@ -491,8 +491,7 @@ def _main():
         for key,value in pending.get('presets',{}).items(): st.session_state[key]=value
     from .ui_workspaces import choose_workspace,project_actions
     from .workspace_labels import table_labels
-    workspace=choose_workspace();directory=workspace.directory
-    actions=st.container()
+    workspace,actions=choose_workspace();directory=workspace.directory
     names=list(workspace.tables())
     page=navigation(workspace)
     if not names:

@@ -155,8 +155,9 @@ def choose_workspace():
         if selection!=current and selection!='__current__':st.session_state['_project-transition']={'kind':'open','target':selection}
     st.sidebar.selectbox('Active project',paths,index=paths.index(current),format_func=labels.get,key=selector_key,on_change=changed)
     if st.sidebar.button('＋ New project',width='stretch'):request_transition('new')
-    st.sidebar.caption('Work stays in this temporary session. Only Save Project / Save Changes updates Saved Projects.')
-    return workspace
+    actions=st.sidebar.container()
+    st.sidebar.caption('Save only when you choose.')
+    return workspace,actions
 
 
 def current_ui(workspace):
@@ -203,21 +204,18 @@ def project_actions(workspace):
     dirty=session.dirty(ui)
     st.session_state['_project-unsaved']=session.is_new or dirty
     name=metadata(workspace)
-    with st.container(border=True,key='project-actions'):
-        title,status=st.columns([3,2])
-        title.text('Unsaved project' if session.is_new else name['name'])
+    with st.container(key='project-actions'):
+        st.caption('NOT SAVED' if session.is_new else 'UNSAVED CHANGES' if dirty else 'ALL CHANGES SAVED')
         st.markdown('<span data-project-unsaved="'+('true' if session.is_new or dirty else 'false')+'" hidden></span>',unsafe_allow_html=True)
-        status.caption('NOT SAVED · TEMPORARY SESSION' if session.is_new else 'UNSAVED CHANGES' if dirty else 'ALL CHANGES SAVED')
         if session.is_new:
-            a,b=st.columns(2)
-            if a.button('Save Project',type='primary',width='stretch'):
+            if st.button('Save Project',type='primary',width='stretch'):
                 st.session_state['_project-save-open']=True;st.rerun()
-            if b.button('Discard Project',width='stretch'):request_transition('new',page='Workspace Home')
+            if st.button('Discard Project',width='stretch'):request_transition('new',page='Workspace Home')
         else:
-            a,b,c=st.columns(3)
-            if a.button('Save Changes',type='primary',width='stretch'):
+            if st.button('Save Changes',type='primary',width='stretch'):
                 session.save(name['name'],name['description'],name.get('purpose',''),ui=ui);st.rerun()
-            if b.button('Rename',width='stretch'):
+            left,right=st.columns(2)
+            if left.button('Rename',width='stretch'):
                 st.session_state['_project-save-open']=True;st.rerun()
-            if c.button('Delete',width='stretch',key='delete-active-project'):
+            if right.button('Delete',width='stretch',key='delete-active-project'):
                 st.session_state['_project-delete-target']=str(session.target);st.rerun()

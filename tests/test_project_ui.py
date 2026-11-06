@@ -129,3 +129,19 @@ def test_navigation_alone_does_not_mark_a_saved_project_dirty(session,tmp_path):
     assert not app.get('dialog')
     assert not any(s.label=='Analysis table' for s in app.selectbox)
     assert not app.exception
+
+
+def test_project_controls_are_compact_and_only_in_the_left_sidebar(session):
+    app=AppTest.from_file(APP).run(timeout=30)
+    sidebar_labels=[b.label for b in app.sidebar.button]
+    assert 'Save Project' in sidebar_labels and 'Discard Project' in sidebar_labels
+    assert len([b for b in app.button if b.label=='Save Project'])==1
+    assert len([b for b in app.button if b.label=='Discard Project'])==1
+    assert not app.exception
+
+
+def test_saved_project_actions_are_in_the_sidebar(session,tmp_path):
+    seed(session,tmp_path)
+    app=AppTest.from_file(APP).run(timeout=30);save(app,'Sidebar project')
+    assert {'Save Changes','Rename','Delete'}<=set(b.label for b in app.sidebar.button)
+    assert not app.exception

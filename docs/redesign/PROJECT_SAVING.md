@@ -3,6 +3,14 @@
 Follow-up on `codex/insightpilot-redesign`, based on
 `3f47317b7aa955a1468b4c71f23fd3b1e0850aff`.
 
+Latest layout correction: [sidebar controls and full home wheel](project-saving/sidebar-controls.png)
+and [saved-project sidebar actions](project-saving/sidebar-saved-controls.png).
+The original lifecycle screenshots below predate this placement correction.
+
+The correction passed 51 targeted tests and the complete Chromium lifecycle check,
+including all ten destinations, refresh, save/discard/cancel, reopening, and deletion.
+See [browser results](project-saving/sidebar-browser-verification.json).
+
 ## What the user controls
 
 | State / action | Behavior |
@@ -17,8 +25,10 @@ Follow-up on `codex/insightpilot-redesign`, based on
 | Leave changed/unsaved work | Offers **Save Project / Discard Project / Cancel** before switching projects |
 | Delete | Requires confirmation, removes that saved project from the catalog, and retains its private snapshot in recoverable Trash |
 
-A visible action bar on every project page shows **Save Project / Discard Project**
-for temporary projects, or **Save Changes / Rename / Delete** for saved projects.
+Compact controls in the **left sidebar beneath New Project** show
+**Save Project / Discard Project** for temporary projects, or
+**Save Changes / Rename / Delete** for saved projects. There is no top action panel;
+the home command wheel keeps its existing full size.
 It indicates **Not saved · Temporary session**, **Unsaved Changes**, or **All changes
 saved**. The homepage lists only explicitly saved snapshots and preserved legacy
 projects. Each card has a name, dataset names, last saved timestamp, Open and Delete.
