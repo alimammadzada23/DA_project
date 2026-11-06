@@ -48,13 +48,19 @@ def test_home_workflow_is_central_and_empty_state_leads_to_upload(tmp_path,monke
 def test_central_project_creation_preserves_the_original_workspace(tmp_path,monkeypatch):
     monkeypatch.chdir(tmp_path);monkeypatch.delenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',raising=False)
     root=tmp_path/'projects';monkeypatch.setenv('INSIGHTPILOT_WORKSPACE_ROOT',str(root))
-    app=AppTest.from_file(APP).run(timeout=30);original=catalog(root)[0].directory
+    from insightpilot.universal.projects import ProjectSession
+    app=AppTest.from_file(APP).run(timeout=30)
+    original=Path(app.session_state['universal-directory'])
+    assert catalog(root)==[]
+    widget(app,'button','New Project').click().run(timeout=30)
+    assert original.parent==Path(app.session_state['universal-directory']).parent
+    assert not catalog(root)
+    widget(app,'button','Save Project').click().run(timeout=30)
     widget(app,'text_input','Project name').set_value('Supplier review')
     widget(app,'text_input','Business purpose (optional)').set_value('Investigate observed delivery differences.')
-    widget(app,'button','Create analysis project').click().run(timeout=30)
-    assert not app.exception and app.radio(key='universal-page').value=='Data Hub'
-    assert original.exists() and len(catalog(root))==2
-    project=next(w for w in catalog(root) if metadata(w)['name']=='Supplier review')
+    widget(app,'button','Save Project').click().run(timeout=30)
+    assert not app.exception and len(catalog(root))==1
+    project=catalog(root)[0]
     assert not project.tables() and metadata(project)['purpose']=='Investigate observed delivery differences.'
     assert metadata(project)['description']==''
 
@@ -234,8 +240,10 @@ def test_explicit_date_basis_review_is_applied_once_without_repeated_configurati
     widget(app,'checkbox','I confirm these field definitions and row grain').check()
     widget(app,'button','Approve field definition').click().run(timeout=30)
     assert not app.exception and widget(app,'selectbox','Date basis').value=='observed'
-    assert workspace.info('facts')['semantics']['date_basis']=='observed'
-    assert workspace.info('facts')['roles']=={'observed':'date'}
+    working=Workspace(app.session_state['universal-directory'])
+    assert working.info('facts')['semantics']['date_basis']=='observed'
+    assert working.info('facts')['roles']=={'observed':'date'}
+    assert workspace.info('facts')['roles']!={'observed':'date'}
 
 
 def test_quality_preparation_and_undo_round_trip_in_the_actual_widgets(app_workspace):

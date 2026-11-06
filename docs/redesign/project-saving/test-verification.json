@@ -1,0 +1,18 @@
+{
+  "regression": {
+    "command": "python3 -m pytest -q",
+    "passed": 953,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 188.04
+  },
+  "focused_final_checks": {
+    "command": "python3 -m pytest tests/test_projects.py tests/test_project_ui.py -q",
+    "passed": 19,
+    "failed": 0,
+    "seconds": 8.08
+  },
+  "warning": "One third-party anyio/pytest deprecation warning per run. Focused tests are included in the full suite count; counts are not additive.",
+  "browser_lifecycle": "Passed on final implementation; native beforeunload observed.",
+  "baseline": "3f47317b7aa955a1468b4c71f23fd3b1e0850aff"
+}

@@ -43,7 +43,9 @@ def test_consumed_component_event_never_overrides_native_navigation(app_workspac
 
 def test_project_search_includes_independently_saved_business_purpose(app_workspace):
     from insightpilot.universal.workspace_labels import save_name
-    save_name(app_workspace,'Operations review','Dataset context',purpose='Understand delivery variation')
+    from insightpilot.universal.projects import ProjectSession
+    session=ProjectSession(app_workspace.directory.parent.parent,app_workspace.directory.name)
+    session.save('Operations review','Dataset context',purpose='Understand delivery variation')
     app=open_page('Workspace Home')
     field(app,'text_input','Find a project').set_value('delivery variation').run(timeout=30)
     assert not app.exception and not app.error

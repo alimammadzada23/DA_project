@@ -9,6 +9,10 @@ analytical pages and replaces the original home heading with **Data Analysis**.
 Its screenshots show the current navigation; the gallery below records the initial
 redesign.
 
+The [explicit project-saving follow-up](PROJECT_SAVING.md) now separates temporary
+work from Saved Projects. Only Save Project / Save Changes publishes a snapshot;
+older galleries below are historical.
+
 ## Run and verify
 
 From the repository root, with Python 3.11+ (validated here on Python 3.12):
@@ -18,10 +22,11 @@ python3 -m pip install -e '.[test,browser]'
 python3 -m streamlit run app.py
 ```
 
-The app opens the existing project catalog. A new install starts empty; validation
-fixtures are never injected into the user's project catalog. Create a named project,
-import data in Data Hub, review quality, select a metric and comparison field, explore,
-save findings, and collect them in Investigate and Reports. Business metrics still
+The app starts with a temporary project. Existing saved/legacy projects are listed
+for explicit opening. Validation fixtures are never injected into the user catalog.
+Import data, analyze and prepare reports freely; use Save Project to retain the
+project or Save Changes to commit later edits. See the saving guide for lifecycle
+and refresh behavior. Business metrics still
 require their normal semantic/units checks. Deterministic analysis requires no model.
 
 ```sh

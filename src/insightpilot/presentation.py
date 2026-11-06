@@ -18,7 +18,7 @@ p{line-height:1.6;}[data-testid="stCaptionContainer"]{color:var(--ip-muted);}
 [data-testid="stVerticalBlockBorderWrapper"]>div,[data-testid="stVerticalBlock"][style*="border"]{border-color:var(--ip-border)!important;border-radius:var(--ip-radius)!important;}
 [data-testid="stButton"] button,[data-testid="stDownloadButton"] button{min-height:42px;border:1px solid #314556;border-radius:9px;font-weight:550;transition:border-color .15s,background .15s;}
 [data-testid="stButton"] button:hover{border-color:#68d7c6;background:#163135;color:#bdf7e9;}
-button[kind="primary"],button[kind="primary"] p{color:#092822!important;}
+button[kind^="primary"],button[kind^="primary"] p{color:#092822!important;}
 button:focus-visible,[role="radio"]:focus-visible,input:focus-visible{outline:2px solid #8cf0db!important;outline-offset:3px;}
 [data-testid="stPlotlyChart"]{background:var(--ip-panel);border:1px solid var(--ip-border);border-radius:var(--ip-radius);padding:10px;}
 [data-testid="stDataFrame"]{border:1px solid var(--ip-border);border-radius:10px;}

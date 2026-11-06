@@ -93,19 +93,21 @@ def investigation_brief(engine,metric):
     selected=st.selectbox('Saved investigation',[None]+list(briefs),format_func=lambda x:'New investigation' if x is None else x.removeprefix('ux.investigation:'))
     current=briefs.get(selected,{})
     scope=tag+'-'+str(selected)
-    with st.form('ux-investigation-'+scope):
-        title=st.text_input('Investigation name',current.get('title',''),placeholder='Name the observed business problem')
-        question=st.text_area('Business question',current.get('question',''),placeholder='What changed, for whom, and over which scope?',max_chars=2000,height=90)
+    input_key='ux-investigation-input-'+tag+'-'+str(selected)+'-'
+    st.session_state['_project-investigation-editor']={'directory':str(workspace.directory),'prefix':input_key.replace(tag,'{project}',1),'kind':'investigation','analysis':configuration(engine,metric)}
+    with st.container(border=True,key='ux-investigation-'+scope):
+        title=st.text_input('Investigation name',current.get('title',''),key=input_key+'title',placeholder='Name the observed business problem')
+        question=st.text_area('Business question',current.get('question',''),key=input_key+'question',placeholder='What changed, for whom, and over which scope?',max_chars=2000,height=90)
         st.caption('Current measure: '+metric.name+' · '+metric.formula+'. The active dataset, filters and date meaning will be saved with this brief.')
         a,b=st.columns(2)
-        observations=a.text_area('Observed facts',current.get('observations',''),max_chars=5000,placeholder='Describe only what an executed result supports.')
-        associations=b.text_area('Observed associations',current.get('associations',''),max_chars=5000,placeholder='Variables that move together; these do not establish causality.')
-        hypotheses=a.text_area('Hypotheses to investigate',current.get('hypotheses',''),max_chars=5000,placeholder='Possible explanations and alternative interpretations.')
-        limitations=b.text_area('Uncertainties and limitations',current.get('limitations',''),max_chars=5000,placeholder='Coverage, missing definitions, measurement changes or confounders.')
-        actions=st.text_area('Possible actions and validation steps',current.get('actions',''),max_chars=5000,placeholder='What could be tested next, and what information would change the decision?')
+        observations=a.text_area('Observed facts',current.get('observations',''),key=input_key+'observations',max_chars=5000,placeholder='Describe only what an executed result supports.')
+        associations=b.text_area('Observed associations',current.get('associations',''),key=input_key+'associations',max_chars=5000,placeholder='Variables that move together; these do not establish causality.')
+        hypotheses=a.text_area('Hypotheses to investigate',current.get('hypotheses',''),key=input_key+'hypotheses',max_chars=5000,placeholder='Possible explanations and alternative interpretations.')
+        limitations=b.text_area('Uncertainties and limitations',current.get('limitations',''),key=input_key+'limitations',max_chars=5000,placeholder='Coverage, missing definitions, measurement changes or confounders.')
+        actions=st.text_area('Possible actions and validation steps',current.get('actions',''),key=input_key+'actions',max_chars=5000,placeholder='What could be tested next, and what information would change the decision?')
         blocks=workspace.saved_objects('block')
-        evidence=st.multiselect('Supporting saved findings',list(blocks),default=[name for name in current.get('evidence',[]) if name in blocks])
-        save=st.form_submit_button('Save investigation',type='primary')
+        evidence=st.multiselect('Supporting saved findings',list(blocks),default=[name for name in current.get('evidence',[]) if name in blocks],key=input_key+'evidence')
+        save=st.button('Save investigation',type='primary')
     if save:
         if not title.strip() or len(title)>80 or not question.strip():st.warning('Give the investigation a name (up to 80 characters) and a business question.')
         else:
@@ -131,6 +133,7 @@ def report_builder(engine,metric):
         if st.button('Explore and save a finding',type='primary'):navigate_to('Explore')
         return
     key='ux-report-'+tag+'-'+str(selected)
+    st.session_state['_project-report-editor']={'directory':str(workspace.directory),'prefix':key.replace(tag,'{project}',1)+'-','kind':'report','selected':selected}
     briefs={k:v for k,v in workspace.saved_objects('layout').items() if k.startswith('ux.investigation:')}
     if briefs:
         source=st.selectbox('Use a saved investigation',[None]+list(briefs),format_func=lambda x:'Choose investigation notes' if x is None else x.removeprefix('ux.investigation:'),key=key+'-brief')

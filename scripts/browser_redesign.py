@@ -3,6 +3,7 @@ import argparse
 from datetime import datetime,timezone
 import json
 from pathlib import Path
+from urllib.parse import urlparse,parse_qs
 import sys
 import pandas as pd
 from playwright.sync_api import sync_playwright, expect
@@ -10,6 +11,7 @@ from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from insightpilot.universal.workspace_labels import catalog,metadata
+from insightpilot.universal.store import Workspace
 from browser_bi_workflow import server,ready,screenshot
 from browser_unified import select
 
@@ -78,6 +80,7 @@ def run(output):
         browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
         page=browser.new_page(viewport={'width':1440,'height':900})
         page.on('pageerror',lambda e:errors.append(str(e)))
+        page.on('dialog',lambda d:d.accept())
         page.goto(url);ready(page)
         expect(hub(page).locator('.sector')).to_have_count(10)
         expect(page.get_by_role('heading',name='Data Analysis',exact=True)).to_be_visible()
@@ -93,14 +96,17 @@ def run(output):
         expect(page.get_by_role('heading',name='Your data, in one place.',exact=True)).to_be_visible()
         events.append('Keyboard arrow movement and Enter changed destination')
         navigate(page,'Workspace Home')
-        page.get_by_role('textbox',name='Project name',exact=True).fill('Synthetic operations review')
-        page.get_by_role('textbox',name='Business purpose (optional)',exact=True).fill('Interface verification with synthetic data; no real business conclusions.')
-        page.get_by_role('textbox',name='Project description (optional)',exact=True).fill('Isolated browser acceptance project.')
-        page.get_by_role('button',name='Create analysis project',exact=True).click();ready(page)
+        page.get_by_role('button',name='Save Project',exact=True).click();ready(page)
+        dialog=page.get_by_role('dialog')
+        dialog.get_by_role('textbox',name='Project name',exact=True).fill('Synthetic operations review')
+        dialog.get_by_role('textbox',name='Business purpose (optional)',exact=True).fill('Interface verification with synthetic data; no real business conclusions.')
+        dialog.get_by_role('textbox',name='Project description (optional)',exact=True).fill('Isolated browser acceptance project.')
+        dialog.get_by_role('button',name='Save Project',exact=True).click();ready(page)
+        navigate(page,'Data Hub')
         page.locator('[data-testid=stFileUploader] input[type=file]').first.set_input_files(str(source));ready(page)
         page.get_by_role('button',name='Import tables',exact=True).click();ready(page)
         expect(page.get_by_role('heading',name='Just imported · '+source.name,exact=True)).to_be_visible(timeout=30000)
-        workspace=next(w for w in catalog(output/'projects') if metadata(w)['name']=='Synthetic operations review')
+        workspace=Workspace(output/'projects'/'.sessions'/parse_qs(urlparse(page.url).query)['project_session'][0])
         table=next(iter(workspace.tables()))
         original=workspace.info(table)
         assert original['rows']==160
@@ -207,10 +213,12 @@ def run(output):
         expect(page.get_by_role('combobox',name='Analysis table',exact=True)).to_have_value(labels['secondary'])
         navigate(page,'Explore');select(page,'Analysis table',labels[table])
         assert 'Persistent navigation selection' in workspace.saved_objects('view')
+        page.get_by_role('button',name='Save Changes',exact=True).click();ready(page)
         second=create_named(output/'projects','Second navigation project')
         navigate(page,'Workspace Home');select(page,'Active project','Second navigation project')
         navigate(page,'Data Hub');expect(page.locator('.st-key-command-dock')).to_be_visible()
         select(page,'Active project','Synthetic operations review');navigate(page,'Reports')
+        workspace=Workspace(output/'projects'/'.sessions'/parse_qs(urlparse(page.url).query)['project_session'][0])
         select(page,'Saved report draft','Synthetic acceptance report')
         expect(page.get_by_role('textbox',name='Business report title',exact=True)).to_have_value('Synthetic acceptance report')
         page.reload();ready(page)

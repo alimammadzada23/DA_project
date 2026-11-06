@@ -23,8 +23,12 @@ def app_workspace(tmp_path,monkeypatch):
     w.add_file(p,'orders',provenance={'origin':'synthetic'})
     w.approve_semantics('orders',{'order_id':'identifier','date':'date','amount':'measure','quantity':'quantity','region':'category','customer':'customer','description':'text'},'One synthetic order',date_purposes={'date':'order observation'},date_basis='date')
     save_metric(w,'orders',Metric('Total amount','sum("amount")','Sum of uploaded amount','user units'))
-    monkeypatch.setenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',str(w.directory))
-    return w
+    from insightpilot.universal.projects import ProjectSession
+    root=tmp_path/'project-catalog'
+    session=ProjectSession.start(root,w.directory)
+    monkeypatch.setenv('INSIGHTPILOT_WORKSPACE_ROOT',str(root))
+    monkeypatch.setenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',str(session.directory))
+    return session.workspace
 
 
 def open_page(page):
@@ -146,7 +150,7 @@ def test_reviewed_metric_and_explicit_date_intent_survive_new_browser_session(ap
     next(s for s in app.selectbox if s.label=='Comparison field').select('region').run(timeout=30)
     next(s for s in app.selectbox if s.label=='Calendar grain').select('day').run(timeout=30)
     fresh=AppTest.from_file(APP).run(timeout=30)
-    assert fresh.radio(key='universal-page').value=='Workspace Home'
+    assert fresh.radio(key='universal-page').value=='Overview'
     fresh.radio(key='universal-page').set_value('Overview').run(timeout=30)
     assert not fresh.exception and not fresh.error
     assert next(s for s in fresh.selectbox if s.label=='Comparison field').value=='region'

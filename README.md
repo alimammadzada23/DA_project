@@ -9,6 +9,7 @@ The application now has one catalog and navigation. The former procurement,
 complaint and mapped-upload front doors are retired. Existing databases, sources,
 reports and backend/CLI compatibility remain intact.
 
+[Explicit project saving, deletion, and refresh recovery](docs/redesign/PROJECT_SAVING.md) ·
 [Command hub redesign, validation, and screenshots](docs/redesign/README.md) ·
 [Local AI acceptance](docs/LOCAL_AI_ACCEPTANCE.md) ·
 [BI workflow upgrade, screenshots and Mac walkthrough](docs/BI_WORKFLOW_UPGRADE.md) ·
@@ -64,8 +65,10 @@ synthetic diagnostics and independent DuckDB references. See the
 
 ## First minute
 
-1. **Workspace Home:** create or open a named project and define its purpose.
-   Upload data, continue a recent analysis or reopen saved reports from the main area.
+1. **Workspace Home:** start an empty temporary project or explicitly open a saved
+   one. Upload and analyze without saving. Use **Save Project** to name and retain
+   it, **Save Changes** to update a saved project, or **Discard Project** to leave
+   temporary work behind. Saved-project cards have Open and confirmed Delete actions.
 2. **Data Hub:** import a CSV/TSV/XLSX/Parquet/JSON/JSONL file or read-only database
    snapshot. Original source bytes, SHA-256, row count and versions are retained.
    Inspect the automatic library preview and choose the next workflow action.

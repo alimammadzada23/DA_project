@@ -489,14 +489,18 @@ def _main():
     if pending:
         st.session_state['universal-page']=pending['page']
         for key,value in pending.get('presets',{}).items(): st.session_state[key]=value
-    from .ui_workspaces import choose_workspace
+    from .ui_workspaces import choose_workspace,project_actions
     from .workspace_labels import table_labels
     workspace=choose_workspace();directory=workspace.directory
+    actions=st.container()
     names=list(workspace.tables())
     page=navigation(workspace)
-    if page=='Workspace Home' and not names:home(workspace);return
-    if page=='Data Hub' and not names: data_hub(workspace); return
-    if not names: st.info('Import a dataset in Data Hub to begin. Your source files and original versions are retained.'); return
+    if not names:
+        with actions:project_actions(workspace)
+        if page=='Workspace Home':home(workspace)
+        elif page=='Data Hub':data_hub(workspace)
+        else:st.info('Import a dataset in Data Hub to begin. This temporary project has no active dataset.')
+        return
     tag=hashlib.sha256(str(workspace.directory).encode()).hexdigest()[:8]
     labels=table_labels(workspace)
     requested=st.session_state.pop('ux-pending-table',None)
@@ -566,6 +570,7 @@ def _main():
     description=f'{table} · {engine.count():,} selected / {info["rows"]:,} rows · {metric.name} ({metric.units})'
     st.session_state['analysis-caption']=description+' · date: '+str(date_basis)+' · filters: '+(repr([(f.column,f.operator,f.value) for f in filters]) if filters else 'all rows')
     st.session_state['_active-analysis']=(engine,metric)
+    with actions:project_actions(workspace)
     with st.sidebar.expander('Save this analysis'):
         name=st.text_input('View name',key='view-name-'+state)
         if st.button('Save view and layout'):
@@ -607,7 +612,13 @@ def _main():
 
 
 def main():
-    try: _main()
+    try:
+        _main()
+        if '_project-token' in st.session_state:
+            from .ui_workspaces import active_session,current_ui
+            st.session_state['_project-widget-page']=st.session_state.get('universal-page')
+            session=active_session()
+            session.observe(current_ui(session.workspace))
     except ValueError as exc: st.warning(str(exc))
     except httpx.HTTPError as exc:
         status=f'HTTP {exc.response.status_code}' if isinstance(exc,httpx.HTTPStatusError) else type(exc).__name__

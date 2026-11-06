@@ -264,9 +264,10 @@ def test_bulk_review_prefills_safe_suggestions_and_requires_explicit_confirmatio
     app.radio(key='universal-page').set_value('Quality & Preparation').run(timeout=30)
     assert not app.exception and not app.error
     after_open=workspace.info('facts')
-    # The existing sidebar persists its default selection on first launch.
-    assert after_open==before|{'analysis_defaults':after_open['analysis_defaults']}
-    before=after_open
+    # Initial controls only affect the temporary working copy, not the original.
+    assert after_open==before
+    workspace=Workspace(app.session_state['universal-directory'])
+    before=workspace.info('facts')
     editor=next(frame.value for frame in app.dataframe if 'role' in frame.value.columns)
     roles=dict(zip(editor.column,editor.role))
     assert roles['age']=='measure' and roles['job']=='category'

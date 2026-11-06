@@ -2,9 +2,6 @@
 from datetime import datetime, timezone
 from html import escape
 import hashlib
-import json
-import os
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -12,7 +9,7 @@ import streamlit as st
 from .engine import Engine, frame_of
 from .profile import numeric_status
 from .store import Workspace
-from .workspace_labels import catalog, create_named, metadata, table_labels
+from .workspace_labels import catalog, metadata
 
 PRIMARY = ['Workspace Home','Data Hub','Quality & Preparation','Explore','Investigate','Reports']
 TOOLS = ['Overview','AI Analyst','SQL Lab','Advanced']
@@ -104,71 +101,34 @@ def project_summary(workspace):
 
 
 def home(workspace):
-    configured=bool(os.environ.get('INSIGHTPILOT_UNIVERSAL_WORKSPACE'))
-    root=Path(os.environ.get('INSIGHTPILOT_WORKSPACE_ROOT','data/universal')).resolve()
-    peers=[workspace] if configured else catalog(root)
-    recent=workspace if workspace.tables() else next((p for p in sorted(peers,key=lambda p:(p.directory/'workspace.duckdb').stat().st_mtime,reverse=True) if p.tables()),None)
-    st.markdown('<div class="eyebrow">MAKE YOUR NEXT MOVE</div>',unsafe_allow_html=True)
-    actions=[('01 / CONNECT','Bring your data','CSV, Excel, Parquet, JSON, and supported connectors.','Upload dataset','Data Hub'),
-             ('02 / DISCOVER','Follow your curiosity','Compare groups, distributions, and trends.','Continue recent analysis','Explore'),
-             ('03 / INVESTIGATE','Understand a change','Build a question around reproducible evidence.','Investigate a problem','Investigate'),
-             ('04 / COMMUNICATE','Tell the whole story','Turn saved findings into a defensible report.','View saved reports','Reports')]
-    for col,(number,title,copy,button,target) in zip(st.columns(4),actions):
-        with col.container(border=True):
-            st.markdown('<div class="ip-card-number">'+number+'</div><div class="ip-card-title">'+title+'</div><div class="ip-card-copy">'+copy+'</div>',unsafe_allow_html=True)
-            if st.button(button,width='stretch',type='primary' if target=='Data Hub' else 'secondary'):
-                if target=='Explore' and recent:
-                    st.session_state['universal-directory']=str(recent.directory)
-                    st.session_state['workspace-selector-pending']=str(recent.directory)
-                go(target if workspace.tables() or target in ('Data Hub','Explore') else 'Data Hub')
-    item=metadata(workspace)
-    if item['status']=='unnamed' and workspace.tables():
-        with st.expander('Give this project a name',expanded=True):
-            with st.form('name-existing-project'):
-                title=st.text_input('Project display name',placeholder='e.g. Retail revenue investigation')
-                purpose=st.text_input('Project objective',max_chars=240)
-                if st.form_submit_button('Save project name',type='primary'):
-                    from .workspace_labels import save_name
-                    try:save_name(workspace,title,purpose,peers=peers);st.rerun()
-                    except ValueError as exc:st.warning(str(exc))
-    with st.expander('Create new analysis project',expanded=st.session_state.pop('ux-create-expanded',False) or (not any(p.tables() for p in peers) and not configured)):
-        if configured:st.caption('This session is bound to an existing workspace. Its datasets and saved work remain in place.')
-        else:
-            with st.form('ux-create-project'):
-                name=st.text_input('Project name',placeholder='Give this investigation a recognizable name')
-                purpose=st.text_input('Business purpose (optional)',max_chars=240,placeholder='The question you want to understand')
-                description=st.text_input('Project description (optional)',max_chars=240,placeholder='Background, scope, or intended audience')
-                create=st.form_submit_button('Create analysis project',type='primary')
-            if create:
-                try:
-                    created=create_named(root,name,description,purpose=purpose)
-                    st.session_state['universal-directory']=str(created.directory)
-                    st.session_state['workspace-selector-pending']=str(created.directory)
-                    go('Data Hub')
-                except ValueError as exc:st.warning(str(exc))
-    st.subheader('Your project collection')
-    query=st.text_input('Find a project',placeholder='Search by name or purpose')
+    from .ui_workspaces import request_transition,root_directory
+    from .projects import saved_info
+    root=root_directory();peers=catalog(root)
+    st.markdown('<div class="eyebrow">YOUR CURRENT SESSION</div>',unsafe_allow_html=True)
+    a,b,c,d=st.columns(4)
+    if a.button('Upload dataset',type='primary',width='stretch'):go('Data Hub')
+    if b.button('Continue recent analysis',width='stretch'):go('Explore' if workspace.tables() else 'Data Hub')
+    if c.button('Investigate a problem',width='stretch'):go('Investigate' if workspace.tables() else 'Data Hub')
+    if d.button('View saved reports',width='stretch'):go('Reports')
+    st.caption('Analyses and report drafts remain in this temporary working session. Save Project or Save Changes is the only way to update Saved Projects.')
+    if st.button('New Project',width='stretch'):request_transition('new')
+    st.subheader('Saved Projects')
+    query=st.text_input('Find a project',placeholder='Search saved names or purposes')
     visible=[p for p in peers if query.casefold() in (metadata(p)['name']+' '+metadata(p)['description']+' '+metadata(p).get('purpose','')).casefold()]
-    if not visible:st.info('No project matches that search. Create a project or clear the search.')
-    # Bounded cards; the selector still exposes every workspace.
-    if len(visible)>12:st.caption('Showing the first 12 matching projects. Narrow the search or use the workspace selector for others.')
+    if not visible:st.info('No saved projects match. Start with an empty project, upload data, and click Save Project when you want to keep it.')
+    if len(visible)>12:st.caption('Showing the first 12 matches. Search to find another saved project.')
     columns=st.columns(2)
     for index,peer in enumerate(visible[:12]):
-        info=metadata(peer);summary=project_summary(peer);tag=info['id']
+        info=metadata(peer);summary=project_summary(peer);tag=info['id'];record=saved_info(peer)
         with columns[index%2].container(border=True,key='ux-project-'+tag):
-            st.text(info['name'] if info['status']=='named' else 'Project awaiting a name');st.caption(info.get('purpose') or info['description'] or 'Add the business purpose in Project settings when you are ready.')
-            st.write(f'{len(summary["tables"]):,} datasets · {summary["blocks"]:,} saved evidence · {summary["reports"]:,} report drafts')
-            st.caption('Stage: '+summary['stage']+' · Activity: '+summary['activity'])
-            st.text('Datasets: '+(', '.join(t.get('display_name') or t['source'].get('filename',name) for name,t in summary['tables'].items()) or 'No data imported yet'))
+            st.text(info['name'] if info['status']=='named' else 'Legacy unnamed project')
+            st.caption(info.get('purpose') or info['description'] or 'Preserved existing project')
+            st.text('Dataset: '+(', '.join(t.get('display_name') or t['source'].get('filename',name) for name,t in summary['tables'].items()) or 'No dataset'))
+            st.caption('Last saved: '+(record['last_saved'] or 'unknown · preserved legacy project'))
             left,right=st.columns(2)
-            if left.button('Open project',key='ux-open-'+tag,width='stretch'):
-                st.session_state['universal-directory']=str(peer.directory)
-                st.session_state['workspace-selector-pending']=str(peer.directory)
-                go('Data Hub' if not summary['tables'] else 'Explore')
-            if right.button('Saved work',key='ux-saved-'+tag,width='stretch'):
-                st.session_state['universal-directory']=str(peer.directory)
-                st.session_state['workspace-selector-pending']=str(peer.directory)
-                go('Reports')
+            if left.button('Open',key='ux-open-'+tag,width='stretch'):request_transition('open',peer.directory)
+            if right.button('Delete',key='project-delete-'+tag,width='stretch'):
+                st.session_state['_project-delete-target']=str(peer.directory);st.rerun()
     st.subheader('Recent work')
     objects=[]
     for kind,category in [('view','Analysis'),('block','Evidence'),('layout','Document')]:

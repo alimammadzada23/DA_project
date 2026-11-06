@@ -20,8 +20,12 @@ def ai_workspace(tmp_path,monkeypatch):
     w.add_file(p,'facts',provenance={'origin':'synthetic'})
     w.approve_semantics('facts',{'group':'category','value':'measure','outcome':'status'},'One synthetic observation',units={'value':'units'})
     save_name(w,'Research workspace')
-    monkeypatch.setenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',str(w.directory))
-    return w
+    from insightpilot.universal.projects import ProjectSession
+    root=tmp_path/'project-catalog'
+    session=ProjectSession.start(root,w.directory)
+    monkeypatch.setenv('INSIGHTPILOT_WORKSPACE_ROOT',str(root))
+    monkeypatch.setenv('INSIGHTPILOT_UNIVERSAL_WORKSPACE',str(session.directory))
+    return session.workspace
 
 
 def open_analyst():
@@ -104,7 +108,8 @@ def test_filter_and_dataset_changes_do_not_reuse_answers(ai_workspace,monkeypatc
 def test_workspace_display_rename_does_not_invalidate_existing_analyst(ai_workspace):
     a=open_analyst();ask(a,'How many records?')
     before=a.session_state['analyst-conversation'].signature
-    field(a,'text_input','Project display name').set_value('Renamed research')
-    field(a,'button','Save project name').click().run(timeout=30)
+    field(a,'button','Save Project').click().run(timeout=30)
+    field(a,'text_input','Project name').set_value('Renamed research')
+    field(a,'button','Save Project').click().run(timeout=30)
     assert not a.exception and a.session_state['analyst-conversation'].signature==before
     assert len(a.session_state['analyst-conversation'].entries)==1
