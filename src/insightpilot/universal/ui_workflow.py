@@ -39,7 +39,7 @@ def go(page, *, table=None, presets=None):
 
 
 PAGE_COPY = {
-    'Workspace Home': ('YOUR ANALYTICAL COMMAND CENTER', 'Good questions. Clear evidence.', 'Turn complexity into understanding. Bring your data, follow the evidence, and make your next decision with confidence.'),
+    'Workspace Home': ('YOUR ANALYTICAL COMMAND CENTER', 'Data Analysis', 'Turn complexity into understanding. Bring your data, follow the evidence, and make your next decision with confidence.'),
     'Data Hub': ('01 / CONNECT', 'Your data, in one place.', 'Import sources, inspect their structure, and keep every original intact.'),
     'Quality & Preparation': ('02 / PREPARE', 'Build on trusted foundations.', 'Review data quality, define field meaning, and prepare reversible versions.'),
     'Explore': ('03 / DISCOVER', 'Find the signal.', 'Compare segments, explore relationships, and save the evidence that matters.'),
@@ -76,27 +76,20 @@ def navigation(workspace):
             '<span class="ip-tag">'+escape(badge)+'</span><div class="eyebrow" style="margin-top:22px">'+eyebrow+'</div>'
             '<h1>'+escape(title)+'</h1><div class="objective">'+escape(item.get('purpose') or item['description'] or copy)+'</div>'+stats+'</div>',unsafe_allow_html=True)
         if info and active=='Workspace Home':st.caption('ACTIVE DATASET · '+info.get('display_name',info['source'].get('filename','Dataset'))+' · '+f'{info["rows"]:,} rows / {len(info["columns"])} fields')
+    expanded=st.session_state.get('_hub-expanded',False)
     with st.container(key='command-header'):
         if active=='Workspace Home':
             left,right=st.columns([1.5,1],gap='large',vertical_alignment='center')
             with left:hero()
             with right:
-                with st.container(key='command-wheel'):wheel(active,PAGES)
-            with st.expander('All destinations · keyboard navigation'):
-                alternative()
+                with st.container(key='command-wheel-expanded' if expanded else 'command-wheel'):
+                    wheel(active,PAGES,presentation='home')
         else:
             hero()
-            with st.expander('Command hub · all destinations'):
-                left,right=st.columns([1,1.7],vertical_alignment='center')
-                with left:wheel(active,PAGES)
-                with right:
-                    st.caption('SIX WORKFLOW STAGES / FOUR SUPPORTING TOOLS')
-                    alternative()
-                    st.caption('Choose a destination. Your dataset, selected metric and filters stay active.')
-    # On narrow screens the wheel is replaced with full-size native navigation.
-    with st.container(key='hub-mobile'):
-        chosen=st.selectbox('Navigate to',PAGES,index=PAGES.index(active),key='mobile-route-'+active)
-        if chosen!=active:go(chosen)
+            with st.container(key='command-dock-expanded' if expanded else 'command-dock'):
+                wheel(active,PAGES,presentation='dock')
+        with st.expander('Accessible navigation'):
+            alternative()
     return st.session_state['universal-page']
 
 

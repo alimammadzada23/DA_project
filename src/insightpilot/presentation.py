@@ -31,8 +31,26 @@ button:focus-visible,[role="radio"]:focus-visible,input:focus-visible{outline:2p
 .st-key-command-header{border-bottom:1px solid var(--ip-border);padding-bottom:12px;margin-bottom:12px;}
 .ip-card-number{font-size:10px;letter-spacing:.15em;color:#71919d;margin:0 0 12px;}.ip-card-title{font-size:17px;font-weight:600;margin:0 0 8px;color:#dcebf3;}.ip-card-copy{color:#92aabc;font-size:12px;min-height:40px;line-height:1.6;}.ip-empty{padding:26px;border:1px dashed #36525d;border-radius:14px;background:#0c1c29;}.ip-empty h3{color:#dcebf3;margin:0 0 8px;}.ip-empty p{font-size:13px;color:#94aabb;}
 [data-testid="stAppDeployButton"]{display:none;}
-@media(min-width:901px){.st-key-hub-mobile{display:none;}}
+
 @media(max-width:1100px){.block-container{padding-left:1.4rem;padding-right:1.4rem;}h1{font-size:2rem!important;}.ip-statline{gap:20px;}}
-@media(max-width:900px){[data-testid="stMain"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap;gap:1rem;}[data-testid="stMain"] [data-testid="stColumn"]{min-width:min(100%,260px)!important;flex:1 1 260px!important;}.st-key-command-wheel{display:none;}.st-key-command-header [data-testid="stHorizontalBlock"]{flex-direction:column;}.st-key-command-header [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}.st-key-command-header [data-testid="stColumn"]:has(.st-key-command-wheel){display:none;}.block-container{padding:1rem 1rem 3rem;}.ip-hero{padding-top:4px;}.st-key-workflow-nav [role="radiogroup"]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:900px){[data-testid="stMain"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap;gap:1rem;}[data-testid="stMain"] [data-testid="stColumn"]{min-width:min(100%,260px)!important;flex:1 1 260px!important;}.st-key-command-header [data-testid="stHorizontalBlock"]{flex-direction:column;}.st-key-command-header [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}.block-container{padding:1rem 1rem 3rem;}.ip-hero{padding-top:4px;}.st-key-workflow-nav [role="radiogroup"]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* The desktop rail is reserved in the content width, never placed over charts. */
+.st-key-command-dock,.st-key-command-dock-expanded{position:fixed;right:18px;top:76px;width:232px;z-index:20;background:#0c1b29;border:1px solid #2d4654;border-radius:18px;padding:8px;box-shadow:0 12px 36px #0003;}
+.st-key-command-dock-expanded{width:388px;}
+[data-testid="stMain"]:has(.st-key-command-dock) .block-container{padding-right:276px;}
+[data-testid="stMain"]:has(.st-key-command-dock-expanded) .block-container{padding-right:432px;}
+@media(max-width:1100px){
+.st-key-command-header [data-testid="stHorizontalBlock"]{flex-direction:column;}
+.st-key-command-header [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}
+[data-testid="stSidebar"]{max-height:calc(100dvh - 88px);}
+[data-testid="stAppViewContainer"]:has(.st-key-command-dock-expanded) [data-testid="stSidebar"],[data-testid="stAppViewContainer"]:has(.st-key-command-wheel-expanded) [data-testid="stSidebar"]{max-height:calc(100dvh - 442px);}
+.st-key-command-dock,.st-key-command-dock-expanded,.st-key-command-wheel,.st-key-command-wheel-expanded{position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;z-index:30;background:#0c1b29;border:1px solid #2d4654;border-radius:14px 14px 0 0;padding:0;height:84px;overflow:hidden;box-shadow:0 -8px 24px #0003;}
+.st-key-command-dock-expanded,.st-key-command-wheel-expanded{height:438px;overflow:auto;}
+[data-testid="stMain"]:has(.st-key-command-dock),[data-testid="stMain"]:has(.st-key-command-wheel){max-height:calc(100dvh - 88px);}
+[data-testid="stMain"]:has(.st-key-command-dock-expanded),[data-testid="stMain"]:has(.st-key-command-wheel-expanded){max-height:calc(100dvh - 442px);}
+[data-testid="stMain"]:has(.st-key-command-dock) .block-container,[data-testid="stMain"]:has(.st-key-command-dock-expanded) .block-container{padding-right:1.4rem;}
+.st-key-command-header [data-testid="stColumn"]:has(.st-key-command-wheel),.st-key-command-header [data-testid="stColumn"]:has(.st-key-command-wheel-expanded){min-height:0;}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>'''

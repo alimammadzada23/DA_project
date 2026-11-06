@@ -1,0 +1,10 @@
+{
+  "command": "python3 -m pytest -q",
+  "passed": 934,
+  "failed": 0,
+  "skipped": 0,
+  "seconds": 178.5,
+  "warnings": 1,
+  "warning_note": "Third-party anyio/pytest deprecation",
+  "baseline_commit": "f126cd0322bdcb528fb448281783bfefbdf12301"
+}

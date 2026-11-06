@@ -4,6 +4,11 @@ Implemented locally from `codex/insightpilot-local-ai` at
 `6824394c5233a41ea56f4beec2dc77a3c96f8436`, on `codex/insightpilot-redesign`.
 No push, merge, deployment, model replacement, or user-data migration was performed.
 
+The [persistent-wheel follow-up](PERSISTENT_WHEEL.md) keeps the wheel visible on
+analytical pages and replaces the original home heading with **Data Analysis**.
+Its screenshots show the current navigation; the gallery below records the initial
+redesign.
+
 ## Run and verify
 
 From the repository root, with Python 3.11+ (validated here on Python 3.12):
@@ -40,9 +45,10 @@ projects. Browser results and original screenshots are retained in
 - Primary workflow stages use turquoise icons; supporting tools use lavender icons.
   Hover, selected, and keyboard-focus states are distinct. Arrow keys, Home/End,
   Enter and Space are supported; the center identifies InsightPilot.
-- The wheel occupies the home hero. Other pages keep it in a collapsible command
-  panel to preserve room for analysis. Native radio navigation remains available;
-  a full-size native route selector appears at narrow widths. Reduced-motion
+- The full wheel occupies the desktop home hero. Other desktop pages have a
+  persistent compact wheel in a reserved side rail, with immediate expansion.
+  Smaller screens use a one-tap wheel dock with reserved viewport space.
+  Native radio navigation remains available as an accessible alternative. Reduced-motion
   preferences are respected.
 - Shared navy, turquoise, typography, spacing, border, surface, focus, table,
   chart, and button styling replaces the previous button-grid appearance. The
@@ -156,7 +162,8 @@ All screenshot data is generated software-validation data, not business evidence
 The wheel is an iframe component; routing causes the normal Streamlit rerun.
 Analytical state lives in Python rather than in the iframe. Complex forms, tables,
 filters, and editors remain native Streamlit controls with shared styling. The
-non-home wheel is collapsible to avoid imposing its height on every analysis. UI
+non-home wheel is compact by default and stays visible during scrolling; expansion
+reserves additional content space instead of covering analytical controls. UI
 styling targets documented test IDs and some native DOM structures; rerun browser
 acceptance after Streamlit upgrades.
 

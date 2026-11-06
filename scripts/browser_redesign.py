@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from insightpilot.universal.workspace_labels import catalog,metadata
-from browser_bi_workflow import server,ready,screenshot,multi
+from browser_bi_workflow import server,ready,screenshot
 from browser_unified import select
 
 PAGES=['Workspace Home','Data Hub','Quality & Preparation','Explore','Investigate','Reports','Overview','AI Analyst','SQL Lab','Advanced']
@@ -21,11 +21,39 @@ def hub(page):
 
 
 def open_hub(page):
-    expander=page.get_by_text('Command hub · all destinations',exact=True)
-    if expander.count() and not expander.evaluate("e=>e.closest('details').open"):
-        expander.click();ready(page)
-    expect(page.locator('iframe[title="insightpilot.universal.command_navigation.insightpilot_command_hub"]')).to_be_visible()
+    frame=page.locator('iframe[title="insightpilot.universal.command_navigation.insightpilot_command_hub"]')
+    expect(frame).to_be_visible()
+    opener=hub(page).get_by_role('button',name='Open command wheel',exact=True)
+    if opener.is_visible():opener.click();ready(page)
     expect(hub(page).get_by_role('button',name='Explore',exact=True)).to_be_visible()
+
+
+def unobscured(page):
+    collisions=page.evaluate("""() => {
+      const dock=document.querySelector('.st-key-command-dock,.st-key-command-dock-expanded,.st-key-command-wheel,.st-key-command-wheel-expanded');
+      if(!dock || getComputedStyle(dock).position!=='fixed')return [];
+      const d=dock.getBoundingClientRect();
+      return Array.from(document.querySelectorAll('[data-testid=stPlotlyChart],[data-testid=stDataFrame],[data-testid=stFileUploader],[data-testid=stTextInput],[data-testid=stSelectbox]')).filter(e=>!dock.contains(e)).flatMap(e=>{
+        const clip=e.closest('[data-testid=stSidebar]') || e.closest('[data-testid=stMain]');if(!clip)return [];
+        const r=e.getBoundingClientRect(),c=clip.getBoundingClientRect();
+        const l=Math.max(0,r.left,c.left),t=Math.max(0,r.top,c.top),rr=Math.min(innerWidth,r.right,c.right),bb=Math.min(innerHeight,r.bottom,c.bottom);
+        return rr>l && bb>t && Math.min(rr,d.right)-Math.max(l,d.left)>1 && Math.min(bb,d.bottom)-Math.max(t,d.top)>1 ? [e.dataset.testid] : [];
+      });
+    }""")
+    assert not collisions,{'navigation_overlaps_visible_controls':collisions}
+
+
+def multi(page,label,names):
+    # Every selection can trigger a Streamlit rerun; wait before opening again.
+    import re
+    for name in names:
+        ready(page)
+        box=page.get_by_role('combobox',name=label,exact=True)
+        box.click();box.fill(name)
+        if box.get_attribute('aria-expanded')!='true':box.press('ArrowDown')
+        option=page.get_by_role('option').filter(has_text=re.compile('^'+re.escape(name)+'$')).first
+        expect(option).to_be_visible(timeout=10000);option.click();ready(page)
+    page.get_by_role('combobox',name=label,exact=True).press('Escape');ready(page)
 
 
 def navigate(page,destination):
@@ -51,10 +79,13 @@ def run(output):
         page=browser.new_page(viewport={'width':1440,'height':900})
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(url);ready(page)
-        expect(hub(page).get_by_role('button')).to_have_count(10)
+        expect(hub(page).locator('.sector')).to_have_count(10)
+        expect(page.get_by_role('heading',name='Data Analysis',exact=True)).to_be_visible()
+        expect(page.get_by_role('heading',name='Good questions. Clear evidence.',exact=True)).to_have_count(0)
+        assert 'Choose a destination' not in hub(page).locator('body').inner_text()
         screenshot(page,output,'01-home-empty-1440')
         hub(page).get_by_role('button',name='Explore',exact=True).hover()
-        expect(hub(page).locator('#hint')).to_contain_text('Explore')
+        expect(hub(page).locator('#destination')).to_contain_text('Explore')
         screenshot(page,output,'02-wheel-hover')
         # Actual keyboard activation, not JS-dispatched clicks.
         hub(page).get_by_role('button',name='Workspace Home',exact=True).focus()
@@ -80,10 +111,16 @@ def run(output):
             navigate(page,destination)
             open_hub(page)
             expect(hub(page).get_by_role('button',name=destination,exact=True)).to_have_attribute('aria-pressed','true')
+            unobscured(page)
+            if destination!='Workspace Home':expect(page.locator('.st-key-command-dock')).to_be_visible()
             if destination=='Explore':screenshot(page,output,'02b-wheel-active')
         events.append('All ten actual wheel sectors route successfully and show active state')
         navigate(page,'Workspace Home');screenshot(page,output,'04-project-home')
         navigate(page,'Quality & Preparation');screenshot(page,output,'05-quality')
+        hub(page).get_by_role('button',name='Expand command wheel',exact=True).click();ready(page)
+        expect(hub(page).locator('body.expanded')).to_be_visible()
+        unobscured(page);screenshot(page,output,'05b-expanded-quality')
+        hub(page).get_by_role('button',name='Collapse command wheel',exact=True).click();ready(page)
         expect(page.get_by_test_id('stPlotlyChart').first).to_be_visible()
         navigate(page,'Explore');select(page,'Comparison field','region')
         select(page,'Group by','region')
@@ -94,6 +131,9 @@ def run(output):
         page.get_by_role('button',name='Save chart to report',exact=True).click();ready(page)
         page.get_by_role('button',name='Save table to report',exact=True).click();ready(page)
         screenshot(page,output,'06-explore',target=page.get_by_test_id('stPlotlyChart').first)
+        unobscured(page)
+        expect(page.locator('.st-key-command-dock')).to_be_in_viewport()
+        events.append('Persistent dock remains visible while scrolling analytical charts and never intersects visible chart/table/form controls')
         select(page,'What would you like to understand?','Composition & Pareto')
         select(page,'Concentration grouping field','region')
         expect(page.get_by_text('Groups to reach 80%',exact=True)).to_be_visible()
@@ -108,6 +148,10 @@ def run(output):
         # A shared filter survives wheel navigation.
         page.get_by_role('button',name='Adjust filters',exact=True).click();ready(page)
         select(page,'Category filter 1','region');select(page,'Value 1','North')
+        save_expander=page.get_by_text('Save this analysis',exact=True)
+        if not save_expander.evaluate("e=>e.closest('details').open"):save_expander.click();ready(page)
+        page.get_by_role('textbox',name='View name',exact=True).fill('Persistent navigation selection')
+        page.get_by_role('button',name='Save view and layout',exact=True).click();ready(page)
         navigate(page,'Investigate')
         expect(page.locator('.st-key-active-scope')).to_contain_text('80 selected / 160')
         page.get_by_role('textbox',name='Investigation name',exact=True).fill('Synthetic segment review')
@@ -133,19 +177,47 @@ def run(output):
         screenshot(page,output,'10b-report-narrative',target=page.get_by_role('textbox',name='Executive summary',exact=True))
         events.append('Saved investigation, ordered report draft, self-contained report download with original source hash')
         navigate(page,'Workspace Home')
-        for width,height in [(1920,1080),(1280,832),(768,1024),(390,844)]:
+        for width,height in [(1920,1080),(1280,832),(1100,900),(768,1024),(390,844)]:
             page.set_viewport_size({'width':width,'height':height});ready(page)
-            screenshot(page,output,f'11-home-{width}')
-            if width>=1000:
-                expect(hub(page).get_by_role('button')).to_have_count(10)
+            unobscured(page);screenshot(page,output,f'11-home-{width}')
+            if width>1100:
+                expect(hub(page).locator('.sector')).to_have_count(10)
+                navigate(page,'Explore');unobscured(page)
+                screenshot(page,output,f'12-compact-explore-{width}')
+                navigate(page,'Workspace Home')
             else:
-                expect(page.get_by_role('combobox',name='Navigate to',exact=True)).to_be_visible()
-                select(page,'Navigate to','Explore')
+                expect(hub(page).get_by_role('button',name='Open command wheel',exact=True)).to_be_visible()
+                open_hub(page);unobscured(page)
+                expect(hub(page).locator('.sector')).to_have_count(10)
+                screenshot(page,output,f'12-expanded-wheel-{width}')
+                navigate(page,'Explore')
                 expect(page.get_by_role('heading',name='Find the signal.',exact=True)).to_be_visible()
                 expect(page.locator('.st-key-active-scope')).to_contain_text('80 selected / 160')
-                screenshot(page,output,f'12-responsive-explore-{width}')
-                select(page,'Navigate to','Workspace Home')
-        events.append('1440, 1920, 1280, 768, and 390px layouts checked; native responsive routes preserve filters')
+                expect(hub(page).get_by_role('button',name='Open command wheel',exact=True)).to_be_visible()
+                unobscured(page);screenshot(page,output,f'13-responsive-explore-{width}')
+                navigate(page,'Workspace Home')
+        events.append('1440, 1920, 1280, 1100, 768, and 390px layouts checked; mobile wheel opens in one tap and preserves selected filters')
+        # Dataset and project switches retain saved work and never remove routing.
+        page.set_viewport_size({'width':1440,'height':900});ready(page)
+        from insightpilot.universal.workspace_labels import table_labels,create_named
+        workspace.add_file(source,'secondary',provenance={'origin':'synthetic'})
+        navigate(page,'Explore')
+        labels=table_labels(workspace)
+        select(page,'Analysis table',labels['secondary']);navigate(page,'Quality & Preparation')
+        expect(page.get_by_role('combobox',name='Analysis table',exact=True)).to_have_value(labels['secondary'])
+        navigate(page,'Explore');select(page,'Analysis table',labels[table])
+        assert 'Persistent navigation selection' in workspace.saved_objects('view')
+        second=create_named(output/'projects','Second navigation project')
+        navigate(page,'Workspace Home');select(page,'Active project','Second navigation project')
+        navigate(page,'Data Hub');expect(page.locator('.st-key-command-dock')).to_be_visible()
+        select(page,'Active project','Synthetic operations review');navigate(page,'Reports')
+        select(page,'Saved report draft','Synthetic acceptance report')
+        expect(page.get_by_role('textbox',name='Business report title',exact=True)).to_have_value('Synthetic acceptance report')
+        page.reload();ready(page)
+        open_hub(page)
+        expect(hub(page).locator('.sector')).to_have_count(10)
+        assert workspace.saved_objects('layout')['ux.investigation:Synthetic segment review']['title']=='Synthetic segment review'
+        events.append('Wheel works after dataset switches, project switches, ordinary reruns, and browser refresh; saved selection, investigation, and report draft retained')
         assert workspace.info(table)['current']==original['current']
         assert workspace.info(table)['source']==original['source']
         assert not errors,errors

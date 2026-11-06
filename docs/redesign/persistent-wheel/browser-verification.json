@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "at": "2026-11-06T07:28:45.771575+00:00",
+  "events": [
+    "Keyboard arrow movement and Enter changed destination",
+    "All ten actual wheel sectors route successfully and show active state",
+    "Persistent dock remains visible while scrolling analytical charts and never intersects visible chart/table/form controls",
+    "Rendered grouped values and Pareto cumulative shares match independent pandas results; donut rendered and saved",
+    "Saved investigation, ordered report draft, self-contained report download with original source hash",
+    "1440, 1920, 1280, 1100, 768, and 390px layouts checked; mobile wheel opens in one tap and preserves selected filters",
+    "Wheel works after dataset switches, project switches, ordinary reruns, and browser refresh; saved selection, investigation, and report draft retained"
+  ],
+  "browser_errors": [],
+  "data": "Explicitly synthetic isolated fixture",
+  "local_ai_model_tested": false
+}
