@@ -615,6 +615,9 @@ def _main():
         elif mode=='Event sequence and process': process_page(engine,scope)
         else: advanced_page(engine,report,metric,scope)
     elif page=='AI Analyst': analyst(engine,report,metric,scope)
+    elif page=='BI Studio':
+        from .ui_bi import bi_studio
+        bi_studio(engine,report,metric,scope,draw,evidence)
     elif page=='Investigate':
         from .ui_deliverables import investigation_brief
         brief,compare=st.tabs(['Question & evidence','Compare & break down'])

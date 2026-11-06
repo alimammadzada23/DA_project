@@ -12,7 +12,7 @@ from .store import Workspace
 from .workspace_labels import catalog, metadata
 
 PRIMARY = ['Workspace Home','Data Hub','Quality & Preparation','Explore','Investigate','Reports']
-TOOLS = ['Overview','AI Analyst','SQL Lab','Advanced']
+TOOLS = ['Overview','AI Analyst','SQL Lab','Advanced','BI Studio']
 PAGES = PRIMARY + TOOLS
 
 
@@ -61,6 +61,7 @@ PAGE_COPY = {
     'AI Analyst': ('LOCAL INTELLIGENCE', 'A thinking partner. Grounded in data.', 'Plan locally with Ollama and Qwen. Review calculations and limitations.'),
     'SQL Lab': ('QUERY WORKBENCH', 'Ask precisely. Verify everything.', 'Read-only SQL over your selected data, with bounded results and execution evidence.'),
     'Advanced': ('ANALYTICAL METHODS', 'Go beyond the surface.', 'Apply statistical methods with explicit assumptions and applicability checks.'),
+    'BI Studio': ('MODEL · DAX · REPORT', 'Model it. Measure it. Report it.', 'Build a semantic model, write DAX measures and design interactive report pages, the Power BI way.'),
 }
 
 

@@ -11,11 +11,11 @@ from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from insightpilot.universal.workspace_labels import catalog,metadata
+from insightpilot.universal.ui_workflow import PAGES  # single source of truth for wheel destinations
 from insightpilot.universal.store import Workspace
 from browser_bi_workflow import server,ready,screenshot
 from browser_unified import select
 
-PAGES=['Workspace Home','Data Hub','Quality & Preparation','Explore','Investigate','Reports','Overview','AI Analyst','SQL Lab','Advanced']
 
 
 def hub(page):
@@ -82,7 +82,7 @@ def run(output):
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.on('dialog',lambda d:d.accept())
         page.goto(url);ready(page)
-        expect(hub(page).locator('.sector')).to_have_count(10)
+        expect(hub(page).locator('.sector')).to_have_count(len(PAGES))
         expect(page.get_by_role('heading',name='Data Analysis',exact=True)).to_be_visible()
         expect(page.get_by_role('heading',name='Good questions. Clear evidence.',exact=True)).to_have_count(0)
         assert 'Choose a destination' not in hub(page).locator('body').inner_text()
@@ -120,7 +120,7 @@ def run(output):
             unobscured(page)
             if destination!='Workspace Home':expect(page.locator('.st-key-command-dock')).to_be_visible()
             if destination=='Explore':screenshot(page,output,'02b-wheel-active')
-        events.append('All ten actual wheel sectors route successfully and show active state')
+        events.append(f'All {len(PAGES)} actual wheel sectors route successfully and show active state')
         navigate(page,'Workspace Home');screenshot(page,output,'04-project-home')
         navigate(page,'Quality & Preparation');screenshot(page,output,'05-quality')
         hub(page).get_by_role('button',name='Expand command wheel',exact=True).click();ready(page)
@@ -187,14 +187,14 @@ def run(output):
             page.set_viewport_size({'width':width,'height':height});ready(page)
             unobscured(page);screenshot(page,output,f'11-home-{width}')
             if width>1100:
-                expect(hub(page).locator('.sector')).to_have_count(10)
+                expect(hub(page).locator('.sector')).to_have_count(len(PAGES))
                 navigate(page,'Explore');unobscured(page)
                 screenshot(page,output,f'12-compact-explore-{width}')
                 navigate(page,'Workspace Home')
             else:
                 expect(hub(page).get_by_role('button',name='Open command wheel',exact=True)).to_be_visible()
                 open_hub(page);unobscured(page)
-                expect(hub(page).locator('.sector')).to_have_count(10)
+                expect(hub(page).locator('.sector')).to_have_count(len(PAGES))
                 screenshot(page,output,f'12-expanded-wheel-{width}')
                 navigate(page,'Explore')
                 expect(page.get_by_role('heading',name='Find the signal.',exact=True)).to_be_visible()
@@ -223,7 +223,7 @@ def run(output):
         expect(page.get_by_role('textbox',name='Business report title',exact=True)).to_have_value('Synthetic acceptance report')
         page.reload();ready(page)
         open_hub(page)
-        expect(hub(page).locator('.sector')).to_have_count(10)
+        expect(hub(page).locator('.sector')).to_have_count(len(PAGES))
         assert workspace.saved_objects('layout')['ux.investigation:Synthetic segment review']['title']=='Synthetic segment review'
         events.append('Wheel works after dataset switches, project switches, ordinary reruns, and browser refresh; saved selection, investigation, and report draft retained')
         assert workspace.info(table)['current']==original['current']

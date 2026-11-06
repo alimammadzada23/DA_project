@@ -132,7 +132,7 @@ def run(output):
             navigate(page,name);unobscured(page)
         page.set_viewport_size({'width':390,'height':844});ready(page)
         screenshot(page,output,'09-mobile-save-actions')
-        events.append('Save Changes is explicit; delete confirmation/cancel works; unrelated legacy project and original upload remain byte-for-byte intact; all ten destinations still navigate')
+        events.append('Save Changes is explicit; delete confirmation/cancel works; unrelated legacy project and original upload remain byte-for-byte intact; all wheel destinations still navigate')
         assert not errors,errors
         browser.close()
     result={'passed':True,'events':events,'browser_errors':errors,'native_dialogs':dialogs,'synthetic_fixture':True,'no_user_projects_modified':True}
