@@ -81,7 +81,10 @@ def display_columns(response):
 def interpretation_context(question,response):
     if not eligible(response):raise InterpretationError('This result type is not sent for interpretation.')
     primary=response['primary'];plan=response['plan']
-    rows=[[_round(v) for v in row] for row in primary['rows'][:MAX_ROWS]]
+    # NULL grouping values are an explicit "Missing" category everywhere in InsightPilot; the model must not
+    # see JSON null and render it as "None". Measure NULLs stay null (unavailable, not zero).
+    labels={i for i,c in enumerate(primary['columns']) if c.startswith('group_') or c in ('category','period')}
+    rows=[['Missing' if v is None and i in labels else _round(v) for i,v in enumerate(row)] for row in primary['rows'][:MAX_ROWS]]
     method=primary.get('method') if isinstance(primary.get('method'),dict) else {}
     context={'question':str(question)[:600],'analysis':plan.get('operation'),
         'grouping':plan.get('group_by',[]),'date_basis':plan.get('date_basis'),'grain':plan.get('grain'),

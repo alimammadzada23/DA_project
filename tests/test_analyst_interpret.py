@@ -84,6 +84,14 @@ def test_model_failure_never_blocks_the_calculation(engine):
     assert response['status']=='ok' and response['interpretation']['status']=='unavailable' and response['primary']['rows']
 
 
+def test_missing_groups_reach_the_model_as_missing_not_none(tmp_path):
+    w=Workspace.create(tmp_path/'ws');p=tmp_path/'facts.csv';p.write_text('region,amount\nNorth,10\n,4\n')
+    w.add_file(p,'facts');w.approve_semantics('facts',{'region':'geography','amount':'revenue'},'One order',units={'amount':'EUR'})
+    model=FakeModel(good());run(Engine(w,'facts'),model)
+    rows=json.loads(model.sent[0][1]['content'])['table']['rows']
+    assert ['Missing',4] in [r[:2] for r in rows] and not any(r[0] is None for r in rows)
+
+
 def test_only_bounded_computed_aggregates_are_sent(engine):
     model=FakeModel(good());run(engine,model)
     payload=json.loads(model.sent[0][1]['content'])

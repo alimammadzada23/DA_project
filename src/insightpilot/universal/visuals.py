@@ -122,7 +122,7 @@ def trend(result,title,unit):
     if partial:notes.append('Hollow markers: edge periods whose observed dates do not cover the whole '+grain)
     if numeric.isna().any() and len(numeric):notes.append(f'{int(numeric.isna().sum())} missing period(s) shown as gaps')
     if notes:subtitle(fig,' · '.join(notes))
-    fig.update_layout(hovermode='x unified' if observed>=6 else 'closest',margin={'b':86},
+    fig.update_layout(hovermode='x unified' if observed>=6 else 'closest',margin={'b':86,'r':48},
                       legend={'orientation':'h','yanchor':'top','y':-0.2,'xanchor':'left','x':0})
     return fig
 
