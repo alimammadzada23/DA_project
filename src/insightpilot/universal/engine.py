@@ -10,6 +10,7 @@ import time
 import pandas as pd
 
 from ..datasets import quote
+from ..engine_settings import query_deadline
 from .metrics import Metric
 from .profile import date_expression, numeric_expression
 from .context import AnalysisContext
@@ -75,7 +76,7 @@ class Engine:
         if explain: full='EXPLAIN '+full
         started = time.perf_counter()
         with self.workspace.connect() as con:
-            timer = threading.Timer(min(20,max(.01,timeout)), con.interrupt); timer.start()
+            timer = threading.Timer(query_deadline(timeout,self.info['rows']), con.interrupt); timer.start()
             try:
                 result = con.execute(full,[*self.parameters,*params])
                 columns = [c[0] for c in result.description]

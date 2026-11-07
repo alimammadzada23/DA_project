@@ -15,6 +15,7 @@ import duckdb
 import httpx
 
 from ..datasets import digest, quote
+from ..engine_settings import resources
 from .store import MAX_ROWS, now
 
 
@@ -25,7 +26,7 @@ def database_tables(path):
         with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)) as con:
             return [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
     if path.suffix.lower()=='.duckdb':
-        with duckdb.connect(str(path),read_only=True,config={'enable_external_access':'false'}) as con:
+        with duckdb.connect(str(path),read_only=True,config={'enable_external_access':'false',**resources()}) as con:
             return [r[0] for r in con.execute('SHOW TABLES').fetchall()]
     raise ValueError('Use a SQLite .sqlite/.db or DuckDB .duckdb file.')
 
@@ -35,7 +36,7 @@ def import_database(workspace,path,source_table,name):
     if source_table not in database_tables(path): raise ValueError('Choose a source table from the database catalog.')
     if path==workspace.database: raise ValueError('Import from a separate source database.')
     if path.suffix.lower()=='.duckdb':
-        source=duckdb.connect(str(path),read_only=True,config={'enable_external_access':'false'})
+        source=duckdb.connect(str(path),read_only=True,config={'enable_external_access':'false',**resources()})
     else:
         source=sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)
         source.execute('PRAGMA query_only=ON')

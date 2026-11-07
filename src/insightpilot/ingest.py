@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import duckdb
 import pandas as pd
 from defusedxml.ElementTree import iterparse
+from .engine_settings import resources
 
 EXPECTED = {"cases": 251734, "events": 1595923, "purchase_documents": 76349,
             "activities": 42, "users": 627}
@@ -79,8 +80,7 @@ def ingest(source, target, *, synthetic=False, mapping=None, batch_size=10000):
     try:
         con = duckdb.connect(temporary)
         con.execute("SET TimeZone='UTC'")
-        con.execute("SET memory_limit='1GB'")
-        con.execute("SET threads=2")
+        for setting,value in resources().items():con.execute(f"SET {setting}='{value}'")
         con.execute('BEGIN TRANSACTION')
         con.execute(Path(__file__).with_name('model.sql').read_text())
         con.execute('CREATE TABLE provenance(source_path VARCHAR, sha256 VARCHAR, synthetic BOOLEAN, mapping JSON, imported_at TIMESTAMPTZ)')

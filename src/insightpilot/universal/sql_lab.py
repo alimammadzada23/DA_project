@@ -10,6 +10,7 @@ import json
 import duckdb
 
 from ..datasets import quote
+from ..engine_settings import memory_limit, query_deadline
 from .metrics import Metric
 from .profile import date_expression
 from .relationships import inspect_relationship, load_relationships
@@ -149,7 +150,8 @@ class SQLLab:
             result=self.engine.run(query,parameters,limit=size,explain=explain,timeout=timeout,method={
                 'mode':'SQL Lab: validated read-only SELECT', 'user_sql':sql,'scanned_sources':scans,
                 'scope':self.catalog(),'relationships':self.relationships,'page':page,'page_size':size,
-                'time_limit_seconds':min(20,timeout),'memory_limit':'768MB','external_access':False})
+                'time_limit_seconds':round(query_deadline(timeout,self.engine.info['rows']),2),
+                'memory_limit':memory_limit(),'external_access':False})
         except duckdb.InterruptException as exc: raise ValueError('Query exceeded its time budget. Narrow filters or simplify the query.') from exc
         except duckdb.OutOfMemoryException as exc: raise ValueError('Query exceeded its memory budget. Reduce cardinality or aggregate first.') from exc
         except duckdb.Error as exc: raise ValueError('SQL could not execute: '+str(exc).split('\nLINE')[0][:600]) from exc

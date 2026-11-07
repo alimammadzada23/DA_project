@@ -7,6 +7,7 @@ import duckdb
 import httpx
 from .ingest import ingest, quality, prepare_analytics
 from .agent import Analyst
+from .engine_settings import resources
 from .analytics import QUESTIONS, discover
 from .reporting import reconcile, analysis_report
 from .demo import create_demo, create_portfolio_demo
@@ -68,8 +69,7 @@ def main():
         if not Path(args.database).is_file():parser.error('Database does not exist; import an event log first')
         with duckdb.connect(args.database) as connection:
             connection.execute("SET TimeZone='UTC'")
-            connection.execute("SET memory_limit='1GB'")
-            connection.execute('SET threads=2')
+            for setting,value in resources().items():connection.execute(f"SET {setting}='{value}'")
             connection.execute('BEGIN TRANSACTION')
             try:
                 prepared=prepare_analytics(connection)

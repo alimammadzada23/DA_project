@@ -16,9 +16,9 @@ import duckdb
 import pandas as pd
 
 from ..datasets import digest, quote, read_table
+from ..engine_settings import connection_config, restrict
 from .profile import date_expression, numeric_expression, profile
 
-CONFIG = {'threads': '2', 'memory_limit': '768MB'}
 MAX_ROWS = 5_000_000
 MAX_BYTES = 512 * 1024 * 1024
 _LOCKS = {}
@@ -48,7 +48,7 @@ class Workspace:
 
     @contextmanager
     def connect(self, *, write=False, external=False):
-        config = CONFIG | ({} if external else {'enable_external_access':'false', 'allow_unsigned_extensions':'false'})
+        config = connection_config(self.database) | ({} if external else {'allow_unsigned_extensions':'false'})
         with _LOCKS_GUARD:
             lock=_LOCKS.setdefault(str(self.database),threading.RLock())
         # Streamlit sessions share a process. Serialize connections to avoid
@@ -56,6 +56,7 @@ class Workspace:
         with lock:
             con = duckdb.connect(str(self.database), read_only=not write, config=config)
             try:
+                if not external: restrict(con)
                 con.execute("SET TimeZone='UTC'")
                 yield con
             finally:

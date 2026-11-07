@@ -1,4 +1,5 @@
 """Format-neutral event sequence analysis, sharing the active context and evidence."""
+from ..engine_settings import resources
 from .profile import date_expression
 
 
@@ -47,7 +48,7 @@ def import_xes(workspace,source,prefix):
             # The compatibility parser also creates normalized domain columns.
             # Generic case import exposes only structural identity + the complete
             # original attribute dictionary, rather than manufacturing empty fields.
-            with duckdb.connect(str(database),read_only=True,config={'enable_external_access':'false'}) as con:
+            with duckdb.connect(str(database),read_only=True,config={'enable_external_access':'false',**resources()}) as con:
                 cursor=con.execute('SELECT case_id,source_attributes FROM cases')
                 info=_import_cursor(workspace,cursor,prefix+'_cases',{'origin':'database_extract',
                     'source_database_sha256':digest(database),'source_table':'cases',

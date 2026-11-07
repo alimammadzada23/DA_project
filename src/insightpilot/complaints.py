@@ -15,6 +15,7 @@ import duckdb
 import httpx
 import pandas as pd
 
+from .engine_settings import resources
 from .datasets import ScopedAnalytics, TableFilters, digest, write_metadata
 
 SOURCE = 'https://www.consumerfinance.gov/data-research/consumer-complaints/'
@@ -139,7 +140,7 @@ def ingest_complaints(source, database, *, download=None, synthetic=False):
     temporary = database.with_name(database.name + '.' + uuid.uuid4().hex + '.tmp')
     try:
         frame = pd.DataFrame(rows)
-        with duckdb.connect(str(temporary), config={'threads': '2', 'memory_limit': '1GB'}) as con:
+        with duckdb.connect(str(temporary), config=resources()) as con:
             con.register('_rows', frame)
             casts = ','.join(f'CAST({column} AS {"BIGINT" if column == "record_id" else "DATE" if column in ("record_date", "date_sent") else "VARCHAR"}) AS {column}' for column in frame.columns)
             con.execute('CREATE TABLE complaints AS SELECT ' + casts + ' FROM _rows')

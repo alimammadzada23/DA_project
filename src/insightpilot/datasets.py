@@ -15,6 +15,8 @@ import zipfile
 import duckdb
 import pandas as pd
 
+from .engine_settings import resources
+
 MAX_ROWS = 500_000
 MAX_BYTES = 100 * 1024 * 1024
 ROLES = ('date', 'category', 'product', 'customer', 'measure', 'quantity', 'unit_price',
@@ -53,7 +55,7 @@ def read_table(path, sheet=0):
                 raise ValueError('Expanded Excel workbook exceeds 250 MiB.')
         frame = pd.read_excel(path, sheet_name=sheet, engine='openpyxl', dtype=str, keep_default_na=False, nrows=MAX_ROWS + 1)
     elif suffix == '.parquet':
-        with duckdb.connect(config={'threads': '2', 'memory_limit': '512MB'}) as con:
+        with duckdb.connect(config=resources()) as con:
             frame = con.execute('SELECT * FROM read_parquet(?) LIMIT ?', [str(path.resolve()), MAX_ROWS + 1]).fetchdf()
             # Nested objects require a deliberate flattening workflow.
             types = con.execute('DESCRIBE SELECT * FROM read_parquet(?)', [str(path.resolve())]).fetchall()
@@ -225,7 +227,7 @@ def ingest_table(source, database, mapping, *, profile='descriptive', title='My 
             info['analytical_source_sha256'] = digest(derived)
             info['grain'] = 'One uploaded row per complaint, explicitly chosen by the user; technical row IDs do not authenticate complaint identities.'
             info['capabilities'] = ['records', 'quality', 'trends', 'company_comparison', 'issue_concentration', 'reported_timeliness']
-        with duckdb.connect(str(temporary), config={'threads': '2', 'memory_limit': '1GB'}) as con:
+        with duckdb.connect(str(temporary), config=resources()) as con:
             if profile == 'complaints': con.execute('DROP TABLE dataset_metadata')
             con.register('_raw', frame); con.execute('CREATE TABLE raw_data AS SELECT * FROM _raw')
             con.register('_records', records)

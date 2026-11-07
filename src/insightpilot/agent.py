@@ -8,6 +8,7 @@ import threading
 import time
 import duckdb
 import httpx
+from .engine_settings import resources
 from .analytics import QUESTIONS
 
 LIMITATIONS = ('Observed spans are not completion times. Repeats may be legitimate. '
@@ -15,8 +16,7 @@ LIMITATIONS = ('Observed spans are not completion times. Repeats may be legitima
                'Resource names alone do not establish human versus batch status.')
 DATA_TABLES = {'cases','events','ordered_events','case_metrics','transitions','variants',
                'transition_performance','category_performance','sequence_signals'}
-SQL_CONFIG = {'enable_external_access': 'false', 'allow_unsigned_extensions': 'false',
-              'threads': '2', 'memory_limit': '512MB'}
+SQL_CONFIG = {'enable_external_access': 'false', 'allow_unsigned_extensions': 'false', **resources()}
 
 
 def referenced_tables(con,sql):
