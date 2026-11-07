@@ -19,7 +19,9 @@ def _table_estimate(path):
 
 
 def size_text(value):
-    return f'{value / GIB:,.1f} GB' if value >= GIB / 10 else f'{value / 1024 ** 2:,.0f} MB'
+    if value >= GIB / 10:
+        return f'{value / GIB:,.1f} GB'
+    return f'{value / 1024 ** 2:,.0f} MB' if value >= 1024 ** 2 else f'{max(1, round(value / 1024)):,} KB'
 
 
 def ensure_free_space(directory, sources):

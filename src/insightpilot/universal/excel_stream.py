@@ -202,8 +202,8 @@ def load_table(con, path, table, sheet=0, progress=None):
     if overlap and overlap['distinct_rows_in_several_sheets']:
         warnings.append(
             f'Sheets overlap: {overlap["distinct_rows_in_several_sheets"]:,} different rows appear in more than one '
-            f'sheet, accounting for {overlap["rows_involved"]:,} imported rows ({overlap["extra_copies"]:,} more than '
-            'one copy of each). All rows were kept, so totals count them more than once until you decide what to do.')
+            f'sheet. They account for {overlap["rows_involved"]:,} imported rows, of which {overlap["extra_copies"]:,} are '
+            'extra copies. All rows were kept, so totals count these rows more than once until you decide what to do.')
     return {'sheets': sheets, 'warnings': warnings, 'overlap': overlap}
 
 

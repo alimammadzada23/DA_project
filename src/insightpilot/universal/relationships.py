@@ -111,9 +111,11 @@ def join_preview(workspace, relation, how='left'):
     for alias,name in [('l',current['left']),('r',current['right'])]:
         for column in ['_row_id',*workspace.columns(name)]:
             fields.append(f'{alias}.{quote(column)} AS {quote(name+"."+column)}')
-    with workspace.connect() as con:
-        return con.execute(f'''SELECT {','.join(fields)} FROM {l} l {how.upper()} JOIN {r} r
-            ON CAST(l.{lk} AS VARCHAR)=CAST(r.{rk} AS VARCHAR) ORDER BY l._row_id,r._row_id LIMIT 100''').fetchdf()
+    def preview():
+        with workspace.connect() as con:
+            return con.execute(f'''SELECT {','.join(fields)} FROM {l} l {how.upper()} JOIN {r} r
+                ON CAST(l.{lk} AS VARCHAR)=CAST(r.{rk} AS VARCHAR) ORDER BY l._row_id,r._row_id LIMIT 100''').fetchdf()
+    return _remember((str(workspace.database),'preview',current['left_version'],current['left_key'],current['right_version'],current['right_key'],how),preview)
 
 
 def related_groups(engine, relation, dimension, metric):

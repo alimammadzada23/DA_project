@@ -517,3 +517,20 @@ def test_relationship_checks_wait_for_a_click_only_on_large_tables(workspace, tm
     assert not calls and any('run only when you ask' in item.value for item in app.info)
     next(item for item in app.button if item.label == 'Check relationships').click().run(timeout=30)
     assert not app.exception and calls and any(item.label == 'Left key' for item in app.selectbox)
+
+
+def test_join_preview_is_reused_and_skipped_when_enormous(workspace, tmp_path, monkeypatch):
+    from insightpilot.universal import relationships, ui_data
+    two_tables(workspace, tmp_path)
+    relation = relationships.inspect_relationship(workspace, 'fact', 'code', 'lookup', 'code')
+    assert len(relationships.join_preview(workspace, relation)) == 3
+    remembered = len(relationships._remembered)
+    assert len(relationships.join_preview(workspace, relation)) == 3 and len(relationships._remembered) == remembered
+    monkeypatch.setattr(ui_data, 'JOIN_PREVIEW_MAX_ROWS', 2)
+    app = AppTest.from_function(relationship_page, args=(str(workspace.directory),)).run(timeout=30)
+    assert not app.exception and any('No preview' in item.value for item in app.warning)
+
+
+@pytest.mark.parametrize('value,text', [(10, '1 KB'), (2048, '2 KB'), (5 * 1024 ** 2, '5 MB'), (3 * 1024 ** 3, '3.0 GB')])
+def test_sizes_read_naturally(value, text):
+    assert disk_space.size_text(value) == text

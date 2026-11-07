@@ -21,6 +21,7 @@ from .relationships import inspect_relationship, join_preview, load_relationship
 LAND_REGISTRY_COLUMNS=('transaction_id,price,transfer_date,postcode,property_type,new_build,duration,paon,saon,'
                        'street,locality,town,district,county,ppd_category,record_status')
 RELATIONSHIP_CHECK_MAX_ROWS=5_000_000
+JOIN_PREVIEW_MAX_ROWS=200_000_000
 ROLES=['unassigned','date','identifier','customer','product','transaction','revenue','expense','quantity',
        'price','geography','company','category','status','duration','text','measure']
 
@@ -274,7 +275,9 @@ def relationship_editor(workspace):
     st.write(f'Unmatched: {relation["left_unmatched_rows"]:,} left / {relation["right_unmatched_rows"]:,} right. '
              f'Duplicate key occurrences: {relation["left_duplicate_keys"]:,} left / {relation["right_duplicate_keys"]:,} right.')
     how=st.selectbox('Join preview type',['left','inner','full'])
-    st.dataframe(join_preview(workspace,relation,how),hide_index=True,width='stretch')
+    if relation['inner_join_rows']>JOIN_PREVIEW_MAX_ROWS:
+        st.warning(f'No preview: these keys would produce {relation["inner_join_rows"]:,} joined rows, which usually means they do not identify the same thing. Choose a more specific key.')
+    else:st.dataframe(join_preview(workspace,relation,how),hide_index=True,width='stretch')
     acknowledged=st.checkbox('I understand and accept left-side row multiplication',disabled=relation['left_join_rows']<=relation['left_rows'])
     if st.button('Save validated relationship'):
         save_relationship(workspace,l+'_'+lk+'__'+r+'_'+rk,relation,allow_multiplication=acknowledged)
