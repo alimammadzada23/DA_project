@@ -9,6 +9,7 @@ import uuid
 import pandas as pd
 import streamlit as st
 
+from .excel_stream import ALL_SHEETS, sheet_names
 from .connectors import database_tables, import_api, import_database, import_postgres
 from .metrics import Metric, save_metric
 from .profile import safe_role_suggestions
@@ -47,6 +48,17 @@ def data_hub(workspace,active_table=None,profile=None):
         if len(tables)>=2:relationship_editor(workspace)
 
 
+def _sheet_picker(source,label,key):
+    """Sheet choice for one workbook. Single-sheet workbooks need no question."""
+    try:names=sheet_names(source)
+    except ValueError as exc:
+        st.warning(f'{label}: {exc}')
+        return 0
+    if len(names)<2:return 0
+    return st.selectbox(f'Sheet to import from {label}',[*names,ALL_SHEETS],key=key,
+        format_func=lambda value:f'All {len(names)} sheets into one table (adds a "sheet" column)' if value==ALL_SHEETS else value)
+
+
 def _import_datasets(workspace,message_key):
     st.markdown('### Upload a dataset')
     tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL','Event logs'])
@@ -65,8 +77,8 @@ def _import_datasets(workspace,message_key):
                         if preview['warning']:st.warning(preview['warning'])
                         st.dataframe(pd.DataFrame(preview['rows'],columns=preview['columns']),hide_index=True,width='stretch')
                     except (UnicodeDecodeError,ValueError,csv.Error):st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import checks the complete source and retains rejected bytes.')
+        sheets={upload.name:_sheet_picker(upload,upload.name,message_key+'-sheet-'+upload.name) for upload in files or [] if upload.name.lower().endswith('.xlsx')}
         with st.form('universal-upload'):
-            sheet=st.text_input('Excel sheet name (blank = first sheet)')
             synthetic=st.checkbox('These files are synthetic test data')
             submitted=st.form_submit_button('Import tables')
         if submitted:
@@ -82,7 +94,7 @@ def _import_datasets(workspace,message_key):
                 while name in workspace.tables(): name=base+'_'+str(index); index+=1
                 try:
                     with st.spinner(f'Importing {file.name}; checking all rows…'):
-                        info=workspace.add_file(path,name,sheet=sheet or 0,delimiter=delimiter,provenance={
+                        info=workspace.add_file(path,name,sheet=sheets.get(file.name,0),delimiter=delimiter,provenance={
                             'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
                     messages.append(('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.'))
                     st.session_state['ux-last-import-'+str(workspace.directory)]=name
@@ -92,8 +104,8 @@ def _import_datasets(workspace,message_key):
                 finally: path.unlink(missing_ok=True)
             st.session_state[message_key]=messages
             st.rerun()
-        st.caption('CSV/TSV, flat Parquet and JSON stream into DuckDB. Up to 512 MiB, 5 million rows and 150 columns. '
-                   'Excel is bounded to 100 MiB/500,000 rows. JSON must be a flat array; JSON Lines uses one object per line. '
+        st.caption('CSV/TSV, flat Parquet, JSON and Excel stream into DuckDB. Up to 100 million rows and 150 columns; browser uploads are limited to 512 MB per file. '
+                   'JSON must be a flat array; JSON Lines uses one object per line. '
                    'Malformed input is rejected atomically, with its original file and a rejection receipt retained.')
     with tabs[1]:
         path=st.text_input('Local SQLite or DuckDB source path',key='universal-db-path')

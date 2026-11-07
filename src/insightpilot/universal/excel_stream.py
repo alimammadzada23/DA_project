@@ -19,6 +19,10 @@ MAX_EXPANSION_RATIO = 1000
 EXPANSION_CHECK_FROM_BYTES = 1024 ** 3
 
 
+class EmptySheet(ValueError):
+    pass
+
+
 def expanded_bytes(path):
     """Uncompressed size of the workbook, after rejecting unsafe archives."""
     path = Path(path)
@@ -94,7 +98,7 @@ def read_sheet(workbook, sheet, batch_rows=BATCH_ROWS):
             names, renamed = _column_names(cells, sheet)
             break
     if names is None:
-        raise ValueError(f'Sheet {sheet!r} is empty.')
+        raise EmptySheet(f'Sheet {sheet!r} is empty.')
     width = len(names)
     yield {'columns': names, 'renamed': renamed}
     columns = [[] for _ in names]
@@ -117,3 +121,108 @@ def read_sheet(workbook, sheet, batch_rows=BATCH_ROWS):
     if count:
         yield pa.table({name: pa.array(values, pa.string()) for name, values in zip(names, columns)})
     yield {'empty_rows_skipped': skipped}
+
+
+def _quote(name):
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _selected_sheets(workbook, sheet):
+    available = list(workbook.sheetnames)
+    if sheet == ALL_SHEETS:
+        return available
+    if isinstance(sheet, int):
+        if not 0 <= sheet < len(available):
+            raise ValueError(f'This workbook has {len(available)} sheet(s); sheet number {sheet + 1} does not exist.')
+        return [available[sheet]]
+    if sheet not in available:
+        raise ValueError(f'Sheet {sheet!r} was not found. This workbook has: {", ".join(available)}.')
+    return [sheet]
+
+
+def _check_reserved(columns, combining):
+    lowered = {name.casefold() for name in columns}
+    if any(name.startswith('_row_id') for name in lowered):
+        raise ValueError('_row_id is reserved for stable source-row references.')
+    if combining and 'sheet' in lowered:
+        raise ValueError('This workbook already has a column named "sheet", which all-sheets import adds. '
+                         'Rename that column, or import one sheet at a time.')
+
+
+def load_table(con, path, table, sheet=0, progress=None):
+    """Create `table` from one sheet, or all sheets with a `sheet` column. Nothing is deduplicated."""
+    workbook = _open(path)
+    combining = sheet == ALL_SHEETS
+    try:
+        names = _selected_sheets(workbook, sheet)
+        columns, written, warnings, sheets = None, 0, [], []
+        for current in names:
+            reader = read_sheet(workbook, current)
+            try:
+                head = next(reader)
+            except EmptySheet:
+                if not combining:
+                    raise
+                warnings.append(f'Sheet {current!r} is empty and added no rows.')
+                continue
+            if columns is None:
+                columns = head['columns']
+                _check_reserved(columns, combining)
+                definitions = ['_row_id BIGINT', *(['sheet VARCHAR'] if combining else []),
+                               *(_quote(name) + ' VARCHAR' for name in columns)]
+                con.execute(f'CREATE TABLE {_quote(table)} ({",".join(definitions)})')
+            elif set(head['columns']) != set(columns):
+                difference = sorted(set(head['columns']) ^ set(columns))
+                raise ValueError(f'Sheet {current!r} has different columns from {sheets[0]["name"]!r} '
+                                 f'({", ".join(difference)}). Import these sheets separately.')
+            if head['renamed']:
+                warnings.append(f'Sheet {current!r} column names were adjusted: ' + ', '.join(head['renamed']) + '.')
+            selection = ','.join(['_row_id', *(['?'] if combining else []), *map(_quote, columns)])
+            parameters = [current] if combining else []
+            first = written
+            for item in reader:
+                if isinstance(item, dict):
+                    if item['empty_rows_skipped']:
+                        warnings.append(f'Sheet {current!r}: {item["empty_rows_skipped"]:,} completely empty rows '
+                                        'were not imported.')
+                    continue
+                ids = pa.array(range(written + 1, written + item.num_rows + 1), pa.int64())
+                con.register('_excel_batch', item.add_column(0, '_row_id', ids))
+                con.execute(f'INSERT INTO {_quote(table)} SELECT {selection} FROM _excel_batch', parameters)
+                con.unregister('_excel_batch')
+                written += item.num_rows
+                if progress:
+                    progress(f'{current}: {written:,} rows read')
+            sheets.append({'name': current, 'rows': written - first})
+        if columns is None:
+            raise ValueError('Every sheet in this workbook is empty.')
+    finally:
+        workbook.close()
+    overlap = sheet_overlap(con, table, columns) if combining and len(sheets) > 1 else None
+    if overlap and overlap['distinct_rows_in_several_sheets']:
+        warnings.append(
+            f'Sheets overlap: {overlap["distinct_rows_in_several_sheets"]:,} different rows appear in more than one '
+            f'sheet, accounting for {overlap["rows_involved"]:,} imported rows ({overlap["extra_copies"]:,} more than '
+            'one copy of each). All rows were kept, so totals count them more than once until you decide what to do.')
+    return {'sheets': sheets, 'warnings': warnings, 'overlap': overlap}
+
+
+def sheet_overlap(con, table, columns, examples=20):
+    """Exact counts of identical rows across sheets (a row's own sheet is not compared)."""
+    fields = ','.join(map(_quote, columns))
+    con.execute(f'''CREATE TEMP TABLE _sheet_rows AS SELECT {fields},count(*) AS copies,
+        count(DISTINCT sheet) AS sheet_count,list(DISTINCT sheet ORDER BY sheet) AS sheets
+        FROM {_quote(table)} GROUP BY ALL''')
+    try:
+        several, involved, extra, within = con.execute('''SELECT count(*) FILTER (WHERE sheet_count>1),
+            coalesce(sum(copies) FILTER (WHERE sheet_count>1),0),
+            coalesce(sum(copies-1) FILTER (WHERE sheet_count>1),0),
+            coalesce(sum(copies-1) FILTER (WHERE sheet_count=1),0) FROM _sheet_rows''').fetchone()
+        cursor = con.execute(f'''SELECT sheets,copies,{fields} FROM _sheet_rows
+            WHERE sheet_count>1 ORDER BY {fields} LIMIT {int(examples)}''')
+        labels = [item[0] for item in cursor.description]
+        rows = [dict(zip(labels, row)) for row in cursor.fetchall()]
+    finally:
+        con.execute('DROP TABLE _sheet_rows')
+    return {'distinct_rows_in_several_sheets': int(several), 'rows_involved': int(involved), 'extra_copies': int(extra),
+            'duplicates_within_one_sheet': int(within), 'examples': rows}

@@ -15,9 +15,10 @@ import uuid
 import duckdb
 import pandas as pd
 
-from ..datasets import digest, quote, read_table
+from ..datasets import digest, quote
 from ..engine_settings import connection_config, restrict
 from .disk_space import ensure_free_space
+from .excel_stream import load_table as load_workbook_table
 from .profile import date_expression, numeric_expression, profile
 
 MAX_ROWS = 100_000_000
@@ -81,7 +82,7 @@ class Workspace:
     def _save_info(self, con, name, info):
         con.execute('INSERT OR REPLACE INTO _catalog VALUES (?,?)', [name, json.dumps(info,default=str)])
 
-    def add_file(self, source, name, *, sheet=0, provenance=None, delimiter=None):
+    def add_file(self, source, name, *, sheet=0, provenance=None, delimiter=None, progress=None):
         source = Path(source).resolve()
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,62}', name):
             raise ValueError('Table names need 1–63 letters, digits or underscores, starting with a letter.')
@@ -95,7 +96,7 @@ class Workspace:
         retained = sources / (key + source.suffix.lower())
         shutil.copyfile(source, retained)
         table = 't_' + key
-        parse_warnings=[]
+        parse_warnings=[]; workbook={}
         try:
             with self.connect(write=True, external=True) as con:
                 con.execute('BEGIN')
@@ -125,10 +126,8 @@ class Workspace:
                         FROM read_json_auto(?,format=?,maximum_object_size=16777216,ignore_errors=false)''',
                         [str(retained), 'newline_delimited' if suffix != '.json' else 'array'])
                 elif suffix == '.xlsx':
-                    frame = read_table(retained, sheet)
-                    if '_row_id' in frame.columns: raise ValueError('_row_id is reserved for stable source-row references.')
-                    con.register('_input', frame)
-                    con.execute(f'CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,* FROM _input')
+                    workbook = load_workbook_table(con, retained, table, sheet, progress)
+                    parse_warnings.extend(workbook['warnings'])
                 else:
                     raise ValueError('Supported files: CSV, TSV, XLSX, flat Parquet, JSON array and JSON Lines.')
                 schema = con.execute(f'DESCRIBE {quote(table)}').fetchall()
@@ -149,6 +148,8 @@ class Workspace:
                                   'filename':(provenance or {}).get('filename',source.name),
                                   'retained':str(retained.relative_to(self.directory)),
                                   'sha256':digest(retained),'bytes':retained.stat().st_size},
+                        **({'sheets':workbook['sheets']} if workbook else {}),
+                        **({'sheet_overlap':workbook['overlap']} if workbook.get('overlap') else {}),
                         'versions':[{'table':table,'parent':None,'operation':{'kind':'import','sheet':sheet,'delimiter':delimiter,'encoding':'UTF-8'},
                                      'rows':count,'created_at':now(),'errors':0}]}
                 self._save_info(con, name, info)

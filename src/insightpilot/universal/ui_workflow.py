@@ -225,6 +225,21 @@ def quality_overview(report,info):
 def dataset_profile(directory,table,version):return Workspace(directory).profile(table)
 
 
+def sheet_overlap_details(info):
+    overlap=info.get('sheet_overlap')
+    if not overlap or not overlap['distinct_rows_in_several_sheets']:return
+    with st.expander('Rows that appear in more than one sheet'):
+        a,b,c=st.columns(3)
+        a.metric('Different rows in several sheets',f'{overlap["distinct_rows_in_several_sheets"]:,}')
+        b.metric('Imported rows involved',f'{overlap["rows_involved"]:,}')
+        c.metric('Copies beyond the first',f'{overlap["extra_copies"]:,}')
+        st.caption(' · '.join(f'{sheet["name"]}: {sheet["rows"]:,} rows' for sheet in info.get('sheets',[])))
+        st.write(f'First {len(overlap["examples"])} of these rows:')
+        st.dataframe(pd.DataFrame([row|{'sheets':', '.join(row['sheets'])} for row in overlap['examples']]),hide_index=True,width='stretch')
+        st.caption('Nothing was removed. Identical rows can be true repeat transactions, so check before deduplicating. '
+                   f'To keep one copy of each row: in Quality & Preparation, remove the sheet column and then deduplicate. That also removes the {overlap["duplicates_within_one_sheet"]:,} repeats that occur inside a single sheet.')
+
+
 def dataset_overview(workspace,table,report=None,*,new=False):
     info=workspace.info(table);report=report or dataset_profile(str(workspace.directory),table,info['current'])
     with st.container(border=True):
@@ -232,6 +247,7 @@ def dataset_overview(workspace,table,report=None,*,new=False):
         st.caption(f'{table} · {info["rows"]:,} rows · {len(info["columns"]):,} fields · {report["exact_duplicate_rows"]:,} exact duplicates retained')
         st.text('Source: '+info['source']['origin']+' · SHA-256 '+info['source']['sha256'][:16])
         for warning in info.get('import_warnings',[]):st.warning(warning)
+        sheet_overlap_details(info)
         a,b,c=st.columns(3)
         if a.button('Explore data',key='ux-data-explore-'+table,type='primary',width='stretch'):go('Explore',table=table)
         if b.button('Review data quality',key='ux-data-quality-'+table,width='stretch'):go('Quality & Preparation',table=table)
