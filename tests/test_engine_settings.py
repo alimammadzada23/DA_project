@@ -7,12 +7,15 @@ import pytest
 
 from insightpilot import engine_settings as settings
 from insightpilot.universal import Workspace
-from insightpilot.universal.engine import Engine
+from insightpilot.universal import engine as engine_module
+from insightpilot.universal.engine import Engine, Filter
 from insightpilot.universal.projects import copy_workspace
+from insightpilot.universal.sql_lab import SQLLab
 
 
 @pytest.fixture(autouse=True)
 def no_overrides(monkeypatch):
+    engine_module._results.clear()
     for name in (settings.MEMORY_ENV, settings.THREADS_ENV, settings.TEMP_ENV):
         monkeypatch.delenv(name, raising=False)
 
@@ -96,8 +99,8 @@ def test_spill_directory_is_outside_project_snapshots(tmp_path):
     assert not list(copy.directory.rglob('*.tmp'))
 
 
-@pytest.mark.parametrize('seconds,rows,expected', [(20, 1_000, 20), (20, 5_000_000, 20), (20, 50_000_000, 200),
-                                                   (10, 50_000_000, 100), (60, 1_000, 20), (.01, 100, .01),
+@pytest.mark.parametrize('seconds,rows,expected', [(20, 1_000, 20), (20, 2_000_000, 20), (20, 50_000_000, 500),
+                                                   (10, 50_000_000, 250), (60, 1_000, 20), (.01, 100, .01),
                                                    (20, 1_000_000_000, 900)])
 def test_query_deadline_scales_only_above_the_tuned_size(seconds, rows, expected):
     assert settings.query_deadline(seconds, rows) == pytest.approx(expected)
@@ -112,4 +115,66 @@ def test_engine_uses_the_scaled_deadline(monkeypatch, tmp_path):
     monkeypatch.setattr('insightpilot.universal.engine.threading.Timer',
                         lambda delay, action: seen.append(delay) or real(delay, action))
     engine.count()
-    assert seen == [200]
+    assert seen == [500]
+
+
+@pytest.fixture
+def facts(tmp_path):
+    source = tmp_path / 'facts.csv'; source.write_text('region,amount\nNorth,1\nSouth,2\nNorth,3\n')
+    workspace = Workspace.create(tmp_path / 'w'); workspace.add_file(source, 'facts')
+    return workspace
+
+
+def forbid_queries(monkeypatch, workspace):
+    monkeypatch.setattr(workspace, 'connect', lambda **_: pytest.fail('the database was queried again'))
+
+
+def test_slow_answers_are_reused_with_fresh_evidence(monkeypatch, facts):
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MIN_SECONDS', 0)
+    first = Engine(facts, 'facts').run('SELECT region,count(*) FROM selected GROUP BY 1 ORDER BY 1', method='first')
+    engine = Engine(facts, 'facts')
+    forbid_queries(monkeypatch, facts)
+    second = engine.run('SELECT region,count(*) FROM selected GROUP BY 1 ORDER BY 1', method='second')
+    assert second['rows'] == first['rows'] == [('North', 2), ('South', 1)]
+    assert second['method'] == 'second' and second['evidence_id'] == first['evidence_id']
+
+
+def test_cached_rows_cannot_be_changed_by_a_caller(monkeypatch, facts):
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MIN_SECONDS', 0)
+    Engine(facts, 'facts').run('SELECT 1 AS one FROM selected LIMIT 1')['rows'].clear()
+    assert Engine(facts, 'facts').run('SELECT 1 AS one FROM selected LIMIT 1')['rows'] == [(1,)]
+
+
+def test_filters_and_new_versions_get_their_own_answers(monkeypatch, facts):
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MIN_SECONDS', 0)
+    assert Engine(facts, 'facts').count() == 3
+    assert Engine(facts, 'facts', [Filter('region', 'eq', 'North')]).count() == 2
+    assert Engine(facts, 'facts', [Filter('region', 'eq', 'South')]).count() == 1
+    facts.transform('facts', {'kind': 'nullify', 'column': 'region', 'value': 'North'})
+    assert Engine(facts, 'facts', [Filter('region', 'eq', 'North')]).count() == 0
+
+
+def test_fast_answers_large_results_and_user_sql_are_not_cached(monkeypatch, facts):
+    before = len(engine_module._results)
+    Engine(facts, 'facts').count()  # below the minimum time
+    assert len(engine_module._results) == before
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MIN_SECONDS', 0)
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MAX_ROWS', 1)
+    Engine(facts, 'facts').run('SELECT * FROM selected')
+    assert len(engine_module._results) == before
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MAX_ROWS', 10_000)
+    SQLLab(Engine(facts, 'facts')).execute('SELECT region FROM facts')
+    assert len(engine_module._results) == before
+
+
+def test_cache_size_is_bounded(monkeypatch, facts):
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_MIN_SECONDS', 0)
+    monkeypatch.setattr(engine_module, 'RESULT_CACHE_ENTRIES', 2)
+    for number in range(4):
+        Engine(facts, 'facts').run(f'SELECT {number} AS value')
+    assert len(engine_module._results) <= 2
+
+
+def test_time_limit_gives_a_clear_message(facts):
+    with pytest.raises(ValueError, match=r'exceeded its time budget.*No partial result'):
+        Engine(facts, 'facts').run('SELECT sum(a.range*b.range) FROM range(1000000) a, range(1000000) b', timeout=.01)

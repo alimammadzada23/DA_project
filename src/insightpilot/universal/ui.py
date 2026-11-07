@@ -29,18 +29,14 @@ from .statistics import categorical_association
 from .segmentation import cluster
 from .store import Workspace
 from .ui_data import data_hub, metric_editor, quality_editor
-from .ui_workflow import PAGES, active_scope, explore_guidance, home, navigation
+from ..engine_settings import memory_limit, query_deadline
+from .ui_workflow import PAGES, active_scope, dataset_profile, explore_guidance, home, navigation
 
 
 
 def download(*args,**kwargs):
     # Exporting one artifact must not erase the other artifacts on a rerun.
     return st.download_button(*args,on_click='ignore',**kwargs)
-
-
-@st.cache_data(max_entries=24,show_spinner=False)
-def cached_profile(path,table,version):
-    return Workspace(path).profile(table)
 
 
 def draw(figure,key,*,select=False,result=None):
@@ -526,7 +522,7 @@ def _main():
     table=st.sidebar.selectbox('Analysis table',names,format_func=labels.get,key='universal-table-'+tag)
     info=workspace.info(table)
     with st.spinner('Profiling the active data version…'):
-        report=cached_profile(str(workspace.directory),table,info['current'])
+        report=dataset_profile(str(workspace.directory),table,info['current'])
     semantics=info.get('semantics',{})
     report=report|{'approved_roles':info['roles'],'date_basis':semantics.get('date_basis')}
     if info['source']['origin']=='synthetic' and page!='Workspace Home': st.warning('SYNTHETIC DATA · Software validation only; no business findings are implied.')
@@ -652,7 +648,7 @@ def sql_page(engine,report,metric,scope):
     from streamlit_ace import st_ace
     lab=SQLLab(engine)
     st.subheader('SQL Lab')
-    st.caption('One read-only SELECT or CTE over the sources below. Active filters are applied before SQL. Unique-key relationships are required for joins. 768 MB memory, 10-second execution budget, bounded result pages.')
+    st.caption(f'One read-only SELECT or CTE over the sources below. Active filters are applied before SQL. Unique-key relationships are required for joins. Up to {memory_limit()} of memory before using disk, a {query_deadline(10,engine.info["rows"]):,.0f}-second execution budget on this table, bounded result pages.')
     with st.expander('Available sources and columns',expanded=True): st.json(lab.catalog())
     if st.session_state.get('sql-next-mode'):
         st.session_state['sql-mode']=st.session_state.pop('sql-next-mode')

@@ -23,9 +23,9 @@ MEMORY_SHARE = 0.55
 MINIMUM_MEMORY_MB = 1024
 FALLBACK_MEMORY_BYTES = 8 * 1024 ** 3
 
-# Query deadlines were tuned for tables up to this size. Larger tables get
-# proportionally longer deadlines so a valid full-table calculation can finish.
-DEADLINE_BASE_ROWS = 5_000_000
+# Query deadlines suit tables up to this size. Larger tables get proportionally
+# longer deadlines, because a slow valid answer is better than a timeout.
+DEADLINE_BASE_ROWS = 2_000_000
 DEADLINE_BASE_SECONDS = 20.0
 DEADLINE_MAXIMUM_SECONDS = 900.0
 
@@ -88,6 +88,6 @@ def restrict(connection):
 
 
 def query_deadline(seconds, rows):
-    """Interrupt deadline: the requested budget, scaled up only for tables over 5M rows."""
+    """Interrupt deadline: the requested budget, scaled up only for large tables."""
     budget = min(DEADLINE_BASE_SECONDS, max(.01, seconds))
     return min(DEADLINE_MAXIMUM_SECONDS, budget * max(1.0, (rows or 0) / DEADLINE_BASE_ROWS))

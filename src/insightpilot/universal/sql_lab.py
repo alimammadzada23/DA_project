@@ -147,13 +147,11 @@ class SQLLab:
         body=f'WITH {prefix} SELECT * FROM ({sql}) AS __user_query' if prefix else sql
         query=f'SELECT * FROM ({body}) AS __sql_result LIMIT {size+1} OFFSET {page*size}'
         try:
-            result=self.engine.run(query,parameters,limit=size,explain=explain,timeout=timeout,method={
+            result=self.engine.run(query,parameters,limit=size,explain=explain,timeout=timeout,cache=False,method={
                 'mode':'SQL Lab: validated read-only SELECT', 'user_sql':sql,'scanned_sources':scans,
                 'scope':self.catalog(),'relationships':self.relationships,'page':page,'page_size':size,
                 'time_limit_seconds':round(query_deadline(timeout,self.engine.info['rows']),2),
                 'memory_limit':memory_limit(),'external_access':False})
-        except duckdb.InterruptException as exc: raise ValueError('Query exceeded its time budget. Narrow filters or simplify the query.') from exc
-        except duckdb.OutOfMemoryException as exc: raise ValueError('Query exceeded its memory budget. Reduce cardinality or aggregate first.') from exc
         except duckdb.Error as exc: raise ValueError('SQL could not execute: '+str(exc).split('\nLINE')[0][:600]) from exc
         result['user_sql']=sql
         return result

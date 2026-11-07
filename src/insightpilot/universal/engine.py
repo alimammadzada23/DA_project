@@ -1,4 +1,5 @@
 """Filtered full-table SQL calculations with evidence bound to immutable versions."""
+from collections import OrderedDict
 from dataclasses import asdict, dataclass
 from datetime import date
 import hashlib
@@ -7,6 +8,7 @@ import math
 import threading
 import time
 
+import duckdb
 import pandas as pd
 
 from ..datasets import quote
@@ -14,6 +16,39 @@ from ..engine_settings import query_deadline
 from .metrics import Metric
 from .profile import date_expression, numeric_expression
 from .context import AnalysisContext
+
+
+# Table versions are immutable, so a query's answer can never change. Reusing slow
+# answers keeps pages responsive when Streamlit reruns them on every interaction.
+# Each entry is bounded in size and rebuilt evidence still describes the current call.
+RESULT_CACHE_ENTRIES = 128
+RESULT_CACHE_MIN_SECONDS = 0.5
+RESULT_CACHE_MAX_ROWS = 10_000
+_results = OrderedDict()
+_results_lock = threading.Lock()
+
+
+def _result_key(workspace, sql, parameters, limit):
+    return str(workspace.database), sql, json.dumps(parameters, default=str), limit
+
+
+def _stored_result(key):
+    if key is None:
+        return None
+    with _results_lock:
+        stored = _results.get(key)
+        if stored:
+            _results.move_to_end(key)
+        return stored
+
+
+def _store_result(key, columns, rows, seconds):
+    if key is None or seconds < RESULT_CACHE_MIN_SECONDS or len(rows) > RESULT_CACHE_MAX_ROWS:
+        return
+    with _results_lock:
+        _results[key] = (columns, rows)
+        while len(_results) > RESULT_CACHE_ENTRIES:
+            _results.popitem(last=False)
 
 
 @dataclass(frozen=True)
@@ -70,19 +105,32 @@ class Engine:
             else: raise ValueError('Unsupported filter operator.')
         return ' AND '.join(clauses) or 'true', params
 
-    def run(self, sql, params=(), *, limit=1000, method=None, explain=False, timeout=20):
+    def run(self, sql, params=(), *, limit=1000, method=None, explain=False, timeout=20, cache=True):
         if not 1 <= limit <= 50_001: raise ValueError('Result limit exceeded.')
         full = f'WITH selected AS (SELECT * FROM {quote(self.info["current"])} WHERE {self.where}) ' + sql
         if explain: full='EXPLAIN '+full
         started = time.perf_counter()
-        with self.workspace.connect() as con:
-            timer = threading.Timer(query_deadline(timeout,self.info['rows']), con.interrupt); timer.start()
-            try:
-                result = con.execute(full,[*self.parameters,*params])
-                columns = [c[0] for c in result.description]
-                rows = result.fetchmany(limit+1)
-            finally:
-                timer.cancel(); timer.join()
+        deadline = query_deadline(timeout,self.info['rows'])
+        key = None if explain or not cache else _result_key(self.workspace,full,[*self.parameters,*params],limit)
+        stored = _stored_result(key)
+        if stored:
+            columns, rows = stored
+        else:
+            with self.workspace.connect() as con:
+                timer = threading.Timer(deadline, con.interrupt); timer.start()
+                try:
+                    result = con.execute(full,[*self.parameters,*params])
+                    columns = [c[0] for c in result.description]
+                    rows = result.fetchmany(limit+1)
+                except duckdb.InterruptException as exc:
+                    raise ValueError(f'This calculation exceeded its time budget of {deadline:,.0f} seconds on {self.info["rows"]:,} rows. '
+                                     'Narrow the filters or simplify it, then try again. No partial result is shown.') from exc
+                except duckdb.OutOfMemoryException as exc:
+                    raise ValueError('This calculation exceeded its memory budget, even after using disk. '
+                                     'Reduce the number of groups or narrow the filters, then try again.') from exc
+                finally:
+                    timer.cancel(); timer.join()
+            _store_result(key,columns,rows,time.perf_counter()-started)
         signature = json.dumps({'table':self.table,'version':self.info['current'],'filters':[asdict(f) for f in self.filters],
                                 'sql':full,'parameters':[*self.parameters,*params], 'context':self.context.dictionary()},default=str,sort_keys=True)
         return {'columns':columns,'rows':rows[:limit],'truncated':len(rows)>limit,

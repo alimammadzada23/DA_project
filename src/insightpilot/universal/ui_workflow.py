@@ -241,7 +241,9 @@ def sheet_overlap_details(info):
 
 
 def dataset_overview(workspace,table,report=None,*,new=False):
-    info=workspace.info(table);report=report or dataset_profile(str(workspace.directory),table,info['current'])
+    info=workspace.info(table)
+    if not report:
+        with st.spinner('Profiling every row of this dataset…'):report=dataset_profile(str(workspace.directory),table,info['current'])
     with st.container(border=True):
         st.subheader(('Just imported · ' if new else 'Dataset overview · ')+info['source'].get('filename',table))
         st.caption(f'{table} · {info["rows"]:,} rows · {len(info["columns"]):,} fields · {report["exact_duplicate_rows"]:,} exact duplicates retained')
