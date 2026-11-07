@@ -159,6 +159,31 @@ launcher. You may need to reselect a workspace or saved view after a fresh brows
 session. Custom workspace environment variables remain supported and are inherited
 by the launcher; Finder does not inherit temporary exports from another Terminal.
 
+## Big files
+
+InsightPilot now handles tables of up to 100 million rows. DuckDB sizes itself to this
+Mac (about 55% of RAM and all CPU cores) and uses disk for anything that doesn't fit.
+
+- **Files over 512 MB, or a folder of files:** use **Data Hub → Upload datasets → File
+  or folder on this Mac** and enter the path. A folder becomes one table with a
+  `source_file` column.
+- **Excel with several sheets:** choose one sheet or all sheets. Rows repeated across
+  sheets are reported and kept.
+- **CSV with no header row:** turn on the no-header option and enter the column names.
+- **Disk space:** an import checks for room first. Saving a project makes another full
+  copy of its data, so a big project needs at least twice its size free.
+- **First opening of a big table:** profiling reads every row, about 45 seconds at 50
+  million rows, once per table version each time the app starts.
+
+If the Mac feels short of memory while Qwen is also running, start the app from Terminal
+with less memory for DuckDB:
+
+```bash
+INSIGHTPILOT_DUCKDB_MEMORY=6GB ./"Start InsightPilot.command"
+```
+
+Limits, measurements and details are in [Working with large tables](LARGE_DATA.md).
+
 ## Occasional safe update
 
 Stop InsightPilot first. In Terminal:

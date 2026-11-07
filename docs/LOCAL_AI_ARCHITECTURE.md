@@ -56,8 +56,8 @@ values are parameters. Queries pass through SQL Lab's parsed SELECT/CTE and
 function restrictions. Writes, external file readers, arbitrary joins, extensions,
 network access and model SQL are unavailable. Only approved direct joins with a
 unique right key are supported. Unmatched facts remain visible; version changes
-invalidate join approval. Existing DuckDB limits remain: 768 MB, two threads,
-Engine deadline 20 seconds and SQL Lab default deadline 10 seconds. Statistical
+invalidate join approval. DuckDB uses the shared limits in [LARGE_DATA.md](LARGE_DATA.md):
+Engine deadline 20 seconds and SQL Lab default deadline 10 seconds, growing from 2 million rows. Statistical
 results use the filtered scope. Sample skewness is descriptive, not causal proof.
 
 ## Ollama protocol and resources

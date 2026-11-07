@@ -109,11 +109,13 @@ retain the data version and chart preset.
 | AI Analyst | Standard finite questions or optional local Ollama structured plans; compound measures, guarded rates, follow-ups, charts, evidence and saved replay; model never supplies executable SQL or numerical findings |
 | Reports | Version-bound replay, standalone escaped HTML, saved evidence blocks, chart/PNG/HTML downloads and bounded source-scope CSV/XLSX/Power Query preparation |
 
-File imports: 512 MiB / 5 million rows / 150 columns; Excel 100 MiB / 500,000 rows.
+File imports: up to 100 million rows and 150 columns, limited by free disk rather than
+file size; browser uploads up to 512 MB. See [Working with large tables](docs/LARGE_DATA.md).
 CSV and TSV require UTF-8. Delimiter is explicit; ambiguous slash dates and numeric
 locales require a reviewed transformation. Nested records must be flattened.
 SQL results are paged, at most 5,000 rows per page, with a 10-second default
-interruption budget and 768 MB connection memory budget. The ordinary records
+interruption budget that grows from 2 million rows, and about 55% of RAM before DuckDB
+spills to disk. The ordinary records
 viewer sends 100 rows per page to the browser. Full-selection export packages
 are capped at 100,000 rows, with an explicit refusal rather than silent truncation.
 
