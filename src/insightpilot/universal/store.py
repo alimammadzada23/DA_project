@@ -17,10 +17,10 @@ import pandas as pd
 
 from ..datasets import digest, quote, read_table
 from ..engine_settings import connection_config, restrict
+from .disk_space import ensure_free_space
 from .profile import date_expression, numeric_expression, profile
 
-MAX_ROWS = 5_000_000
-MAX_BYTES = 512 * 1024 * 1024
+MAX_ROWS = 100_000_000
 _LOCKS = {}
 _LOCKS_GUARD = threading.Lock()
 
@@ -87,8 +87,9 @@ class Workspace:
             raise ValueError('Table names need 1–63 letters, digits or underscores, starting with a letter.')
         if name in self.tables():
             raise ValueError('Use a new table name; existing tables and source files are preserved.')
-        if not source.is_file() or source.stat().st_size > MAX_BYTES:
-            raise ValueError('Choose a local file no larger than 512 MiB.')
+        if not source.is_file():
+            raise ValueError('Choose an existing local file.')
+        ensure_free_space(self.directory, [source])
         key = uuid.uuid4().hex
         sources = self.directory / 'sources'; sources.mkdir(exist_ok=True)
         retained = sources / (key + source.suffix.lower())
