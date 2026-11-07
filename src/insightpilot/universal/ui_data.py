@@ -10,11 +10,16 @@ import pandas as pd
 import streamlit as st
 
 from .excel_stream import ALL_SHEETS, sheet_names
+from .disk_space import size_text
+from .file_readers import parse_column_names, scan_source
 from .connectors import database_tables, import_api, import_database, import_postgres
 from .metrics import Metric, save_metric
 from .profile import safe_role_suggestions
 from .relationships import inspect_relationship, join_preview, load_relationships, save_relationship, suggest_relationships
 
+# Column order published by HM Land Registry for its header-less Price Paid CSV files.
+LAND_REGISTRY_COLUMNS=('transaction_id,price,transfer_date,postcode,property_type,new_build,duration,paon,saon,'
+                       'street,locality,town,district,county,ppd_category,record_status')
 ROLES=['unassigned','date','identifier','customer','product','transaction','revenue','expense','quantity',
        'price','geography','company','category','status','duration','text','measure']
 
@@ -59,24 +64,100 @@ def _sheet_picker(source,label,key):
         format_func=lambda value:f'All {len(names)} sheets into one table (adds a "sheet" column)' if value==ALL_SHEETS else value)
 
 
+def _header_options(key):
+    """Column names for header-less delimited files: None means the file has a header row."""
+    if not st.checkbox('These CSV/TSV files have no header row',key=key+'-no-header'):return None
+    text=st.text_area('Column names, separated by commas',key=key+'-column-names')
+    st.caption('For UK Land Registry Price Paid files, copy these names:')
+    st.code(LAND_REGISTRY_COLUMNS,language=None)
+    return parse_column_names(text) if text.strip() else []
+
+
+def _delimited_preview(data,label,separator,names):
+    from .import_preview import parsing_preview
+    try:
+        preview=parsing_preview(data,separator)
+        st.caption(label+' · UTF-8 · selected separator '+repr(separator)+' · '+str(preview['field_count'])+' fields detected. ISO dates recognized; ambiguous dates need explicit conversion.')
+        if preview['warning']:st.warning(preview['warning'])
+        if names and len(names)==preview['field_count']:
+            frame=pd.DataFrame([preview['columns'],*preview['rows']],columns=names)
+        else:
+            if names:st.warning(f'{len(names)} column names were given, but the file has {preview["field_count"]} fields.')
+            frame=pd.DataFrame(preview['rows'],columns=None if names is not None else preview['columns'])
+        st.dataframe(frame,hide_index=True,width='stretch')
+    except (UnicodeDecodeError,ValueError,csv.Error):st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import checks the complete source and retains rejected bytes.')
+
+
+def _available_name(workspace,stem):
+    name=re.sub(r'[^A-Za-z0-9_]+','_',stem).strip('_')[:50] or 'dataset'
+    if not name[0].isalpha(): name='table_'+name
+    base=name; index=2
+    while name in workspace.tables(): name=base+'_'+str(index); index+=1
+    return name
+
+
+def _import_from_path(workspace,message_key):
+    key=message_key+'-path'
+    st.caption('Import by path, with no browser upload or 512 MB limit. A folder with several files of the same structure becomes one table with a source_file column. Files are copied into the project, so your originals are not changed.')
+    location=st.text_input('File or folder path',key=key,placeholder='~/Downloads/online_retail_II.xlsx')
+    if not location.strip():return
+    try:found=scan_source(location)
+    except (ValueError,OSError) as exc:
+        st.warning(str(exc));return
+    kinds=sorted({path.suffix.lower() for path in found})
+    if len(kinds)>1:
+        kind=st.selectbox('This folder has several file types. Import',kinds,key=key+'-kind')
+        found=[path for path in found if path.suffix.lower()==kind]
+    suffix=found[0].suffix.lower()
+    if suffix=='.xlsx' and len(found)>1:
+        st.warning('Excel workbooks import one at a time. Enter the path of one workbook.');return
+    total=sum(path.stat().st_size for path in found)
+    st.write(f'**{len(found):,} file{"s" if len(found)>1 else ""}** · {size_text(total)}')
+    if len(found)>1:
+        st.dataframe(pd.DataFrame([{'File':path.name,'Size':size_text(path.stat().st_size)} for path in found[:500]]),hide_index=True,width='stretch',height=200)
+    sheet=_sheet_picker(found[0],found[0].name,key+'-sheet') if suffix=='.xlsx' else 0
+    delimiter,names=None,None
+    if suffix in ('.csv','.tsv'):
+        delimiter=st.selectbox('Separator',[None,',','\t',';','|'],key=key+'-separator',format_func=lambda v:'By extension: comma for CSV, tab for TSV' if v is None else repr(v))
+        names=_header_options(key)
+        with found[0].open('rb') as stream:
+            _delimited_preview(stream.read(65536),found[0].name,delimiter or ('\t' if suffix=='.tsv' else ','),names)
+    stem=found[0].stem if len(found)==1 else found[0].parent.name
+    name=st.text_input('New table name',_available_name(workspace,stem),key=key+'-name')
+    synthetic=st.checkbox('This is synthetic test data',key=key+'-synthetic')
+    if not st.button('Import from this Mac',key=key+'-import',type='primary'):return
+    if names==[]:
+        st.warning('Enter the column names, or turn off the no-header option.');return
+    status=st.empty()
+    provenance={'origin':'synthetic' if synthetic else 'local_files'}
+    try:
+        with st.spinner('Importing and checking all rows. Large files can take several minutes…'):
+            if len(found)==1:
+                info=workspace.add_file(found[0],name,sheet=sheet,delimiter=delimiter,column_names=names,provenance=provenance,progress=status.caption)
+            else:
+                info=workspace.add_files(found,name,delimiter=delimiter,column_names=names,provenance=provenance,progress=status.caption)
+    except Exception as exc:
+        st.error(f'{exc}. No partial table was created.');return
+    messages=[('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.')]
+    messages+=[('warning',warning) for warning in info.get('import_warnings',[])]
+    st.session_state[message_key]=messages
+    st.session_state['ux-last-import-'+str(workspace.directory)]=name
+    st.session_state['ux-data-mode-pending-'+str(workspace.directory)]='Dataset library'
+    st.rerun()
+
+
 def _import_datasets(workspace,message_key):
     st.markdown('### Upload a dataset')
-    tabs=st.tabs(['Files','Local databases','HTTP API','PostgreSQL','Event logs'])
+    tabs=st.tabs(['Files','File or folder on this Mac','Local databases','HTTP API','PostgreSQL','Event logs'])
     with tabs[0]:
-        from .import_preview import parsing_preview
         files=st.file_uploader('Dataset files',type=['csv','tsv','xlsx','parquet','json','jsonl','ndjson'],accept_multiple_files=True,key=message_key+'-files')
         delimiter=st.selectbox('Delimited text separator',[None,',','\t',';','|'],format_func=lambda v:'By extension: comma for CSV, tab for TSV' if v is None else repr(v))
+        names=_header_options(message_key+'-upload') if any(Path(upload.name).suffix.lower() in ('.csv','.tsv') for upload in files or []) else None
         if files:
             with st.expander('Preview source parsing',expanded=True):
                 for upload in files:
                     if Path(upload.name).suffix.lower() not in ('.csv','.tsv'): continue
-                    sep=delimiter or ('\t' if upload.name.lower().endswith('.tsv') else ',')
-                    try:
-                        preview=parsing_preview(upload.getbuffer(),sep)
-                        st.caption(upload.name+' · UTF-8 · selected separator '+repr(sep)+' · '+str(preview['field_count'])+' fields detected. ISO dates recognized; ambiguous dates need explicit conversion.')
-                        if preview['warning']:st.warning(preview['warning'])
-                        st.dataframe(pd.DataFrame(preview['rows'],columns=preview['columns']),hide_index=True,width='stretch')
-                    except (UnicodeDecodeError,ValueError,csv.Error):st.warning('Preview could not parse these bytes as UTF-8 delimited text. Import checks the complete source and retains rejected bytes.')
+                    _delimited_preview(upload.getbuffer(),upload.name,delimiter or ('\t' if upload.name.lower().endswith('.tsv') else ','),names)
         sheets={upload.name:_sheet_picker(upload,upload.name,message_key+'-sheet-'+upload.name) for upload in files or [] if upload.name.lower().endswith('.xlsx')}
         with st.form('universal-upload'):
             synthetic=st.checkbox('These files are synthetic test data')
@@ -84,17 +165,17 @@ def _import_datasets(workspace,message_key):
         if submitted:
             messages=[]
             if not files: messages.append(('warning','Choose at least one file.'))
+            if names==[]:
+                messages.append(('warning','Enter the column names, or turn off the no-header option.'));files=[]
             for file in files or []:
                 folder=workspace.directory/'incoming'; folder.mkdir(exist_ok=True)
                 path=folder/(uuid.uuid4().hex+Path(file.name).suffix.lower())
                 path.write_bytes(file.getvalue())
-                name=re.sub(r'[^A-Za-z0-9_]+','_',Path(file.name).stem).strip('_')[:50] or 'dataset'
-                if not name[0].isalpha(): name='table_'+name
-                base=name; index=2
-                while name in workspace.tables(): name=base+'_'+str(index); index+=1
+                name=_available_name(workspace,Path(file.name).stem)
+                columns=names if Path(file.name).suffix.lower() in ('.csv','.tsv') else None
                 try:
                     with st.spinner(f'Importing {file.name}; checking all rows…'):
-                        info=workspace.add_file(path,name,sheet=sheets.get(file.name,0),delimiter=delimiter,provenance={
+                        info=workspace.add_file(path,name,sheet=sheets.get(file.name,0),delimiter=delimiter,column_names=columns,provenance={
                             'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
                     messages.append(('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.'))
                     st.session_state['ux-last-import-'+str(workspace.directory)]=name
@@ -104,10 +185,11 @@ def _import_datasets(workspace,message_key):
                 finally: path.unlink(missing_ok=True)
             st.session_state[message_key]=messages
             st.rerun()
-        st.caption('CSV/TSV, flat Parquet, JSON and Excel stream into DuckDB. Up to 100 million rows and 150 columns; browser uploads are limited to 512 MB per file. '
+        st.caption('CSV/TSV, flat Parquet, JSON and Excel stream into DuckDB. Up to 100 million rows and 150 columns; browser uploads are limited to 512 MB per file; use File or folder on this Mac for anything larger. '
                    'JSON must be a flat array; JSON Lines uses one object per line. '
                    'Malformed input is rejected atomically, with its original file and a rejection receipt retained.')
-    with tabs[1]:
+    with tabs[1]:_import_from_path(workspace,message_key)
+    with tabs[2]:
         path=st.text_input('Local SQLite or DuckDB source path',key='universal-db-path')
         if path and Path(path).is_file():
             try:
@@ -117,7 +199,7 @@ def _import_datasets(workspace,message_key):
                     import_database(workspace,path,source_table,target); st.rerun()
             except Exception as exc: st.error(str(exc))
         st.caption('Source data is opened read-only. The extracted table is copied into this workspace; source database files are not edited.')
-    with tabs[2]:
+    with tabs[3]:
         with st.form('universal-api'):
             url=st.text_input('HTTPS API base URL')
             name=st.text_input('Table name','api_records')
@@ -135,7 +217,7 @@ def _import_datasets(workspace,message_key):
                 st.rerun()
         st.caption('At most 50 pages / 100,000 records, with rate spacing and an empty terminal page required. '
                    'No redirects or arbitrary next-page links. Credentials are read from secure process configuration and never saved in receipts. Network policy still applies.')
-    with tabs[3]:
+    with tabs[4]:
         with st.form('universal-postgres'):
             variable=st.text_input('DSN environment variable name','INSIGHTPILOT_POSTGRES_DSN')
             schema=st.text_input('Source schema','public'); table=st.text_input('Source table')
@@ -148,7 +230,7 @@ def _import_datasets(workspace,message_key):
                 raise ValueError(f'PostgreSQL import could not finish ({type(exc).__name__}). Verify the configured read-only connection, schema/table, network access and source permissions.') from exc
             st.rerun()
         st.caption('Optional postgres extra and a configured reachable database are required. Server cursor, read-only transaction and statement timeout are enforced. No credentials are entered here.')
-    with tabs[4]:
+    with tabs[5]:
         st.caption('Import XES/XES.GZ using the existing streaming parser. The original log and parser database are retained. Cases and events enter the same catalog as all other datasets; review their definitions before analysis.')
         xes=st.file_uploader('XES event log',type=['xes','gz'])
         prefix=st.text_input('Event table prefix','eventlog')

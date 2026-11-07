@@ -5,6 +5,7 @@ never replaced, tables are immutable versions, and switching a version is undo.
 """
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -19,6 +20,7 @@ from ..datasets import digest, quote
 from ..engine_settings import connection_config, restrict
 from .disk_space import ensure_free_space
 from .excel_stream import load_table as load_workbook_table
+from .file_readers import combined_columns, delimited_columns, file_reader, normalize_delimiter
 from .profile import date_expression, numeric_expression, profile
 
 MAX_ROWS = 100_000_000
@@ -82,12 +84,38 @@ class Workspace:
     def _save_info(self, con, name, info):
         con.execute('INSERT OR REPLACE INTO _catalog VALUES (?,?)', [name, json.dumps(info,default=str)])
 
-    def add_file(self, source, name, *, sheet=0, provenance=None, delimiter=None, progress=None):
-        source = Path(source).resolve()
+    def _check_new_name(self, name):
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,62}', name):
             raise ValueError('Table names need 1–63 letters, digits or underscores, starting with a letter.')
         if name in self.tables():
             raise ValueError('Use a new table name; existing tables and source files are preserved.')
+
+    def _commit_import(self, con, name, table, *, warnings, source, operation, extra=None):
+        """Shared checks for every file import; raises before anything is committed."""
+        schema = con.execute(f'DESCRIBE {quote(table)}').fetchall()
+        cols = [r[0] for r in schema if r[0] != '_row_id']
+        # Reserved source names may otherwise be auto-renamed by DuckDB.
+        if any(c.casefold().startswith('_row_id') for c in cols):
+            raise ValueError('_row_id is reserved for stable source-row references.')
+        if len(cols) > 150 or any(not c.strip() for c in cols):
+            raise ValueError('Use 1–150 nonempty column names.')
+        if any(any(s in r[1] for s in ('STRUCT','MAP','[]')) for r in schema):
+            raise ValueError('Flatten nested fields explicitly before import.')
+        count = con.execute(f'SELECT count(*) FROM {quote(table)}').fetchone()[0]
+        if not 1 <= count <= MAX_ROWS:
+            raise ValueError(f'Use 1–{MAX_ROWS:,} records; no silent sampling is performed.')
+        info = {'name':name, 'current':table, 'columns':cols, 'rows':count, 'roles':{},
+                'grain':'Unconfirmed; review what one row represents.', 'created_at':now(),'import_warnings':warnings,
+                'source':source, **(extra or {}),
+                'versions':[{'table':table,'parent':None,'operation':{'kind':'import',**operation},
+                             'rows':count,'created_at':now(),'errors':0}]}
+        self._save_info(con, name, info)
+        con.execute('COMMIT')
+        return info
+
+    def add_file(self, source, name, *, sheet=0, provenance=None, delimiter=None, column_names=None, progress=None):
+        source = Path(source).resolve()
+        self._check_new_name(name)
         if not source.is_file():
             raise ValueError('Choose an existing local file.')
         ensure_free_space(self.directory, [source])
@@ -96,69 +124,107 @@ class Workspace:
         retained = sources / (key + source.suffix.lower())
         shutil.copyfile(source, retained)
         table = 't_' + key
-        parse_warnings=[]; workbook={}
+        warnings=[]; workbook={}
         try:
             with self.connect(write=True, external=True) as con:
                 con.execute('BEGIN')
                 if con.execute('SELECT count(*) FROM _catalog WHERE name=?',[name]).fetchone()[0]:
                     raise ValueError('This table name was imported in another session. Choose a new name.')
-                suffix = retained.suffix
-                if suffix in ('.csv','.tsv'):
-                    import csv
-                    delimiter = delimiter or ('\t' if suffix == '.tsv' else ',')
-                    if delimiter not in (',','\t',';','|'): raise ValueError('Choose comma, tab, semicolon or pipe delimiter.')
-                    with retained.open(encoding='utf-8-sig', newline='') as stream:
-                        header = next(csv.reader(stream, delimiter=delimiter), [])
-                    if len(header)==1:
-                        from .import_preview import parsing_preview
-                        with retained.open('rb') as stream: preview=parsing_preview(stream.read(65536),delimiter)
-                        if preview['warning']:parse_warnings.append(preview['warning'])
-                    if not header or any(not n.strip() for n in header) or len({n.casefold() for n in header}) != len(header):
-                        raise ValueError('Delimited files need unique nonempty column names (case insensitive).')
-                    con.execute(f'''CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,*
-                        FROM read_csv(?,header=true,all_varchar=true,delim=?,strict_mode=true,
-                        null_padding=false,ignore_errors=false,parallel=false)''', [str(retained), delimiter])
-                elif suffix == '.parquet':
-                    con.execute(f'CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,* FROM read_parquet(?)', [str(retained)])
-                elif suffix in ('.json','.jsonl','.ndjson'):
-                    # Flat structures only. DuckDB strict parsing preserves failures atomically.
-                    con.execute(f'''CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,*
-                        FROM read_json_auto(?,format=?,maximum_object_size=16777216,ignore_errors=false)''',
-                        [str(retained), 'newline_delimited' if suffix != '.json' else 'array'])
-                elif suffix == '.xlsx':
+                if retained.suffix == '.xlsx':
                     workbook = load_workbook_table(con, retained, table, sheet, progress)
-                    parse_warnings.extend(workbook['warnings'])
+                    warnings.extend(workbook['warnings'])
                 else:
-                    raise ValueError('Supported files: CSV, TSV, XLSX, flat Parquet, JSON array and JSON Lines.')
-                schema = con.execute(f'DESCRIBE {quote(table)}').fetchall()
-                cols = [r[0] for r in schema if r[0] != '_row_id']
-                # Reserved source names may otherwise be auto-renamed by DuckDB.
-                if any(c.casefold().startswith('_row_id') for c in cols):
-                    raise ValueError('_row_id is reserved for stable source-row references.')
-                if len(cols) > 150 or any(not c.strip() for c in cols):
-                    raise ValueError('Use 1–150 nonempty column names.')
-                if any(any(s in r[1] for s in ('STRUCT','MAP','[]')) for r in schema):
-                    raise ValueError('Flatten nested fields explicitly before import.')
-                count = con.execute(f'SELECT count(*) FROM {quote(table)}').fetchone()[0]
-                if not 1 <= count <= MAX_ROWS:
-                    raise ValueError(f'Use 1–{MAX_ROWS:,} records; no silent sampling is performed.')
-                info = {'name':name, 'current':table, 'columns':cols, 'rows':count, 'roles':{},
-                        'grain':'Unconfirmed; review what one row represents.', 'created_at':now(),'import_warnings':parse_warnings,
-                        'source':{'origin':'user_upload', **(provenance or {}),
-                                  'filename':(provenance or {}).get('filename',source.name),
-                                  'retained':str(retained.relative_to(self.directory)),
-                                  'sha256':digest(retained),'bytes':retained.stat().st_size},
-                        **({'sheets':workbook['sheets']} if workbook else {}),
-                        **({'sheet_overlap':workbook['overlap']} if workbook.get('overlap') else {}),
-                        'versions':[{'table':table,'parent':None,'operation':{'kind':'import','sheet':sheet,'delimiter':delimiter,'encoding':'UTF-8'},
-                                     'rows':count,'created_at':now(),'errors':0}]}
-                self._save_info(con, name, info)
-                con.execute('COMMIT')
-            return info
+                    delimiter = normalize_delimiter(retained, delimiter)
+                    if retained.suffix in ('.csv','.tsv'):
+                        delimited_columns(retained, delimiter, column_names, warnings)
+                    elif column_names is not None:
+                        raise ValueError('Column names can only be supplied for CSV or TSV files.')
+                    reader, parameters = file_reader(retained, delimiter, column_names)
+                    con.execute(f'CREATE TABLE {quote(table)} AS SELECT row_number() OVER () AS _row_id,* FROM {reader} LIMIT {MAX_ROWS+1}', parameters)
+                return self._commit_import(con, name, table, warnings=warnings,
+                    source={'origin':'user_upload', **(provenance or {}),
+                            'filename':(provenance or {}).get('filename',source.name),
+                            'retained':str(retained.relative_to(self.directory)),
+                            'sha256':digest(retained),'bytes':retained.stat().st_size},
+                    operation={'sheet':sheet,'delimiter':delimiter,'encoding':'UTF-8',
+                               **({'supplied_column_names':column_names} if column_names else {})},
+                    extra={**({'sheets':workbook['sheets']} if workbook else {}),
+                           **({'sheet_overlap':workbook['overlap']} if workbook.get('overlap') else {})})
         except Exception as exc:
             # Keep rejected source bytes plus an explicit receipt; no partial table is committed.
             (sources / (key + '.rejected.json')).write_text(json.dumps({'source':retained.name,
                 'sha256':digest(retained),'status':'rejected; no table committed','at':now(),
+                'error_type':type(exc).__name__,'parsing_error':str(exc)[:3000]}))
+            raise
+
+    def add_files(self, paths, name, *, provenance=None, delimiter=None, column_names=None, progress=None):
+        """Several files with the same columns become one table with a source_file column."""
+        paths = [Path(path).resolve() for path in paths]
+        self._check_new_name(name)
+        if len(paths) < 2:
+            raise ValueError('Choose at least two files, or import a single file directly.')
+        if any(not path.is_file() for path in paths):
+            raise ValueError('Every selected path must be an existing local file.')
+        suffixes = {path.suffix.lower() for path in paths}
+        if len(suffixes) > 1:
+            raise ValueError('Files in one table must share a type; found ' + ', '.join(sorted(suffixes)) + '.')
+        suffix = suffixes.pop()
+        if suffix == '.xlsx':
+            raise ValueError('Excel workbooks import one at a time. To combine sheets, choose all sheets for a workbook.')
+        ensure_free_space(self.directory, paths)
+        key = uuid.uuid4().hex
+        folder = self.directory / 'sources' / key; folder.mkdir(parents=True)
+        files = []
+        for index, path in enumerate(paths):
+            retained = folder / f'{index:05d}{suffix}'
+            if progress: progress(f'Copying {path.name} ({index + 1} of {len(paths)})')
+            shutil.copyfile(path, retained)
+            files.append({'filename':path.name, 'retained':str(retained.relative_to(self.directory)),
+                          'sha256':digest(retained), 'bytes':retained.stat().st_size})
+        table = 't_' + key
+        warnings = []
+        names_by_hash = {}
+        for item in files: names_by_hash.setdefault(item['sha256'], []).append(item['filename'])
+        for names in names_by_hash.values():
+            if len(names) > 1:
+                warnings.append('These files have identical contents, and all their rows were kept: ' + ', '.join(names) + '.')
+        combined = hashlib.sha256(''.join(f'{item["filename"]}\0{item["sha256"]}\n' for item in files).encode()).hexdigest()
+        retained_paths = [(item['filename'], self.directory / item['retained']) for item in files]
+        try:
+            delimiter = normalize_delimiter(retained_paths[0][1], delimiter)
+            if column_names is not None and suffix not in ('.csv', '.tsv'):
+                raise ValueError('Column names can only be supplied for CSV or TSV files.')
+            with self.connect(write=True, external=True) as con:
+                con.execute('BEGIN')
+                if con.execute('SELECT count(*) FROM _catalog WHERE name=?',[name]).fetchone()[0]:
+                    raise ValueError('This table name was imported in another session. Choose a new name.')
+                columns = combined_columns(con, retained_paths, delimiter, column_names, warnings)
+                lowered = {column.casefold() for column, _ in columns}
+                if any(column.startswith('_row_id') for column in lowered):
+                    raise ValueError('_row_id is reserved for stable source-row references.')
+                if 'source_file' in lowered:
+                    raise ValueError('These files already have a column named "source_file", which this import adds. Rename that column first.')
+                definitions = ','.join(quote(column) + ' ' + kind for column, kind in columns)
+                con.execute(f'CREATE TABLE {quote(table)} (_row_id BIGINT,source_file VARCHAR,{definitions})')
+                selection = ','.join(f'CAST({quote(column)} AS {kind})' for column, kind in columns)
+                written = 0
+                for label, path in retained_paths:
+                    reader, parameters = file_reader(path, delimiter, column_names)
+                    # Stop just past the limit; _commit_import then rejects the whole import.
+                    written += con.execute(f'''INSERT INTO {quote(table)} SELECT {written}+row_number() OVER (),?,{selection}
+                        FROM {reader} LIMIT {MAX_ROWS + 1 - written}''', [label, *parameters]).fetchone()[0]
+                    if progress: progress(f'{label}: {written:,} rows so far')
+                    if written > MAX_ROWS: break
+                return self._commit_import(con, name, table, warnings=warnings,
+                    source={'origin':'local_files', **(provenance or {}),
+                            'filename':(provenance or {}).get('filename',f'{paths[0].parent.name} ({len(paths)} files)'),
+                            'retained':str(folder.relative_to(self.directory)), 'sha256':combined,
+                            'bytes':sum(item['bytes'] for item in files), 'files':files},
+                    operation={'delimiter':delimiter,'encoding':'UTF-8','files':len(files),
+                               **({'supplied_column_names':column_names} if column_names else {})})
+        except Exception as exc:
+            (self.directory / 'sources' / (key + '.rejected.json')).write_text(json.dumps({'source':key,'files':files,
+                'sha256':combined,'status':'rejected; no table committed','at':now(),
                 'error_type':type(exc).__name__,'parsing_error':str(exc)[:3000]}))
             raise
 
