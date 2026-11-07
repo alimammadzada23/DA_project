@@ -20,6 +20,7 @@ from .relationships import inspect_relationship, join_preview, load_relationship
 # Column order published by HM Land Registry for its header-less Price Paid CSV files.
 LAND_REGISTRY_COLUMNS=('transaction_id,price,transfer_date,postcode,property_type,new_build,duration,paon,saon,'
                        'street,locality,town,district,county,ppd_category,record_status')
+RELATIONSHIP_CHECK_MAX_ROWS=5_000_000
 ROLES=['unassigned','date','identifier','customer','product','transaction','revenue','expense','quantity',
        'price','geography','company','category','status','duration','text','measure']
 
@@ -249,7 +250,14 @@ def relationship_editor(workspace):
     st.subheader('Model relationships')
     st.caption('Keys are suggestions to investigate, not proof of entity identity. Exact text equality preserves leading zeros; NULL keys do not match.')
     st.caption('Automatic screening checks at most 50 same-name key candidates; additional relationships can be validated manually below.')
-    suggestions=suggest_relationships(workspace)
+    tables=workspace.tables();largest=max(info['rows'] for info in tables.values())
+    confirmed='rel-check-large-'+str(workspace.directory)
+    if largest>RELATIONSHIP_CHECK_MAX_ROWS and not st.session_state.get(confirmed):
+        st.info(f'Relationship checks read every row, and the largest table here has {largest:,} rows, so they run only when you ask.')
+        if st.button('Check relationships',key=confirmed+'-button'):
+            st.session_state[confirmed]=True;st.rerun()
+        return
+    with st.spinner('Checking relationships across every row…'):suggestions=suggest_relationships(workspace)
     if suggestions:
         st.dataframe(pd.DataFrame([{'left':r['left'],'left key':r['left_key'],'right':r['right'],'right key':r['right_key'],
             'cardinality':r['cardinality'],'unmatched left':r['left_unmatched_rows'],'basis':r['basis']} for r in suggestions]),hide_index=True,width='stretch')

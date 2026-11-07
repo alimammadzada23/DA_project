@@ -1,14 +1,41 @@
 """Explicit relationships, cardinality receipts and safe fact-to-dimension queries."""
+from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import asdict
 import json
+import threading
 
 from ..datasets import quote
+
+# These checks read every row of both tables. Table versions never change, so one
+# answer stays correct for those versions and page reruns can reuse it.
+_REMEMBERED_ENTRIES = 64
+_remembered = OrderedDict()
+_remembered_lock = threading.Lock()
+
+
+def _remember(key, calculate):
+    with _remembered_lock:
+        if key in _remembered:
+            _remembered.move_to_end(key)
+            return deepcopy(_remembered[key])
+    value = calculate()
+    with _remembered_lock:
+        _remembered[key] = deepcopy(value)
+        while len(_remembered) > _REMEMBERED_ENTRIES:
+            _remembered.popitem(last=False)
+    return value
 
 
 def inspect_relationship(workspace, left, left_key, right, right_key):
     if left == right: raise ValueError('Choose two different tables.')
     l,r=workspace.info(left),workspace.info(right)
     if left_key not in l['columns'] or right_key not in r['columns']: raise ValueError('Choose existing key columns.')
+    return _remember((str(workspace.database),'inspect',left,l['current'],left_key,right,r['current'],right_key),
+                     lambda:_inspect(workspace,l,left,left_key,r,right,right_key))
+
+
+def _inspect(workspace, l, left, left_key, r, right, right_key):
     lt,rt,lk,rk=map(quote,[l['current'],r['current'],left_key,right_key])
     with workspace.connect() as con:
         stats=[]
@@ -47,7 +74,13 @@ def load_relationships(workspace):
 
 def suggest_relationships(workspace,max_checks=50):
     """Conservative same-name key hypotheses; identity still needs user review."""
-    tables=workspace.tables(); suggestions=[]; checks=0
+    tables=workspace.tables()
+    versions=tuple(sorted((name,info['current']) for name,info in tables.items()))
+    return _remember((str(workspace.database),'suggest',versions,max_checks),lambda:_suggest(workspace,tables,max_checks))
+
+
+def _suggest(workspace,tables,max_checks):
+    suggestions=[]; checks=0
     excluded={'rownames','index','year','month','day','date','amount','value','price','quantity'}
     for left,li in tables.items():
         for right,ri in tables.items():

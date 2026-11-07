@@ -8,6 +8,7 @@ server-side page runs (AppTest), without browser rendering.
   .venv/bin/python scripts/benchmark_large.py --rows 30000000 --output outputs/large.json
 """
 import argparse
+from datetime import datetime, timedelta
 import json
 import os
 from pathlib import Path
@@ -18,12 +19,14 @@ import tempfile
 import time
 
 import duckdb
+import openpyxl
 from streamlit.testing.v1 import AppTest
 
 from insightpilot.engine_settings import memory_limit, thread_count
 from insightpilot.universal import Workspace
 from insightpilot.universal.dax import Field, Model, evaluate
-from insightpilot.universal.engine import Engine
+from insightpilot.universal.engine import Engine, _results
+from insightpilot.universal.excel_stream import ALL_SHEETS
 from insightpilot.universal.file_readers import scan_source
 from insightpilot.universal.metrics import Metric
 from insightpilot.universal.projects import ProjectSession
@@ -90,6 +93,30 @@ def check_engine(workspace, table, rows, results, prefix):
         "SELECT count(*) FROM selected WHERE zone='zone-7'"))
 
 
+def check_workbook(directory, results):
+    """Two sheets shaped like UCI Online Retail II: 1,067,371 rows, sharing an exact block."""
+    first, second, shared = 525_461, 541_910, 25_000
+    workbook = openpyxl.Workbook(write_only=True)
+    start = datetime(2009, 12, 1, 7, 45)
+
+    def fill(sheet, rows, offset):
+        sheet.append(['Invoice', 'StockCode', 'Description', 'Quantity', 'InvoiceDate', 'Price', 'Customer ID', 'Country'])
+        for index in range(offset, offset + rows):
+            sheet.append([f'I{index}', f'S{index % 4000}', f'SYNTHETIC ITEM {index % 4000}', index % 24 + 1,
+                          start + timedelta(minutes=index), round(1 + index % 700 / 100, 2), 13000 + index % 4000, 'Synthetic'])
+    fill(workbook.create_sheet('Year 2009-2010'), first, 0)
+    fill(workbook.create_sheet('Year 2010-2011'), second, first - shared)
+    path = directory / 'SYNTHETIC-two-sheets.xlsx'
+    timed(results, 'workbook: write two sheets', lambda: workbook.save(path))
+    results['workbook: file bytes'] = path.stat().st_size
+    workspace = Workspace.create(directory / 'workbook-project')
+    info = timed(results, 'workbook: import all sheets with overlap check', lambda: workspace.add_file(path, 'retail', sheet=ALL_SHEETS, provenance={'origin': 'synthetic'}))
+    assert info['rows'] == first + second
+    assert info['sheet_overlap']['distinct_rows_in_several_sheets'] == shared, info['sheet_overlap']
+    assert info['sheet_overlap']['extra_copies'] == shared
+    timed(results, 'workbook: full profile', lambda: workspace.profile('retail'))
+
+
 def check_studio(workspace, table, rows, results):
     """DAX compiles to correlated subqueries, the most expensive path in the app."""
     engine = Engine(workspace, table)
@@ -122,6 +149,8 @@ def check_sql_lab(workspace, table, rows, results):
 
 
 def run_pages(root, session_directory, results):
+    # Earlier engine checks filled the result cache; page timings must start cold.
+    _results.clear()
     os.environ['INSIGHTPILOT_WORKSPACE_ROOT'] = str(root)
     os.environ['INSIGHTPILOT_UNIVERSAL_WORKSPACE'] = str(session_directory)
     app = timed(results, 'page: first app load', lambda: AppTest.from_file(APP, default_timeout=900).run())
@@ -133,6 +162,8 @@ def run_pages(root, session_directory, results):
             if app.exception:
                 raise RuntimeError(app.exception[0].value)
         timed(results, 'page: ' + page, visit)
+    charts = results['charts rendered per step'] = {}
+
     def choose(label, change):
         def action():
             change()
@@ -140,6 +171,7 @@ def run_pages(root, session_directory, results):
             if app.exception:
                 raise RuntimeError(app.exception[0].value)
         timed(results, label, action)
+        charts[label] = len(app.get('plotly_chart'))
 
     def explore_chart(mode):
         app.selectbox(key='explore-chart-type').set_value(mode)
@@ -148,9 +180,13 @@ def run_pages(root, session_directory, results):
     for mode in ('Numeric distribution', 'Numeric relationship', 'Calendar trend', 'Distribution by group',
                  'Two-dimensional counts', 'Composition & Pareto', 'Records'):
         choose('Explore: ' + mode, lambda mode=mode: explore_chart(mode))
+    choose('Explore: Calendar trend again (repeat)', lambda: explore_chart('Calendar trend'))
     choose('Explore: Ranked groups again (repeat)', lambda: explore_chart('Ranked groups'))
     choose('page: open Data Hub', lambda: app.radio(key='universal-page').set_value('Data Hub'))
     choose('Data Hub: dataset library', lambda: next(item for item in app.radio if item.label == 'Data Hub view').set_value('Dataset library'))
+    choose('Data Hub: dataset library again (repeat)', lambda: None)
+    choose('Data Hub: run relationship checks (asked for)', lambda: next(item for item in app.button if item.label == 'Check relationships').click())
+    choose('Data Hub: relationship checks again (repeat)', lambda: None)
     for page in PAGES:
         def again(target=page):
             app.radio(key='universal-page').set_value(target).run()
@@ -172,6 +208,7 @@ def main():
         parquet, csv_path = timed(results, 'generate synthetic files', lambda: generate(root, args.rows, args.files))
         sizes = {'parquet_bytes': sum(path.stat().st_size for path in parquet.iterdir()), 'csv_bytes': csv_path.stat().st_size}
         print(sizes, flush=True)
+        check_workbook(root, results)
         catalog = root / 'catalog'
         session = ProjectSession.start(catalog)
         workspace = session.workspace
@@ -203,7 +240,7 @@ def main():
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + '\n')
-    failures = [label for label, value in results.items() if isinstance(value, dict)]
+    failures = [label for label, value in results.items() if isinstance(value, dict) and 'error' in value]
     print('Failed steps:', failures or 'none')
     return 1 if failures else 0
 

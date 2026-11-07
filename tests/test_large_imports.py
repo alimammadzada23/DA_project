@@ -472,3 +472,48 @@ def test_path_tab_explains_a_bad_path_and_failed_import(workspace, folder):
     app = click_import(path_app(workspace, folder))
     assert any('different columns' in item.value and 'No partial table' in item.value for item in app.error)
     assert not workspace.tables()
+
+
+def two_tables(workspace, tmp_path):
+    fact = tmp_path / 'fact.csv'; fact.write_text('code,amount\nA,1\nB,2\nA,3\n')
+    lookup = tmp_path / 'lookup.csv'; lookup.write_text('code,label\nA,Alpha\nB,Beta\n')
+    workspace.add_file(fact, 'fact'); workspace.add_file(lookup, 'lookup')
+
+
+def test_relationship_checks_are_reused_until_a_version_changes(workspace, tmp_path, monkeypatch):
+    from insightpilot.universal import relationships
+    two_tables(workspace, tmp_path)
+    first = relationships.inspect_relationship(workspace, 'fact', 'code', 'lookup', 'code')
+    calls = []
+    real = relationships._inspect
+    monkeypatch.setattr(relationships, '_inspect', lambda *args: calls.append(1) or real(*args))
+    first['cardinality'] = 'changed by caller'
+    again = relationships.inspect_relationship(workspace, 'fact', 'code', 'lookup', 'code')
+    assert not calls and again['cardinality'] == 'many-to-one'
+    assert relationships.suggest_relationships(workspace)[0]['right_key'] == 'code'
+    workspace.transform('lookup', {'kind': 'nullify', 'column': 'code', 'value': 'B'})
+    changed = relationships.inspect_relationship(workspace, 'fact', 'code', 'lookup', 'code')
+    assert calls and changed['left_unmatched_rows'] == 1
+    assert not relationships.suggest_relationships(workspace) or relationships.suggest_relationships(workspace)[0]['left_unmatched_rows'] == 1
+
+
+def relationship_page(directory):
+    from insightpilot.universal import Workspace
+    from insightpilot.universal.ui_data import relationship_editor
+    relationship_editor(Workspace(directory))
+
+
+def test_relationship_checks_wait_for_a_click_only_on_large_tables(workspace, tmp_path, monkeypatch):
+    from insightpilot.universal import relationships, ui_data
+    two_tables(workspace, tmp_path)
+    calls = []
+    real = relationships._suggest
+    monkeypatch.setattr(relationships, '_suggest', lambda *args: calls.append(1) or real(*args))
+    app = AppTest.from_function(relationship_page, args=(str(workspace.directory),)).run(timeout=30)
+    assert calls and not any(item.label == 'Check relationships' for item in app.button)
+    calls.clear(); relationships._remembered.clear()
+    monkeypatch.setattr(ui_data, 'RELATIONSHIP_CHECK_MAX_ROWS', 2)
+    app = AppTest.from_function(relationship_page, args=(str(workspace.directory),)).run(timeout=30)
+    assert not calls and any('run only when you ask' in item.value for item in app.info)
+    next(item for item in app.button if item.label == 'Check relationships').click().run(timeout=30)
+    assert not app.exception and calls and any(item.label == 'Left key' for item in app.selectbox)
