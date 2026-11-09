@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import shutil
@@ -24,8 +25,20 @@ from .file_readers import combined_columns, delimited_columns, file_reader, norm
 from .profile import date_expression, numeric_expression, profile
 
 MAX_ROWS = 100_000_000
+BATCH_KINDS = ('numeric','date','trim','nullify','nullify_many')
+FILL_STRATEGIES = ('constant','median','mean','mode')
+INTEGER_TYPES = {'TINYINT','SMALLINT','INTEGER','BIGINT','HUGEINT','UTINYINT','USMALLINT','UINTEGER','UBIGINT','UHUGEINT'}
 _LOCKS = {}
 _LOCKS_GUARD = threading.Lock()
+
+
+def literal(value):
+    """A SQL string literal. Data is quoted, never interpreted as an expression."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _numeric_type(dtype):
+    return dtype in INTEGER_TYPES or dtype in ('FLOAT','DOUBLE','REAL') or dtype.startswith('DECIMAL')
 
 
 def now():
@@ -288,12 +301,11 @@ class Workspace:
                 return {}
             return {n:json.loads(p) for n,p in con.execute('SELECT name,payload FROM _saved_objects WHERE kind=? ORDER BY name',[kind]).fetchall()}
 
-    def transform(self, name, operation):
-        info = self.info(name); parent = info['current']; cols = info['columns']
+    def _step(self, operation, cols):
+        """SQL for one preparation operation: (projection, error predicate, error value, suffix)."""
         kind = operation.get('kind'); column = operation.get('column')
         if column is not None and column not in cols: raise ValueError('Unknown transformation column.')
-        target = 't_' + uuid.uuid4().hex
-        expr = '*'; error_expr = None; error_original = None
+        expr = '*'; error_expr = None; error_original = None; suffix = ''
         if kind in ('numeric','date','trim','nullify'):
             if column is None: raise ValueError('Choose a transformation column.')
             col = quote(column)
@@ -342,14 +354,22 @@ class Workspace:
         elif kind == 'deduplicate':
             expr = '_row_id,' + ','.join(quote(c) for c in cols)
         else: raise ValueError('Choose a supported preparation operation.')
+        if kind == 'deduplicate':
+            suffix = ' QUALIFY row_number() OVER (PARTITION BY ' + ','.join(quote(c) for c in cols) + ' ORDER BY _row_id)=1'
+        return expr, error_expr, error_original, suffix
+
+    def transform(self, name, operation):
+        info = self.info(name); parent = info['current']; cols = info['columns']
+        kind = operation.get('kind')
+        if kind == 'batch': return self._transform_batch(name, info, operation)
+        if kind == 'fill_missing': return self._fill_missing(name, info, operation)
+        expr, error_expr, error_original, suffix = self._step(operation, cols)
+        target = 't_' + uuid.uuid4().hex
         with self.connect(write=True) as con:
             con.execute('BEGIN')
             actual=json.loads(con.execute('SELECT info FROM _catalog WHERE name=?',[name]).fetchone()[0])
             if actual['current']!=parent or len(actual['versions'])!=len(info['versions']):
                 raise ValueError('Another session changed this table. Reload before preparing a new version.')
-            suffix = ''
-            if kind == 'deduplicate':
-                suffix = ' QUALIFY row_number() OVER (PARTITION BY ' + ','.join(quote(c) for c in cols) + ' ORDER BY _row_id)=1'
             con.execute(f'CREATE TABLE {quote(target)} AS SELECT {expr} FROM {quote(parent)}{suffix}')
             errors = 0
             if error_expr:
@@ -362,6 +382,127 @@ class Workspace:
             self._activate(con, name, info, target)
             con.execute('COMMIT')
         return version
+
+    def _begin_version(self, con, name, info, parent):
+        con.execute('BEGIN')
+        actual=json.loads(con.execute('SELECT info FROM _catalog WHERE name=?',[name]).fetchone()[0])
+        if actual['current']!=parent or len(actual['versions'])!=len(info['versions']):
+            raise ValueError('Another session changed this table. Reload before preparing a new version.')
+
+    def _finish_version(self, con, name, info, version):
+        version['rows'] = con.execute(f'SELECT count(*) FROM {quote(version["table"])}').fetchone()[0]
+        version['created_at'] = now()
+        info['versions'].append(version)
+        self._activate(con, name, info, version['table'])
+        con.execute('COMMIT')
+        return version
+
+    def _transform_batch(self, name, info, operation):
+        """Several column-preserving operations as one new version, with one receipt per step."""
+        steps = operation.get('steps'); parent = info['current']; cols = info['columns']
+        if not isinstance(steps, list) or not 1 <= len(steps) <= 500:
+            raise ValueError('A batch needs 1–500 preparation steps.')
+        if any(not isinstance(step, dict) or step.get('kind') not in BATCH_KINDS for step in steps):
+            raise ValueError('A batch can combine only numeric, date, trim and missing-marker operations.')
+        target = 't_' + uuid.uuid4().hex
+        ctes = [f'"__s0" AS (SELECT * FROM {quote(parent)})']; ledgers = []
+        for index, step in enumerate(steps, 1):
+            expr, error_expr, error_original, _ = self._step(step, cols)
+            ctes.append(f'"__s{index}" AS (SELECT {expr} FROM "__s{index-1}")')
+            if error_expr:
+                ledgers.append(f'SELECT _row_id,{error_original} AS original_value,{literal(step["column"])} AS column_name,'
+                               f'{index} AS step FROM "__s{index-1}" WHERE {error_expr}')
+        with self.connect(write=True) as con:
+            self._begin_version(con, name, info, parent)
+            con.execute(f'CREATE TABLE {quote(target)} AS WITH {",".join(ctes)} SELECT * FROM "__s{len(steps)}"')
+            step_errors = {}
+            if ledgers:
+                con.execute(f'CREATE TABLE {quote(target+"_errors")} AS WITH {",".join(ctes)} '
+                            f'SELECT * FROM ({" UNION ALL ".join(ledgers)}) ORDER BY step,_row_id')
+                step_errors = dict(con.execute(f'SELECT step,count(*) FROM {quote(target+"_errors")} GROUP BY 1').fetchall())
+            receipt = dict(operation, steps=[dict(step, errors=step_errors.get(index, 0)) for index, step in enumerate(steps, 1)])
+            return self._finish_version(con, name, info, {'table':target,'parent':parent,'operation':receipt,
+                                                          'errors':sum(step_errors.values())})
+
+    def _fill_missing(self, name, info, operation):
+        """Fill missing values (NULL or blank text) by an explicit strategy; every filled row is ledgered."""
+        parent = info['current']; cols = info['columns']; column = operation.get('column')
+        strategy = operation.get('strategy')
+        if column not in cols: raise ValueError('Choose an existing column to fill.')
+        if strategy not in FILL_STRATEGIES: raise ValueError('Choose a fill strategy: constant, median, mean or mode.')
+        col = quote(column)
+        missing = f"({col} IS NULL OR trim(CAST({col} AS VARCHAR))='')"
+        condition = operation.get('condition'); selected = missing; receipt = {}
+        with self.connect() as con:
+            types = {r[0]: r[1] for r in con.execute(f'DESCRIBE {quote(parent)}').fetchall()}
+            if condition is not None:
+                other = condition.get('column') if isinstance(condition, dict) else None
+                value = condition.get('value') if isinstance(condition, dict) else None
+                if other not in cols or other == column:
+                    raise ValueError('The condition needs a different existing column.')
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError('The condition needs a value to compare with.')
+                if _numeric_type(types[other]):
+                    number = con.execute('SELECT try_cast(? AS DOUBLE)', [value.strip()]).fetchone()[0]
+                    if number is None or not math.isfinite(number):
+                        raise ValueError(f'{other} is numeric, so the condition value must be a number.')
+                    selected += f' AND {quote(other)} = {float(number)!r}'
+                else:
+                    selected += f' AND trim(CAST({quote(other)} AS VARCHAR)) = {literal(value.strip())}'
+            to_fill = con.execute(f'SELECT count(*) FROM {quote(parent)} WHERE {selected}').fetchone()[0]
+            if not to_fill:
+                raise ValueError(f'Nothing to fill: {column} has no missing values' + (' where the condition holds.' if condition else '.'))
+            dtype = types[column]; numeric = _numeric_type(dtype)
+            if strategy in ('median', 'mean'):
+                if not numeric:
+                    raise ValueError(f'{strategy.capitalize()} needs a numeric column; {column} is stored as {dtype}. Convert it to numeric first.')
+                function = 'median' if strategy == 'median' else 'avg'
+                fill = con.execute(f'SELECT {function}({col}) FROM {quote(parent)} WHERE NOT {missing}').fetchone()[0]
+                if fill is None: raise ValueError(f'{column} has no values to compute a {strategy} from.')
+                fill = float(fill)
+            elif strategy == 'mode':
+                rows = con.execute(f'SELECT CAST({col} AS VARCHAR) AS value,count(*) AS n FROM {quote(parent)} '
+                                   f'WHERE NOT {missing} GROUP BY 1 ORDER BY n DESC,value LIMIT 2').fetchall()
+                if not rows: raise ValueError(f'{column} has no values to compute a mode from.')
+                # Ties are broken by the smallest value in text order, so the result is repeatable.
+                receipt['mode_tied'] = len(rows) > 1 and rows[0][1] == rows[1][1]
+                fill = rows[0][0]
+            else:
+                fill = operation.get('value')
+                if not isinstance(fill, str) or not fill.strip(): raise ValueError('Enter the constant value to fill with.')
+                fill = fill.strip()
+                if dtype != 'VARCHAR' and con.execute(f'SELECT try_cast(? AS {dtype})', [fill]).fetchone()[0] is None:
+                    raise ValueError(f'{fill!r} is not a valid value for {column}, which is stored as {dtype}.')
+        projection = col
+        if isinstance(fill, float) and not fill.is_integer() and dtype in INTEGER_TYPES:
+            # A fractional mean/median cannot be stored in an integer column without rounding.
+            projection = f'CAST({col} AS DOUBLE)'; receipt['type_change'] = f'{dtype} → DOUBLE'; dtype = 'DOUBLE'
+        if dtype == 'VARCHAR': fill_sql = literal(fill)
+        else: fill_sql = f'CAST({literal(repr(fill) if isinstance(fill, float) else fill)} AS {dtype})'
+        extra = ''
+        if operation.get('indicator'):
+            indicator = column + '_was_missing'
+            if indicator.casefold() in {c.casefold() for c in cols} | {'_row_id'}:
+                raise ValueError(f'A column named {indicator} already exists.')
+            extra = f',CASE WHEN {missing} THEN 1 ELSE 0 END AS {quote(indicator)}'
+        target = 't_' + uuid.uuid4().hex
+        with self.connect(write=True) as con:
+            self._begin_version(con, name, info, parent)
+            # The indicator and the ledger come from the parent, so they record values before filling.
+            con.execute(f'CREATE TABLE {quote(target)} AS SELECT * REPLACE '
+                        f'(CASE WHEN {selected} THEN {fill_sql} ELSE {projection} END AS {col}){extra} FROM {quote(parent)}')
+            con.execute(f'CREATE TABLE {quote(target+"_filled")} AS SELECT _row_id FROM {quote(parent)} WHERE {selected} ORDER BY _row_id')
+            receipt = dict(operation, fill_value=fill, filled=to_fill, **receipt)
+            return self._finish_version(con, name, info, {'table':target,'parent':parent,'operation':receipt,
+                                                          'errors':0,'filled':to_fill})
+
+    def filled_rows(self, name, limit=1000):
+        info = self.info(name)
+        version = next(v for v in info['versions'] if v['table']==info['current'])
+        if not version.get('filled'): return pd.DataFrame(columns=['_row_id'])
+        with self.connect() as con:
+            return con.execute(f'SELECT * FROM {quote(info["current"]+"_filled")} ORDER BY _row_id LIMIT ?',
+                               [max(1,min(limit,1000))]).fetchdf()
 
     def _activate(self, con, name, info, table):
         info['current'] = table
