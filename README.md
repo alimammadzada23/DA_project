@@ -4,7 +4,9 @@
 
 No account, no cloud and no coding needed.
 
-![InsightPilot home screen](docs/redesign/persistent-wheel/01-home-empty-1440.png)
+![InsightPilot BI Studio with a report page](docs/screenshots/bi-studio.png)
+
+*BI Studio with DAX measures and a report page. The data shown is synthetic.*
 
 ## What it does
 
