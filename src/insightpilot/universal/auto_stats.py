@@ -16,12 +16,14 @@ def average_rank(value_sql):
 
 
 def rank_groups_sql(value_sql, group_sql, source):
-    """Per-group count and rank sum, plus the tie term, for values and groups from `source`."""
-    return (f'WITH __d AS (SELECT {value_sql} AS v,{group_sql} AS g FROM {source}), '
-            f'__r AS (SELECT g,{average_rank("v")} AS r FROM __d WHERE v IS NOT NULL AND g IS NOT NULL) '
-            f'SELECT g,count(*)::DOUBLE AS n,sum(r)::DOUBLE AS rank_sum,'
-            f'(SELECT sum(t*t*t-t) FROM (SELECT count(*)::DOUBLE AS t FROM __d WHERE v IS NOT NULL AND g IS NOT NULL GROUP BY v)) AS ties '
-            f'FROM __r GROUP BY g ORDER BY g')
+    """Per-group count and rank sum, plus the tie term, for complete (value, group) pairs from `source`.
+
+    Written with subqueries only, so it can follow the Engine's own WITH clause.
+    """
+    pairs = f'(SELECT v,g FROM (SELECT {value_sql} AS v,{group_sql} AS g FROM {source}) WHERE v IS NOT NULL AND g IS NOT NULL)'
+    return (f'SELECT g,count(*)::DOUBLE AS n,sum(r)::DOUBLE AS rank_sum,'
+            f'(SELECT sum(t*t*t-t) FROM (SELECT count(*)::DOUBLE AS t FROM {pairs} GROUP BY v)) AS ties '
+            f'FROM (SELECT g,{average_rank("v")} AS r FROM {pairs}) GROUP BY g ORDER BY g')
 
 
 def kruskal_wallis(groups, ties):

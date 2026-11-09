@@ -1,0 +1,403 @@
+id,region,segment,tenure,amount,balance,signup,local_date,ambiguous_date,notes,constant,score,churn
+C0000,A,Retail,0,150,,2023-01-01,01/01/2024,01/01/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0001,B,retail,2,160,25.00,2023-01-02,02/01/2024,02/02/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0002,C, Retail,3,170,37.50,2023-01-03,03/01/2024,03/03/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0003,D,Wholesale,4,180,50.00,2023-01-04,04/01/2024,04/04/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0004,A,Retail,5,190,62.50,2023-01-05,05/01/2024,05/05/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0005,B,retail,6,N/A,75.00,2023-01-06,06/01/2024,06/06/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0006,C, Retail,7,210,87.50,2023-01-07,07/01/2024,07/07/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0007,D,Wholesale,8,220,100.00,2023-01-08,08/01/2024,08/08/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0008,A,Retail,9,180,112.50,2023-01-09,09/01/2024,09/09/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 1 ,No
+C0009,B,retail,10,240,125.00,2023-01-10,10/01/2024,10/10/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0010,C, Retail,11,200,137.50,2023-01-11,11/01/2024,11/11/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 3 ,No
+C0011,D,Wholesale,12,210,150.00,2023-01-12,12/01/2024,12/12/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 4 ,No
+C0012,A,Retail,13,220,162.50,2023-01-13,13/01/2024,01/01/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 5 ,No
+C0013,B,retail,14,280,175.00,2023-01-14,14/01/2024,02/02/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0014,C, Retail,15,240,187.50,2023-01-15,15/01/2024,03/03/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 0 ,No
+C0015,D,Wholesale,16,250,200.00,2023-01-16,16/01/2024,04/04/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 1 ,No
+C0016,A,Retail,17,260,212.50,2023-01-17,17/01/2024,05/05/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 2 ,No
+C0017,B,retail,18,320,225.00,2023-01-18,18/01/2024,06/06/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0018,C, Retail,19,280,237.50,2023-01-19,19/01/2024,07/07/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 4 ,No
+C0019,D,Wholesale,20,290,250.00,2023-01-20,20/01/2024,08/08/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 5 ,No
+C0020,A,Retail,21,300,262.50,2023-01-21,21/01/2024,09/09/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 6 ,No
+C0021,B,retail,22,360,275.00,2023-01-22,22/01/2024,10/10/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0022,C, Retail,23,320,287.50,2023-01-23,23/01/2024,11/11/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 1 ,No
+C0023,D,Wholesale,24,330,300.00,2023-01-24,24/01/2024,12/12/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 2 ,No
+C0024,A,Retail,25,340,312.50,2023-01-25,25/01/2024,01/01/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 3 ,No
+C0025,B,retail,26,350,325.00,2023-01-26,26/01/2024,02/02/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 4 ,No
+C0026,C, Retail,27,360,337.50,2023-01-27,27/01/2024,03/03/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 5 ,No
+C0027,D,Wholesale,28,370,350.00,2023-01-28,28/01/2024,04/04/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 6 ,No
+C0028,A,Retail,29,380,362.50,2023-01-29,29/01/2024,05/05/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 0 ,No
+C0029,B,retail,30,390,375.00,2023-01-30,30/01/2024,06/06/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 1 ,No
+C0030,C, Retail,31,400,387.50,2023-01-31,31/01/2024,07/07/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 2 ,No
+C0031,D,Wholesale,32,410,400.00,2023-02-01,01/02/2024,08/08/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 3 ,No
+C0032,A,Retail,33,420,412.50,2023-02-02,02/02/2024,09/09/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 4 ,No
+C0033,B,retail,34,430,425.00,2023-02-03,03/02/2024,10/10/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 5 ,No
+C0034,C, Retail,35,440,437.50,2023-02-04,04/02/2024,11/11/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 6 ,No
+C0035,D,Wholesale,36,450,450.00,2023-02-05,05/02/2024,12/12/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 0 ,No
+C0036,A,Retail,37,460,462.50,2023-02-06,06/02/2024,01/01/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 1 ,No
+C0037,B,retail,38,470,475.00,2023-02-07,07/02/2024,02/02/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 2 ,No
+C0038,C, Retail,39,480,487.50,2023-02-08,08/02/2024,03/03/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 3 ,No
+C0039,D,Wholesale,40,490,500.00,2023-02-09,09/02/2024,04/04/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 4 ,No
+C0040,A,Retail,41,550,512.50,2023-02-10,10/02/2024,05/05/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0041,B,retail,42,560,525.00,2023-02-11,11/02/2024,06/06/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0042,C, Retail,43,570,537.50,2023-02-12,12/02/2024,07/07/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0043,D,Wholesale,44,580,550.00,2023-02-13,13/02/2024,08/08/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0044,A,Retail,45,590,562.50,2023-02-14,14/02/2024,09/09/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0045,B,retail,46,600,575.00,2023-02-15,15/02/2024,10/10/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0046,C, Retail,47,610,587.50,2023-02-16,16/02/2024,11/11/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0047,D,Wholesale,48,620,600.00,2023-02-17,17/02/2024,12/12/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0048,A,Retail,49,580,612.50,2023-02-18,18/02/2024,01/01/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 6 ,No
+C0049,B,retail,50,640,625.00,2023-02-19,19/02/2024,02/02/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0050,C, Retail,51,100,637.50,2023-02-20,20/02/2024,03/03/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 1 ,No
+C0051,D,Wholesale,52,110,650.00,2023-02-21,21/02/2024,04/04/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 2 ,No
+C0052,A,Retail,53,120,662.50,2023-02-22,22/02/2024,05/05/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 3 ,No
+C0053,B,retail,54,180,675.00,2023-02-23,23/02/2024,06/06/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0054,C, Retail,55,140,687.50,2023-02-24,24/02/2024,07/07/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 5 ,No
+C0055,D,Wholesale,56,150,700.00,2023-02-25,25/02/2024,08/08/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 6 ,No
+C0056,A,Retail,57,160,712.50,2023-02-26,26/02/2024,09/09/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 0 ,No
+C0057,B,retail,58,220,725.00,2023-02-27,27/02/2024,10/10/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0058,C, Retail,59,180,737.50,2023-02-28,28/02/2024,11/11/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 2 ,No
+C0059,D,Wholesale,60,190,750.00,2023-03-01,29/02/2024,12/12/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 3 ,No
+C0060,A,Retail,1,200,12.50,2023-03-02,01/03/2024,01/01/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 4 ,No
+C0061,B,retail,2,260,25.00,2023-03-03,02/03/2024,02/02/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0062,C, Retail,3,220,37.50,2023-03-04,03/03/2024,03/03/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 6 ,No
+C0063,D,Wholesale,4,230,50.00,2023-03-05,04/03/2024,04/04/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 0 ,No
+C0064,A,Retail,5,240,62.50,2023-03-06,05/03/2024,05/05/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 1 ,No
+C0065,B,retail,6,250,75.00,2023-03-07,06/03/2024,06/06/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 2 ,No
+C0066,C, Retail,7,260,87.50,2023-03-08,07/03/2024,07/07/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 3 ,No
+C0067,D,Wholesale,0,270,,2023-03-09,08/03/2024,08/08/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 4 ,No
+C0068,A,Retail,9,280,112.50,2023-03-10,09/03/2024,09/09/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 5 ,No
+C0069,B,retail,10,290,125.00,2023-03-11,10/03/2024,10/10/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 6 ,No
+C0070,C, Retail,11,300,137.50,2023-03-12,11/03/2024,11/11/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 0 ,No
+C0071,D,Wholesale,12,310,150.00,2023-03-13,12/03/2024,12/12/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 1 ,No
+C0072,A,Retail,13,320,162.50,2023-03-14,13/03/2024,01/01/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 2 ,No
+C0073,B,retail,14,330,175.00,2023-03-15,14/03/2024,02/02/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 3 ,No
+C0074,C, Retail,15,340,187.50,2023-03-16,15/03/2024,03/03/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 4 ,No
+C0075,D,Wholesale,16,350,200.00,2023-03-17,16/03/2024,04/04/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 5 ,No
+C0076,A,Retail,17,360,212.50,2023-03-18,17/03/2024,05/05/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 6 ,No
+C0077,B,retail,18,370,225.00,2023-03-19,18/03/2024,06/06/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 0 ,No
+C0078,C, Retail,19,380,237.50,2023-03-20,19/03/2024,07/07/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 1 ,No
+C0079,D,Wholesale,20,390,250.00,2023-03-21,20/03/2024,08/08/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 2 ,No
+C0080,A,Retail,21,450,262.50,2023-03-22,21/03/2024,09/09/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0081,B,retail,22,460,275.00,2023-03-23,22/03/2024,10/10/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0082,C, Retail,23,470,287.50,2023-03-24,23/03/2024,11/11/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0083,D,Wholesale,24,480,300.00,2023-03-25,24/03/2024,12/12/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0084,A,Retail,25,490,312.50,2023-03-26,25/03/2024,01/01/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0085,B,retail,26,500,325.00,2023-03-27,26/03/2024,02/02/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0086,C, Retail,27,510,337.50,2023-03-28,27/03/2024,03/03/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0087,D,Wholesale,28,520,350.00,2023-03-29,28/03/2024,04/04/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0088,A,Retail,29,480,362.50,2023-03-30,29/03/2024,05/05/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 4 ,No
+C0089,B,retail,30,540,375.00,2023-03-31,30/03/2024,06/06/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0090,C, Retail,31,500,387.50,2023-04-01,31/03/2024,07/07/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 6 ,No
+C0091,D,Wholesale,32,510,400.00,2023-04-02,01/04/2024,08/08/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 0 ,No
+C0092,A,Retail,33,520,412.50,2023-04-03,02/04/2024,09/09/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 1 ,No
+C0093,B,retail,34,580,425.00,2023-04-04,03/04/2024,10/10/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0094,C, Retail,35,540,437.50,2023-04-05,04/04/2024,11/11/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 3 ,No
+C0095,D,Wholesale,36,550,450.00,2023-04-06,05/04/2024,12/12/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 4 ,No
+C0096,A,Retail,37,560,462.50,2023-04-07,06/04/2024,01/01/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 5 ,No
+C0097,B,retail,38,620,475.00,2023-04-08,07/04/2024,02/02/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0098,C, Retail,39,580,487.50,2023-04-09,08/04/2024,03/03/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 0 ,No
+C0099,D,Wholesale,40,590,500.00,2023-04-10,09/04/2024,04/04/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 1 ,No
+C0100,A,Retail,41,100,512.50,2023-04-11,10/04/2024,05/05/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 2 ,No
+C0101,B,retail,42,160,525.00,2023-04-12,11/04/2024,06/06/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0102,C, Retail,43,120,537.50,2023-04-13,12/04/2024,07/07/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 4 ,No
+C0103,D,Wholesale,44,130,550.00,2023-04-14,13/04/2024,08/08/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 5 ,No
+C0104,A,Retail,45,140,562.50,2023-04-15,14/04/2024,09/09/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 6 ,No
+C0105,B,retail,46,N/A,575.00,2023-04-16,15/04/2024,10/10/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 0 ,No
+C0106,C, Retail,47,160,587.50,2023-04-17,16/04/2024,11/11/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 1 ,No
+C0107,D,Wholesale,48,170,600.00,2023-04-18,17/04/2024,12/12/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 2 ,No
+C0108,A,Retail,49,180,612.50,2023-04-19,18/04/2024,01/01/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 3 ,No
+C0109,B,retail,50,190,625.00,2023-04-20,19/04/2024,02/02/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 4 ,No
+C0110,C, Retail,51,200,637.50,2023-04-21,20/04/2024,03/03/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 5 ,No
+C0111,D,Wholesale,52,210,650.00,2023-04-22,21/04/2024,04/04/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 6 ,No
+C0112,A,Retail,53,220,662.50,2023-04-23,22/04/2024,05/05/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 0 ,No
+C0113,B,retail,54,230,675.00,2023-04-24,23/04/2024,06/06/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 1 ,No
+C0114,C, Retail,55,240,687.50,2023-04-25,24/04/2024,07/07/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 2 ,No
+C0115,D,Wholesale,56,250,700.00,2023-04-26,25/04/2024,08/08/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 3 ,No
+C0116,A,Retail,57,260,712.50,2023-04-27,26/04/2024,09/09/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 4 ,No
+C0117,B,retail,58,270,725.00,2023-04-28,27/04/2024,10/10/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 5 ,No
+C0118,C, Retail,59,280,737.50,2023-04-29,28/04/2024,11/11/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 6 ,No
+C0119,D,Wholesale,60,290,750.00,2023-04-30,29/04/2024,12/12/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 0 ,No
+C0120,A,Retail,1,350,12.50,2023-05-01,30/04/2024,01/01/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0121,B,retail,2,360,25.00,2023-05-02,01/05/2024,02/02/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0122,C, Retail,3,370,37.50,2023-05-03,02/05/2024,03/03/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0123,D,Wholesale,4,380,50.00,2023-05-04,03/05/2024,04/04/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0124,A,Retail,5,390,62.50,2023-05-05,04/05/2024,05/05/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0125,B,retail,6,400,75.00,2023-05-06,05/05/2024,06/06/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0126,C, Retail,7,410,87.50,2023-05-07,06/05/2024,07/07/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0127,D,Wholesale,8,420,100.00,2023-05-08,07/05/2024,08/08/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0128,A,Retail,9,380,112.50,2023-05-09,08/05/2024,09/09/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 2 ,No
+C0129,B,retail,10,440,125.00,2023-05-10,09/05/2024,10/10/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0130,C, Retail,11,400,137.50,2023-05-11,10/05/2024,11/11/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 4 ,No
+C0131,D,Wholesale,12,410,150.00,2023-05-12,11/05/2024,12/12/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 5 ,No
+C0132,A,Retail,13,420,162.50,2023-05-13,12/05/2024,01/01/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 6 ,No
+C0133,B,retail,14,480,175.00,2023-05-14,13/05/2024,02/02/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0134,C, Retail,0,440,,2023-05-15,14/05/2024,03/03/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 1 ,No
+C0135,D,Wholesale,16,450,200.00,2023-05-16,15/05/2024,04/04/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 2 ,No
+C0136,A,Retail,17,460,212.50,2023-05-17,16/05/2024,05/05/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 3 ,No
+C0137,B,retail,18,520,225.00,2023-05-18,17/05/2024,06/06/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0138,C, Retail,19,480,237.50,2023-05-19,18/05/2024,07/07/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 5 ,No
+C0139,D,Wholesale,20,490,250.00,2023-05-20,19/05/2024,08/08/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 6 ,No
+C0140,A,Retail,21,500,262.50,2023-05-21,20/05/2024,09/09/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 0 ,No
+C0141,B,retail,22,560,275.00,2023-05-22,21/05/2024,10/10/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0142,C, Retail,23,520,287.50,2023-05-23,22/05/2024,11/11/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 2 ,No
+C0143,D,Wholesale,24,530,300.00,2023-05-24,23/05/2024,12/12/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 3 ,No
+C0144,A,Retail,25,540,312.50,2023-05-25,24/05/2024,01/01/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 4 ,No
+C0145,B,retail,26,550,325.00,2023-05-26,25/05/2024,02/02/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 5 ,No
+C0146,C, Retail,27,560,337.50,2023-05-27,26/05/2024,03/03/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 6 ,No
+C0147,D,Wholesale,28,570,350.00,2023-05-28,27/05/2024,04/04/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 0 ,No
+C0148,A,Retail,29,580,362.50,2023-05-29,28/05/2024,05/05/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 1 ,No
+C0149,B,retail,30,590,375.00,2023-05-30,29/05/2024,06/06/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 2 ,No
+C0150,C, Retail,31,100,387.50,2023-05-31,30/05/2024,07/07/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 3 ,No
+C0151,D,Wholesale,32,110,400.00,2023-06-01,31/05/2024,08/08/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 4 ,No
+C0152,A,Retail,33,120,412.50,2023-06-02,01/06/2024,09/09/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 5 ,No
+C0153,B,retail,34,130,425.00,2023-06-03,02/06/2024,10/10/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 6 ,No
+C0154,C, Retail,35,140,437.50,2023-06-04,03/06/2024,11/11/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 0 ,No
+C0155,D,Wholesale,36,150,450.00,2023-06-05,04/06/2024,12/12/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 1 ,No
+C0156,A,Retail,37,160,462.50,2023-06-06,05/06/2024,01/01/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 2 ,No
+C0157,B,retail,38,170,475.00,2023-06-07,06/06/2024,02/02/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 3 ,No
+C0158,C, Retail,39,180,487.50,2023-06-08,07/06/2024,03/03/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 4 ,No
+C0159,D,Wholesale,40,190,500.00,2023-06-09,08/06/2024,04/04/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 5 ,No
+C0160,A,Retail,41,250,512.50,2023-06-10,09/06/2024,05/05/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0161,B,retail,42,260,525.00,2023-06-11,10/06/2024,06/06/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0162,C, Retail,43,270,537.50,2023-06-12,11/06/2024,07/07/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0163,D,Wholesale,44,280,550.00,2023-06-13,12/06/2024,08/08/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0164,A,Retail,45,290,562.50,2023-06-14,13/06/2024,09/09/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0165,B,retail,46,300,575.00,2023-06-15,14/06/2024,10/10/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0166,C, Retail,47,310,587.50,2023-06-16,15/06/2024,11/11/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0167,D,Wholesale,48,320,600.00,2023-06-17,16/06/2024,12/12/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0168,A,Retail,49,280,612.50,2023-06-18,17/06/2024,01/01/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 0 ,No
+C0169,B,retail,50,340,625.00,2023-06-19,18/06/2024,02/02/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0170,C, Retail,51,300,637.50,2023-06-20,19/06/2024,03/03/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 2 ,No
+C0171,D,Wholesale,52,310,650.00,2023-06-21,20/06/2024,04/04/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 3 ,No
+C0172,A,Retail,53,320,662.50,2023-06-22,21/06/2024,05/05/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 4 ,No
+C0173,B,retail,54,380,675.00,2023-06-23,22/06/2024,06/06/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0174,C, Retail,55,340,687.50,2023-06-24,23/06/2024,07/07/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 6 ,No
+C0175,D,Wholesale,56,350,700.00,2023-06-25,24/06/2024,08/08/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 0 ,No
+C0176,A,Retail,57,360,712.50,2023-06-26,25/06/2024,09/09/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 1 ,No
+C0177,B,retail,58,420,725.00,2023-06-27,26/06/2024,10/10/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0178,C, Retail,59,380,737.50,2023-06-28,27/06/2024,11/11/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 3 ,No
+C0179,D,Wholesale,60,390,750.00,2023-06-29,28/06/2024,12/12/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 4 ,No
+C0180,A,Retail,1,400,12.50,2023-06-30,29/06/2024,01/01/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 5 ,No
+C0181,B,retail,2,460,25.00,2023-07-01,30/06/2024,02/02/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0182,C, Retail,3,420,37.50,2023-07-02,01/07/2024,03/03/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 0 ,No
+C0183,D,Wholesale,4,430,50.00,2023-07-03,02/07/2024,04/04/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 1 ,No
+C0184,A,Retail,5,440,62.50,2023-07-04,03/07/2024,05/05/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 2 ,No
+C0185,B,retail,6,450,75.00,2023-07-05,04/07/2024,06/06/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 3 ,No
+C0186,C, Retail,7,460,87.50,2023-07-06,05/07/2024,07/07/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 4 ,No
+C0187,D,Wholesale,8,470,100.00,2023-07-07,06/07/2024,08/08/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 5 ,No
+C0188,A,Retail,9,480,112.50,2023-07-08,07/07/2024,09/09/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 6 ,No
+C0189,B,retail,10,490,125.00,2023-07-09,08/07/2024,10/10/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 0 ,No
+C0190,C, Retail,11,500,137.50,2023-07-10,09/07/2024,11/11/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 1 ,No
+C0191,D,Wholesale,12,510,150.00,2023-07-11,10/07/2024,12/12/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 2 ,No
+C0192,A,Retail,13,520,162.50,2023-07-12,11/07/2024,01/01/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 3 ,No
+C0193,B,retail,14,530,175.00,2023-07-13,12/07/2024,02/02/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 4 ,No
+C0194,C, Retail,15,540,187.50,2023-07-14,13/07/2024,03/03/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 5 ,No
+C0195,D,Wholesale,16,550,200.00,2023-07-15,14/07/2024,04/04/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 6 ,No
+C0196,A,Retail,17,560,212.50,2023-07-16,15/07/2024,05/05/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 0 ,No
+C0197,B,retail,18,570,225.00,2023-07-17,16/07/2024,06/06/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 1 ,No
+C0198,C, Retail,19,580,237.50,2023-07-18,17/07/2024,07/07/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 2 ,No
+C0199,D,Wholesale,20,590,250.00,2023-07-19,18/07/2024,08/08/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 3 ,No
+C0200,A,Retail,21,150,262.50,2023-07-20,19/07/2024,09/09/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0201,B,retail,0,160,,2023-07-21,20/07/2024,10/10/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0202,C, Retail,23,170,287.50,2023-07-22,21/07/2024,11/11/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0203,D,Wholesale,24,180,300.00,2023-07-23,22/07/2024,12/12/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0204,A,Retail,25,190,312.50,2023-07-24,23/07/2024,01/01/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0205,B,retail,26,N/A,325.00,2023-07-25,24/07/2024,02/02/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0206,C, Retail,27,210,337.50,2023-07-26,25/07/2024,03/03/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0207,D,Wholesale,28,220,350.00,2023-07-27,26/07/2024,04/04/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0208,A,Retail,29,180,362.50,2023-07-28,27/07/2024,05/05/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 5 ,No
+C0209,B,retail,30,240,375.00,2023-07-29,28/07/2024,06/06/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0210,C, Retail,31,200,387.50,2023-07-30,29/07/2024,07/07/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 0 ,No
+C0211,D,Wholesale,32,210,400.00,2023-07-31,30/07/2024,08/08/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 1 ,No
+C0212,A,Retail,33,220,412.50,2023-08-01,31/07/2024,09/09/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 2 ,No
+C0213,B,retail,34,280,425.00,2023-08-02,01/08/2024,10/10/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0214,C, Retail,35,240,437.50,2023-08-03,02/08/2024,11/11/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 4 ,No
+C0215,D,Wholesale,36,250,450.00,2023-08-04,03/08/2024,12/12/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 5 ,No
+C0216,A,Retail,37,260,462.50,2023-08-05,04/08/2024,01/01/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 6 ,No
+C0217,B,retail,38,320,475.00,2023-08-06,05/08/2024,02/02/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0218,C, Retail,39,280,487.50,2023-08-07,06/08/2024,03/03/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 1 ,No
+C0219,D,Wholesale,40,290,500.00,2023-08-08,07/08/2024,04/04/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 2 ,No
+C0220,A,Retail,41,300,512.50,2023-08-09,08/08/2024,05/05/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 3 ,No
+C0221,B,retail,42,360,525.00,2023-08-10,09/08/2024,06/06/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0222,C, Retail,43,320,537.50,2023-08-11,10/08/2024,07/07/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 5 ,No
+C0223,D,Wholesale,44,330,550.00,2023-08-12,11/08/2024,08/08/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 6 ,No
+C0224,A,Retail,45,340,562.50,2023-08-13,12/08/2024,09/09/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 0 ,No
+C0225,B,retail,46,350,575.00,2023-08-14,13/08/2024,10/10/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 1 ,No
+C0226,C, Retail,47,360,587.50,2023-08-15,14/08/2024,11/11/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 2 ,No
+C0227,D,Wholesale,48,370,600.00,2023-08-16,15/08/2024,12/12/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 3 ,No
+C0228,A,Retail,49,380,612.50,2023-08-17,16/08/2024,01/01/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 4 ,No
+C0229,B,retail,50,390,625.00,2023-08-18,17/08/2024,02/02/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 5 ,No
+C0230,C, Retail,51,400,637.50,2023-08-19,18/08/2024,03/03/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 6 ,No
+C0231,D,Wholesale,52,410,650.00,2023-08-20,19/08/2024,04/04/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 0 ,No
+C0232,A,Retail,53,420,662.50,2023-08-21,20/08/2024,05/05/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 1 ,No
+C0233,B,retail,54,430,675.00,2023-08-22,21/08/2024,06/06/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 2 ,No
+C0234,C, Retail,55,440,687.50,2023-08-23,22/08/2024,07/07/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 3 ,No
+C0235,D,Wholesale,56,450,700.00,2023-08-24,23/08/2024,08/08/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 4 ,No
+C0236,A,Retail,57,460,712.50,2023-08-25,24/08/2024,09/09/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 5 ,No
+C0237,B,retail,58,470,725.00,2023-08-26,25/08/2024,10/10/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 6 ,No
+C0238,C, Retail,59,480,737.50,2023-08-27,26/08/2024,11/11/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 0 ,No
+C0239,D,Wholesale,60,490,750.00,2023-08-28,27/08/2024,12/12/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 1 ,No
+C0240,A,Retail,1,550,12.50,2023-08-29,28/08/2024,01/01/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0241,B,retail,2,560,25.00,2023-08-30,29/08/2024,02/02/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0242,C, Retail,3,570,37.50,2023-08-31,30/08/2024,03/03/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0243,D,Wholesale,4,580,50.00,2023-09-01,31/08/2024,04/04/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0244,A,Retail,5,590,62.50,2023-09-02,01/09/2024,05/05/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0245,B,retail,6,600,75.00,2023-09-03,02/09/2024,06/06/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0246,C, Retail,7,610,87.50,2023-09-04,03/09/2024,07/07/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0247,D,Wholesale,8,620,100.00,2023-09-05,04/09/2024,08/08/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0248,A,Retail,9,580,112.50,2023-09-06,05/09/2024,09/09/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 3 ,No
+C0249,B,retail,10,640,125.00,2023-09-07,06/09/2024,10/10/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0250,C, Retail,11,100,137.50,2023-09-08,07/09/2024,11/11/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 5 ,No
+C0251,D,Wholesale,12,110,150.00,2023-09-09,08/09/2024,12/12/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 6 ,No
+C0252,A,Retail,13,120,162.50,2023-09-10,09/09/2024,01/01/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 0 ,No
+C0253,B,retail,14,180,175.00,2023-09-11,10/09/2024,02/02/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0254,C, Retail,15,140,187.50,2023-09-12,11/09/2024,03/03/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 2 ,No
+C0255,D,Wholesale,16,150,200.00,2023-09-13,12/09/2024,04/04/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 3 ,No
+C0256,A,Retail,17,160,212.50,2023-09-14,13/09/2024,05/05/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 4 ,No
+C0257,B,retail,18,220,225.00,2023-09-15,14/09/2024,06/06/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0258,C, Retail,19,180,237.50,2023-09-16,15/09/2024,07/07/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 6 ,No
+C0259,D,Wholesale,20,190,250.00,2023-09-17,16/09/2024,08/08/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 0 ,No
+C0260,A,Retail,21,200,262.50,2023-09-18,17/09/2024,09/09/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 1 ,No
+C0261,B,retail,22,260,275.00,2023-09-19,18/09/2024,10/10/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0262,C, Retail,23,220,287.50,2023-09-20,19/09/2024,11/11/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 3 ,No
+C0263,D,Wholesale,24,230,300.00,2023-09-21,20/09/2024,12/12/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 4 ,No
+C0264,A,Retail,25,240,312.50,2023-09-22,21/09/2024,01/01/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 5 ,No
+C0265,B,retail,26,250,325.00,2023-09-23,22/09/2024,02/02/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 6 ,No
+C0266,C, Retail,27,260,337.50,2023-09-24,23/09/2024,03/03/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 0 ,No
+C0267,D,Wholesale,28,270,350.00,2023-09-25,24/09/2024,04/04/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 1 ,No
+C0268,A,Retail,0,280,,2023-09-26,25/09/2024,05/05/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 2 ,No
+C0269,B,retail,30,290,375.00,2023-09-27,26/09/2024,06/06/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 3 ,No
+C0270,C, Retail,31,300,387.50,2023-09-28,27/09/2024,07/07/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 4 ,No
+C0271,D,Wholesale,32,310,400.00,2023-09-29,28/09/2024,08/08/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 5 ,No
+C0272,A,Retail,33,320,412.50,2023-09-30,29/09/2024,09/09/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 6 ,No
+C0273,B,retail,34,330,425.00,2023-10-01,30/09/2024,10/10/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 0 ,No
+C0274,C, Retail,35,340,437.50,2023-10-02,01/10/2024,11/11/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 1 ,No
+C0275,D,Wholesale,36,350,450.00,2023-10-03,02/10/2024,12/12/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 2 ,No
+C0276,A,Retail,37,360,462.50,2023-10-04,03/10/2024,01/01/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 3 ,No
+C0277,B,retail,38,370,475.00,2023-10-05,04/10/2024,02/02/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 4 ,No
+C0278,C, Retail,39,380,487.50,2023-10-06,05/10/2024,03/03/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 5 ,No
+C0279,D,Wholesale,40,390,500.00,2023-10-07,06/10/2024,04/04/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 6 ,No
+C0280,A,Retail,41,450,512.50,2023-10-08,07/10/2024,05/05/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0281,B,retail,42,460,525.00,2023-10-09,08/10/2024,06/06/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0282,C, Retail,43,470,537.50,2023-10-10,09/10/2024,07/07/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0283,D,Wholesale,44,480,550.00,2023-10-11,10/10/2024,08/08/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0284,A,Retail,45,490,562.50,2023-10-12,11/10/2024,09/09/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0285,B,retail,46,500,575.00,2023-10-13,12/10/2024,10/10/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0286,C, Retail,47,510,587.50,2023-10-14,13/10/2024,11/11/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0287,D,Wholesale,48,520,600.00,2023-10-15,14/10/2024,12/12/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0288,A,Retail,49,480,612.50,2023-10-16,15/10/2024,01/01/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 1 ,No
+C0289,B,retail,50,540,625.00,2023-10-17,16/10/2024,02/02/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0290,C, Retail,51,500,637.50,2023-10-18,17/10/2024,03/03/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 3 ,No
+C0291,D,Wholesale,52,510,650.00,2023-10-19,18/10/2024,04/04/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 4 ,No
+C0292,A,Retail,53,520,662.50,2023-10-20,19/10/2024,05/05/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 5 ,No
+C0293,B,retail,54,580,675.00,2023-10-21,20/10/2024,06/06/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0294,C, Retail,55,540,687.50,2023-10-22,21/10/2024,07/07/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 0 ,No
+C0295,D,Wholesale,56,550,700.00,2023-10-23,22/10/2024,08/08/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 1 ,No
+C0296,A,Retail,57,560,712.50,2023-10-24,23/10/2024,09/09/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 2 ,No
+C0297,B,retail,58,620,725.00,2023-10-25,24/10/2024,10/10/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0298,C, Retail,59,580,737.50,2023-10-26,25/10/2024,11/11/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 4 ,No
+C0299,D,Wholesale,60,590,750.00,2023-10-27,26/10/2024,12/12/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 5 ,No
+C0300,A,Retail,1,100,12.50,2023-10-28,01/01/2024,01/01/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 6 ,No
+C0301,B,retail,2,160,25.00,2023-10-29,02/01/2024,02/02/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0302,C, Retail,3,120,37.50,2023-10-30,03/01/2024,03/03/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 1 ,No
+C0303,D,Wholesale,4,130,50.00,2023-10-31,04/01/2024,04/04/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 2 ,No
+C0304,A,Retail,5,140,62.50,2023-11-01,05/01/2024,05/05/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 3 ,No
+C0305,B,retail,6,N/A,75.00,2023-11-02,06/01/2024,06/06/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 4 ,No
+C0306,C, Retail,7,160,87.50,2023-11-03,07/01/2024,07/07/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 5 ,No
+C0307,D,Wholesale,8,170,100.00,2023-11-04,08/01/2024,08/08/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 6 ,No
+C0308,A,Retail,9,180,112.50,2023-11-05,09/01/2024,09/09/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 0 ,No
+C0309,B,retail,10,190,125.00,2023-11-06,10/01/2024,10/10/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 1 ,No
+C0310,C, Retail,11,200,137.50,2023-11-07,11/01/2024,11/11/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 2 ,No
+C0311,D,Wholesale,12,210,150.00,2023-11-08,12/01/2024,12/12/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 3 ,No
+C0312,A,Retail,13,220,162.50,2023-11-09,13/01/2024,01/01/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 4 ,No
+C0313,B,retail,14,230,175.00,2023-11-10,14/01/2024,02/02/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 5 ,No
+C0314,C, Retail,15,240,187.50,2023-11-11,15/01/2024,03/03/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 6 ,No
+C0315,D,Wholesale,16,250,200.00,2023-11-12,16/01/2024,04/04/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 0 ,No
+C0316,A,Retail,17,260,212.50,2023-11-13,17/01/2024,05/05/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 1 ,No
+C0317,B,retail,18,270,225.00,2023-11-14,18/01/2024,06/06/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 2 ,No
+C0318,C, Retail,19,280,237.50,2023-11-15,19/01/2024,07/07/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 3 ,No
+C0319,D,Wholesale,20,290,250.00,2023-11-16,20/01/2024,08/08/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 4 ,No
+C0320,A,Retail,21,350,262.50,2023-11-17,21/01/2024,09/09/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0321,B,retail,22,360,275.00,2023-11-18,22/01/2024,10/10/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0322,C, Retail,23,370,287.50,2023-11-19,23/01/2024,11/11/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0323,D,Wholesale,24,380,300.00,2023-11-20,24/01/2024,12/12/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0324,A,Retail,25,390,312.50,2023-11-21,25/01/2024,01/01/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0325,B,retail,26,400,325.00,2023-11-22,26/01/2024,02/02/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0326,C, Retail,27,410,337.50,2023-11-23,27/01/2024,03/03/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0327,D,Wholesale,28,420,350.00,2023-11-24,28/01/2024,04/04/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0328,A,Retail,29,380,362.50,2023-11-25,29/01/2024,05/05/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 6 ,No
+C0329,B,retail,30,440,375.00,2023-11-26,30/01/2024,06/06/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0330,C, Retail,31,400,387.50,2023-11-27,31/01/2024,07/07/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 1 ,No
+C0331,D,Wholesale,32,410,400.00,2023-11-28,01/02/2024,08/08/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 2 ,No
+C0332,A,Retail,33,420,412.50,2023-11-29,02/02/2024,09/09/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 3 ,No
+C0333,B,retail,34,480,425.00,2023-11-30,03/02/2024,10/10/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0334,C, Retail,35,440,437.50,2023-12-01,04/02/2024,11/11/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 5 ,No
+C0335,D,Wholesale,0,450,,2023-12-02,05/02/2024,12/12/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 6 ,No
+C0336,A,Retail,37,460,462.50,2023-12-03,06/02/2024,01/01/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 0 ,No
+C0337,B,retail,38,520,475.00,2023-12-04,07/02/2024,02/02/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0338,C, Retail,39,480,487.50,2023-12-05,08/02/2024,03/03/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 2 ,No
+C0339,D,Wholesale,40,490,500.00,2023-12-06,09/02/2024,04/04/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 3 ,No
+C0340,A,Retail,41,500,512.50,2023-12-07,10/02/2024,05/05/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 4 ,No
+C0341,B,retail,42,560,525.00,2023-12-08,11/02/2024,06/06/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0342,C, Retail,43,520,537.50,2023-12-09,12/02/2024,07/07/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 6 ,No
+C0343,D,Wholesale,44,530,550.00,2023-12-10,13/02/2024,08/08/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 0 ,No
+C0344,A,Retail,45,540,562.50,2023-12-11,14/02/2024,09/09/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 1 ,No
+C0345,B,retail,46,550,575.00,2023-12-12,15/02/2024,10/10/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 2 ,No
+C0346,C, Retail,47,560,587.50,2023-12-13,16/02/2024,11/11/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 3 ,No
+C0347,D,Wholesale,48,570,600.00,2023-12-14,17/02/2024,12/12/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 4 ,No
+C0348,A,Retail,49,580,612.50,2023-12-15,18/02/2024,01/01/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 5 ,No
+C0349,B,retail,50,590,625.00,2023-12-16,19/02/2024,02/02/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 6 ,No
+C0350,C, Retail,51,100,637.50,2023-12-17,20/02/2024,03/03/2024,Synthetic note number 0 describing a fictional interaction in plain words.,x, 0 ,No
+C0351,D,Wholesale,52,110,650.00,2023-12-18,21/02/2024,04/04/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 1 ,No
+C0352,A,Retail,53,120,662.50,2023-12-19,22/02/2024,05/05/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 2 ,No
+C0353,B,retail,54,130,675.00,2023-12-20,23/02/2024,06/06/2024,Synthetic note number 3 describing a fictional interaction in plain words.,x, 3 ,No
+C0354,C, Retail,55,140,687.50,2023-12-21,24/02/2024,07/07/2024,Synthetic note number 4 describing a fictional interaction in plain words.,x, 4 ,No
+C0355,D,Wholesale,56,150,700.00,2023-12-22,25/02/2024,08/08/2024,Synthetic note number 5 describing a fictional interaction in plain words.,x, 5 ,No
+C0356,A,Retail,57,160,712.50,2023-12-23,26/02/2024,09/09/2024,Synthetic note number 6 describing a fictional interaction in plain words.,x, 6 ,No
+C0357,B,retail,58,170,725.00,2023-12-24,27/02/2024,10/10/2024,Synthetic note number 7 describing a fictional interaction in plain words.,x, 0 ,No
+C0358,C, Retail,59,180,737.50,2023-12-25,28/02/2024,11/11/2024,Synthetic note number 8 describing a fictional interaction in plain words.,x, 1 ,No
+C0359,D,Wholesale,60,190,750.00,2023-12-26,29/02/2024,12/12/2024,Synthetic note number 9 describing a fictional interaction in plain words.,x, 2 ,No
+C0360,A,Retail,1,250,12.50,2023-12-27,01/03/2024,01/01/2024,Synthetic note number 10 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0361,B,retail,2,260,25.00,2023-12-28,02/03/2024,02/02/2024,Synthetic note number 11 describing a fictional interaction in plain words.,x, 4 ,Yes
+C0362,C, Retail,3,270,37.50,2023-12-29,03/03/2024,03/03/2024,Synthetic note number 12 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0363,D,Wholesale,4,280,50.00,2023-12-30,04/03/2024,04/04/2024,Synthetic note number 13 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0364,A,Retail,5,290,62.50,2023-12-31,05/03/2024,05/05/2024,Synthetic note number 14 describing a fictional interaction in plain words.,x, 0 ,Yes
+C0365,B,retail,6,300,75.00,2024-01-01,06/03/2024,06/06/2024,Synthetic note number 15 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0366,C, Retail,7,310,87.50,2024-01-02,07/03/2024,07/07/2024,Synthetic note number 16 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0367,D,Wholesale,8,320,100.00,2024-01-03,08/03/2024,08/08/2024,Synthetic note number 17 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0368,A,Retail,9,280,112.50,2024-01-04,09/03/2024,09/09/2024,Synthetic note number 18 describing a fictional interaction in plain words.,x, 4 ,No
+C0369,B,retail,10,340,125.00,2024-01-05,10/03/2024,10/10/2024,Synthetic note number 19 describing a fictional interaction in plain words.,x, 5 ,Yes
+C0370,C, Retail,11,300,137.50,2024-01-06,11/03/2024,11/11/2024,Synthetic note number 20 describing a fictional interaction in plain words.,x, 6 ,No
+C0371,D,Wholesale,12,310,150.00,2024-01-07,12/03/2024,12/12/2024,Synthetic note number 21 describing a fictional interaction in plain words.,x, 0 ,No
+C0372,A,Retail,13,320,162.50,2024-01-08,13/03/2024,01/01/2024,Synthetic note number 22 describing a fictional interaction in plain words.,x, 1 ,No
+C0373,B,retail,14,380,175.00,2024-01-09,14/03/2024,02/02/2024,Synthetic note number 23 describing a fictional interaction in plain words.,x, 2 ,Yes
+C0374,C, Retail,15,340,187.50,2024-01-10,15/03/2024,03/03/2024,Synthetic note number 24 describing a fictional interaction in plain words.,x, 3 ,No
+C0375,D,Wholesale,16,350,200.00,2024-01-11,16/03/2024,04/04/2024,Synthetic note number 25 describing a fictional interaction in plain words.,x, 4 ,No
+C0376,A,Retail,17,360,212.50,2024-01-12,17/03/2024,05/05/2024,Synthetic note number 26 describing a fictional interaction in plain words.,x, 5 ,No
+C0377,B,retail,18,420,225.00,2024-01-13,18/03/2024,06/06/2024,Synthetic note number 27 describing a fictional interaction in plain words.,x, 6 ,Yes
+C0378,C, Retail,19,380,237.50,2024-01-14,19/03/2024,07/07/2024,Synthetic note number 28 describing a fictional interaction in plain words.,x, 0 ,No
+C0379,D,Wholesale,20,390,250.00,2024-01-15,20/03/2024,08/08/2024,Synthetic note number 29 describing a fictional interaction in plain words.,x, 1 ,No
+C0380,A,Retail,21,400,262.50,2024-01-16,21/03/2024,09/09/2024,Synthetic note number 30 describing a fictional interaction in plain words.,x, 2 ,No
+C0381,B,retail,22,460,275.00,2024-01-17,22/03/2024,10/10/2024,Synthetic note number 31 describing a fictional interaction in plain words.,x, 3 ,Yes
+C0382,C, Retail,23,420,287.50,2024-01-18,23/03/2024,11/11/2024,Synthetic note number 32 describing a fictional interaction in plain words.,x, 4 ,No
+C0383,D,Wholesale,24,430,300.00,2024-01-19,24/03/2024,12/12/2024,Synthetic note number 33 describing a fictional interaction in plain words.,x, 5 ,No
+C0384,A,Retail,25,440,312.50,2024-01-20,25/03/2024,01/01/2024,Synthetic note number 34 describing a fictional interaction in plain words.,x, 6 ,No
+C0385,B,retail,26,450,325.00,2024-01-21,26/03/2024,02/02/2024,Synthetic note number 35 describing a fictional interaction in plain words.,x, 0 ,No
+C0386,C, Retail,27,460,337.50,2024-01-22,27/03/2024,03/03/2024,Synthetic note number 36 describing a fictional interaction in plain words.,x, 1 ,No
+C0387,D,Wholesale,28,470,350.00,2024-01-23,28/03/2024,04/04/2024,Synthetic note number 37 describing a fictional interaction in plain words.,x, 2 ,No
+C0388,A,Retail,29,480,362.50,2024-01-24,29/03/2024,05/05/2024,Synthetic note number 38 describing a fictional interaction in plain words.,x, 3 ,No
+C0389,B,retail,30,490,375.00,2024-01-25,30/03/2024,06/06/2024,Synthetic note number 39 describing a fictional interaction in plain words.,x, 4 ,No
+C0390,C, Retail,31,500,387.50,2024-01-26,31/03/2024,07/07/2024,Synthetic note number 40 describing a fictional interaction in plain words.,x, 5 ,No
+C0391,D,Wholesale,32,510,400.00,2024-01-27,01/04/2024,08/08/2024,Synthetic note number 41 describing a fictional interaction in plain words.,x, 6 ,No
+C0392,A,Retail,33,520,412.50,2024-01-28,02/04/2024,09/09/2024,Synthetic note number 42 describing a fictional interaction in plain words.,x, 0 ,No
+C0393,B,retail,34,530,425.00,2024-01-29,03/04/2024,10/10/2024,Synthetic note number 43 describing a fictional interaction in plain words.,x, 1 ,No
+C0394,C, Retail,35,540,437.50,2024-01-30,04/04/2024,11/11/2024,Synthetic note number 44 describing a fictional interaction in plain words.,x, 2 ,No
+C0395,D,Wholesale,36,550,450.00,2024-01-31,05/04/2024,12/12/2024,Synthetic note number 45 describing a fictional interaction in plain words.,x, 3 ,No
+C0396,A,Retail,37,560,462.50,2024-02-01,06/04/2024,01/01/2024,Synthetic note number 46 describing a fictional interaction in plain words.,x, 4 ,No
+C0397,B,retail,38,570,475.00,2024-02-02,07/04/2024,02/02/2024,Synthetic note number 47 describing a fictional interaction in plain words.,x, 5 ,No
+C0398,C, Retail,39,580,487.50,2024-02-03,08/04/2024,03/03/2024,Synthetic note number 48 describing a fictional interaction in plain words.,x, 6 ,No
+C0399,D,Wholesale,40,590,500.00,2024-02-04,09/04/2024,04/04/2024,Synthetic note number 49 describing a fictional interaction in plain words.,x, 0 ,No
+C0001,B,retail,2,160,25.00,2023-01-02,02/01/2024,02/02/2024,Synthetic note number 1 describing a fictional interaction in plain words.,x, 1 ,Yes
+C0002,C, Retail,3,170,37.50,2023-01-03,03/01/2024,03/03/2024,Synthetic note number 2 describing a fictional interaction in plain words.,x, 2 ,Yes
