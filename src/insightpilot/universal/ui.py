@@ -67,12 +67,13 @@ def draw(figure,key,*,select=False,result=None):
     return event
 
 
-def evidence(result):
+def evidence(result,key=None):
+    # Two visuals can run the identical query, so callers that draw several pass their own key.
     with st.expander('Inspect calculations and provenance'):
         st.code(result['sql'],language='sql')
         st.json(result)
         download('Download evidence JSON',json.dumps(result,default=str,indent=2),
-                           file_name='analysis-evidence.json',mime='application/json',key='ev-'+result['evidence_id'])
+                           file_name='analysis-evidence.json',mime='application/json',key='ev-'+(key or result['evidence_id']))
 
 
 def sidebar_filters(workspace,table,report):

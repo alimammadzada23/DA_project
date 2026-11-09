@@ -343,7 +343,7 @@ def render_visual(engine,model,state,visual,conditions,page,scope,draw,evidence)
     with st.expander('Visual options and DAX'):
         st.code('\n'.join(f'{m} = {model.measures.get(m,"")}' for m in measures),language='sql')
         st.caption('Generated SQL (filter context as correlated subqueries):');st.code(result['dax_sql'][:4000],language='sql')
-        evidence(result)
+        evidence(result,key=f'bi-{visual["id"]}')
         if st.button('Remove visual',key=f'bi-rm-{visual["id"]}'):remove_visual(engine,state,page,visual)
 
 

@@ -84,3 +84,18 @@ def test_calculated_column_and_model_tab(studio):
     by_label(app.button,'Add column').click().run(timeout=30);ok(app)
     assert session.workspace.saved_objects('layout')['bi.model:sales']['columns']==[{'name':'Size','expression':'IF(sales[amount] > 15, "Large", "Small")'}]
     assert len(app.get('graphviz_chart'))==1
+
+
+def test_two_visuals_with_the_same_data_on_one_page(studio):
+    app,session=studio
+    by_label(app.text_input,'Measure name').set_value('Total Sales')
+    by_label(app.text_area,'DAX expression').set_value('SUM(sales[amount])')
+    by_label(app.button,'Save measure').click().run(timeout=30);ok(app)
+    by_label(app.button,'Create page').click().run(timeout=30);ok(app)
+    for kind in ('Line','Donut'):
+        by_label(app.selectbox,'Visual type').set_value(kind).run(timeout=30)
+        by_label(app.button,'Add to page').click().run(timeout=30);ok(app)
+    visuals=session.workspace.saved_objects('layout')['bi.model:sales']['pages']['Page 1']['visuals']
+    assert [v['type'] for v in visuals]==['Line','Donut'] and visuals[0]['rows']==visuals[1]['rows']
+    assert len(app.get('plotly_chart'))==2
+    assert sum(b.label=='Download evidence JSON' for b in app.get('download_button'))==2
