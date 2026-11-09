@@ -686,7 +686,7 @@ def small_groups(output, name, rows, count_index):
 
 def effect_row(name, kind, test, result, key):
     if not result: return {'field': name, 'type': kind, 'test': test, 'measure': key, 'effect': None, 'p_value': None, 'n': None}
-    return {'field': name, 'type': kind, 'test': test, 'measure': key, 'effect': result[key], 'p_value': result['p_value'], 'n': result['n']}
+    return {'field': name, 'type': kind, 'test': test, 'measure': key, 'effect': _clean(result[key]), 'p_value': _clean(result['p_value']), 'n': result['n']}
 
 
 def categorical_multiclass(a, spec, name, output):
@@ -849,8 +849,8 @@ def numeric_numeric(a, spec, name, output):
     title = f'{name} and {spec.column}' + (f' ({len(points):,} of {total:,} rows, seed {SETTINGS["sample_seed"]})' if total > len(points) else '')
     items.append(figure(item_id(name, 'scatter'), title, visuals.style(fig, title, name, spec.column), evidence=evidence))
     a.results[item_id(name, 'scatter')] = sample
-    return items, {'field': name, 'type': 'numeric', 'test': 'Spearman', 'measure': 'spearman', 'effect': stats_['spearman'],
-                   'p_value': stats_['p_value'], 'n': stats_['n']}
+    return items, {'field': name, 'type': 'numeric', 'test': 'Spearman', 'measure': 'spearman', 'effect': _clean(stats_['spearman']),
+                   'p_value': _clean(stats_['p_value']), 'n': stats_['n']}
 
 
 def date_grain(a, column):
@@ -993,7 +993,8 @@ def relationships_stage(a, spec, facts, time_axis, output, state):
     for i, first in enumerate(fields):
         for second in fields[i + 1:]:
             value, measure, n, results = association(a, first, second, kinds)
-            pairs.append([first, second, measure, value, n]); queries += results
+            # Rounded before sorting, so last-bit differences from parallel sums cannot reorder near-ties.
+            pairs.append([first, second, measure, _clean(value), n]); queries += results
     evidence = a.evidence("Cramér's V for categorical pairs, Spearman ρ for numeric pairs, correlation ratio η for mixed pairs", *queries)
     matrix = pd.DataFrame(1.0, index=fields, columns=fields)
     for first, second, _, value, _ in pairs:
