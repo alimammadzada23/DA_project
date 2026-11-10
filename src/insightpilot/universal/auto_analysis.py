@@ -21,6 +21,7 @@ import plotly.graph_objects as go
 
 from ..datasets import quote
 from . import auto_stats, visuals
+from .auto import leakage as auto_leakage, multivariate as auto_multivariate
 from .auto import quality as auto_quality, structure as auto_structure, univariate as auto_univariate
 from .auto.config import DEFAULT as DEFAULT_CONFIG
 from .auto.stats import bootstrap_interval
@@ -64,7 +65,7 @@ TARGET_HINTS = ('target', 'label', 'outcome', 'result', 'status', 'class', 'flag
 POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
 STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'), ('structure', 'Structure discovery'),
-          ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('ranking', 'Ranking'),
+          ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'),
           ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
 
@@ -77,6 +78,14 @@ def _clean(value):
     if hasattr(value, 'item') and not isinstance(value, (list, tuple, dict, str)):
         return _clean(value.item())
     return value
+
+
+def deep_clean(value):
+    """Plain JSON values throughout (numpy numbers become Python numbers with 12 significant digits)."""
+    if isinstance(value, dict): return {k: deep_clean(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)): return [deep_clean(v) for v in value]
+    if isinstance(value, (bool, np.bool_)): return bool(value)
+    return _clean(value)
 
 
 def table(item_id, title, columns, rows, *, evidence, note=None):
@@ -412,7 +421,8 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
               'rows': info['rows'], 'column_count': len(info['columns']), 'original_version': info['current'], 'analysis_version': info['current'],
               'target': target, 'target_type': target_type if target else None, 'positive': positive if target_type == 'binary' else None,
               'time_axis': time_axis, 'settings': SETTINGS, 'stages': [], 'sections': {}, 'skipped': [], 'field_failures': [],
-              'sampling': [], 'small_sample_warnings': [], 'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed}
+              'sampling': [], 'small_sample_warnings': [], 'warnings': [], 'nonlinear': [], 'leakage': [],
+              'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed}
     state = {'prepared': prepared, 'cfg': cfg}
 
     def stage(key, action, *, skip_reason=None):
@@ -501,7 +511,9 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
     stage('structure', lambda: structure_stage(worker, facts, spec, output, state))
     stage('target_overview', lambda: target_overview(worker, spec, output), skip_reason=None if target else 'no target chosen')
     stage('fields', lambda: fields_stage(worker, spec, facts, time_axis, output, state))
+    stage('leakage', lambda: leakage_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
     stage('ranking', lambda: ranking_stage(output, state), skip_reason=None if target else 'no target chosen')
+    stage('multivariate', lambda: multivariate_stage(worker, spec, facts, time_axis, output, state), skip_reason=None if target else 'no target chosen')
     finish_structure(output, state, bool(target))
     stage('relationships', lambda: relationships_stage(worker, spec, facts, time_axis, output, state))
     stage('time', lambda: time_stage(worker, spec, time_axis, output), skip_reason=None if time_axis else 'no time axis chosen')
@@ -572,6 +584,11 @@ def target_overview(a, spec, output):
                            summary, evidence=a.evidence('Majority class share = largest class / rows with a target value', result)))
         if smallest < SETTINGS['imbalance_share']:
             items.append(text(f'Class imbalance: the smallest class is {smallest:.1%} of rows, below the {SETTINGS["imbalance_share"]:.0%} threshold.'))
+        cfg = DEFAULT_CONFIG; minority_rows = min(n for _, n in result['rows'])
+        if smallest < cfg.imbalance_share or (spec.kind == 'binary' and smallest > 1 - cfg.imbalance_share):
+            output['warnings'].append(f'Imbalanced target: the smallest class is {smallest:.1%} of rows. Rates have wide intervals; AUC is shown with PR-AUC.')
+        if minority_rows < cfg.minority_rows_minimum:
+            output['warnings'].append(f'Small minority class: {minority_rows:,} rows, below {cfg.minority_rows_minimum}. Estimates for it are uncertain.')
         fig = go.Figure(go.Bar(x=[visuals.category_label(c) for c, _, _ in rows], y=[n for _, n, _ in rows],
                                text=[f'{n:,} · {share:.1%}' for _, n, share in rows], textposition='outside', marker_color=visuals.TEAL))
         items.append(figure('target-classes-chart', 'Rows per target class', visuals.style(fig, 'Rows per target class', spec.column, 'Rows'),
@@ -670,9 +687,12 @@ def enrich_field(a, spec, name, f, items, effect, output, state):
         items = subset_items + [text('Reference: all rows, including rows where the field does not apply.')] + items
         effect = subset_effect
         if effect and reference: effect['unconditional_effect'] = reference['effect']
-    if effect is None or not spec.column or kind == 'date':
+    if not spec.column:
         return notes + items, effect
     power = auto_univariate.field_power(a, target_spec, name, kind, cfg, absent_sql)
+    state.setdefault('powers', {})[name] = power
+    if effect is None or kind == 'date':
+        return notes + items, effect
     effect.update(power=_clean(power['value']), power_metric=power['metric'], power_sd=_clean(power['sd']), power_auc=_clean(power['auc']),
                   nmi_adjusted=_clean(power['nmi_adjusted']), nmi_p=_clean(power['nmi_p']), derived=derived.formula if derived else None,
                   subset=f'{conditional.parent} ≠ {conditional.parent_value}' if conditional else 'all rows')
@@ -907,7 +927,18 @@ def numeric_binary(a, spec, name, output):
     items.append(figure(item_id(name, 'bins-chart'), f'{name}: positive rate by bin', visuals.style(line, f'{name}: positive rate by equal-count bin',
                         name, 'Positive rate'), evidence=evidence))
     a.results[item_id(name, 'box')] = summary; a.results[item_id(name, 'bins-chart')] = bins
+    share = auto_univariate.monotone_share([r[5] for r in bin_rows], [r[3] for r in bin_rows])
+    chi = auto_stats.chi_square([[r[4], r[3] - r[4]] for r in bin_rows])
+    spread = max(r[5] for r in bin_rows) - min(r[5] for r in bin_rows) if bin_rows else 0
+    if share is not None and chi and share < DEFAULT_CONFIG.monotone_share_minimum and chi['p_value'] < 0.01 and spread >= 0.05:
+        flag_nonlinear(output, items, name, share, f'positive rates across bins range from {min(r[5] for r in bin_rows):.1%} to {max(r[5] for r in bin_rows):.1%}')
     return items, effect_row(name, 'numeric', 'Mann–Whitney U', test, 'rank_biserial')
+
+
+def flag_nonlinear(output, items, name, share, detail):
+    output['nonlinear'].append({'field': name, 'monotone_share': _clean(share), 'detail': detail})
+    items.insert(0, text(f'Non-linear relationship: a monotone curve explains {share:.0%} of the variation between bins ({detail}). '
+                         'A single direction or correlation does not describe this field.'))
 
 
 def numeric_multiclass(a, spec, name, output):
@@ -946,7 +977,7 @@ def scatter_sample(a, x, y, label, output, name):
 def numeric_numeric(a, spec, name, output):
     x = numeric_expression(name); y = spec.value
     stats_, result = correlation(a, x, y, f'Correlation of {name} and {spec.column}')
-    medians = a.run(f'''SELECT bin,min(x) AS lower,max(x) AS upper,count(*) AS n,median(y) AS median FROM
+    medians = a.run(f'''SELECT bin,min(x) AS lower,max(x) AS upper,count(*) AS n,median(y) AS median,avg(y) AS mean,var_pop(y) AS variance FROM
         (SELECT x,y,ntile({SETTINGS["median_bins"]}) OVER (ORDER BY x,_row_id) AS bin FROM
         (SELECT {x} AS x,{y} AS y,_row_id FROM selected) WHERE x IS NOT NULL AND y IS NOT NULL) GROUP BY 1 ORDER BY 1''',
         f'Median {spec.column} by bins of {name}')
@@ -956,8 +987,19 @@ def numeric_numeric(a, spec, name, output):
         ['Spearman rank correlation', stats_['spearman'], None, stats_['p_value'], stats_['spearman'], stats_['n'], ''],
         ['Pearson correlation (reference)', stats_['pearson'], None, stats_['pearson_p'], stats_['pearson'], stats_['n'], '']], evidence=evidence),
         table(item_id(name, 'medians'), f'{name}: median {spec.column} by {SETTINGS["median_bins"]} equal-count bins', [('Bin', 'count'),
-              ('Lowest value', 'number'), ('Highest value', 'number'), ('Rows', 'count'), (f'Median {spec.column}', 'number')], medians['rows'],
-              evidence=evidence)]
+              ('Lowest value', 'number'), ('Highest value', 'number'), ('Rows', 'count'), (f'Median {spec.column}', 'number'), (f'Mean {spec.column}', 'number'),
+              ('Variance', 'number')], medians['rows'], evidence=evidence)]
+    bins_ = medians['rows']
+    if len(bins_) >= 3:
+        from scipy import stats as scipy_stats
+        n_total = sum(r[3] for r in bins_); grand = sum(r[3] * r[5] for r in bins_) / n_total
+        between = sum(r[3] * (r[5] - grand) ** 2 for r in bins_); within = sum(r[3] * (r[6] or 0) for r in bins_)
+        k = len(bins_)
+        p_value = scipy_stats.f.sf((between / (k - 1)) / (within / (n_total - k)), k - 1, n_total - k) if within > 0 and n_total > k else None
+        share = auto_univariate.monotone_share([r[5] for r in bins_], [r[3] for r in bins_])
+        eta2 = between / (between + within) if between + within else 0
+        if share is not None and p_value is not None and share < DEFAULT_CONFIG.monotone_share_minimum and p_value < 0.01 and eta2 >= 0.01:
+            flag_nonlinear(output, items, name, share, f'mean {spec.column} across bins ranges from {min(r[5] for r in bins_):,.4g} to {max(r[5] for r in bins_):,.4g}')
     points = frame_of(sample)
     fig = go.Figure(go.Scattergl(x=points.x, y=points.y, mode='markers', marker={'color': visuals.TEAL, 'size': 5, 'opacity': .55}))
     title = f'{name} and {spec.column}' + (f' ({len(points):,} of {total:,} rows, seed {SETTINGS["sample_seed"]})' if total > len(points) else '')
@@ -1132,6 +1174,82 @@ def explained_missing(a, facts, cfg, output):
              'Reported only; no values are filled.')
 
 
+# ---------------- leakage ----------------
+def leakage_stage(a, spec, facts, output, state):
+    cfg = state['cfg']
+    candidates = {n: f for n, f in facts.items() if n != spec.column}
+    suspects, queries = auto_leakage.screen(a, spec, state.get('powers', {}), candidates, cfg, absent_sql,
+                                            lambda c: f'trim(CAST({quote(c)} AS VARCHAR))')
+    output['leakage'] = [s.to_dict() for s in suspects]
+    for suspect in suspects:
+        output['warnings'].append(f'Possible leakage: {suspect.field} ({"; ".join(suspect.reasons)}). It is excluded from the multivariate model.')
+    output['sections']['leakage'] = [table('leakage-suspects', 'Leakage suspects', [('Field', 'text'), ('Reasons', 'text'), ('Power metric', 'text'),
+        ('Predictive power alone', 'effect')], [[s.field, '; '.join(s.reasons), s.power_metric, s.power] for s in suspects],
+        evidence=a.evidence('Single-field cross-validated power, exact dependency checks with the target and date-name hints', *queries),
+        note=f'A field is a suspect when it alone reaches AUC ≥ {cfg.leakage_auc} (R² ≥ {cfg.leakage_r2} for numeric targets), when it determines '
+             'the target or takes one value per target class, or when a date name suggests it is recorded after the outcome (a weak hint). '
+             'Suspects stay in the ranking with a flag and are excluded from the multivariate model.')]
+    return f'{len(suspects)} suspects'
+
+
+def multivariate_stage(a, spec, facts, time_axis, output, state):
+    cfg = state['cfg']; structure = state.get('structure')
+    suspects = {s['field'] for s in output.get('leakage', [])}
+    ranked = [e for e in output.get('ranking', []) if e['field'] not in suspects]
+    fields = [e['field'] for e in ranked]
+    clusters = structure.clusters if structure else []
+    result, queries = auto_multivariate.analyse(a, spec, fields, facts, cfg, time_axis, absent_sql,
+                                                lambda c: f'trim(CAST({quote(c)} AS VARCHAR))', clusters, ranked,
+                                                {c.column: c.level for c in structure.conditional} if structure else None,
+                                                {n['field'] for n in output.get('nonlinear', [])})
+    evidence = {'version': output['analysis_version'], 'computation': (
+        f'HistGradientBoosting ({cfg.model_iterations} iterations, seed {cfg.seed}), {cfg.cv_folds}-fold cross-validation; permutation importance on at most '
+        f'{cfg.permutation_rows:,} held-out rows per fold, {cfg.permutation_repeats} repeats'), 'queries': [{'sql': q['sql'], 'parameters': []} for q in queries]}
+    items = [text(note) for note in result.notes]
+    items.append(table('multivariate-metrics', 'Model performance against the baseline (cross-validated)', [('Measure', 'text'), ('Model', 'effect'),
+        ('Fold sd', 'effect'), ('Baseline', 'effect'), ('Per fold', 'text')], result.metrics, evidence=evidence,
+        note='Baselines: AUC 0.5; accuracy of always predicting the majority class; class shares as predicted probabilities; '
+             'the training mean (R²) or median (MAE) for numeric targets.'))
+    if not result.no_signal:
+        items.append(table('multivariate-importance', 'Permutation importance (drop in held-out score when a field or cluster is shuffled)',
+            [('Field or cluster', 'text'), ('Columns shuffled together', 'text'), ('Mean drop', 'effect'), ('sd', 'effect'), ('Repeats × folds', 'count')],
+            result.importance, evidence=evidence,
+            note='Shuffling a cluster together shows the information its members share; shuffling one member alone can understate it.'))
+        lr = spec.kind != 'multiclass'
+        items.append(table('multivariate-verdicts', 'Univariate vs adjusted', [('Field', 'text'),
+            ('Univariate LR χ²' if lr else 'Univariate power', 'number'), ('Adjusted LR χ²' if lr else 'Adjusted importance', 'number'),
+            ('df', 'count'), ('Effect retained', 'percent'), ('Adjusted p', 'p'), ('Univariate direction', 'text'), ('Adjusted direction', 'text'),
+            ('Verdict', 'text'), ('Note', 'text')], result.verdicts, evidence=evidence,
+            note=(f'Likelihood-ratio contribution of each field alone and after the other fields in the adjusted model. Effect retained = '
+                  f'√(adjusted χ² / univariate χ²), because χ² grows with the square of an effect. Holds: at least {cfg.weakens_share:.0%} retained. '
+                  'Weakens substantially: less. Disappears: adjusted '
+                  'p ≥ 0.05. Reverses: the adjusted coefficient has the opposite sign, both intervals excluding no effect (numeric fields). '
+                  'Directions: + higher values go with the positive class or larger target, − the opposite, 0 interval includes no effect.') if lr else
+                 'Multiclass: univariate cross-validated power vs permutation importance in the model (AUC units); AUC gains are not additive, '
+                 'so these verdicts understate fields that hold.'))
+        if result.regression or result.regression_note:
+            label = 'Odds ratio' if spec.kind == 'binary' else 'Coefficient'
+            items.append(table('multivariate-adjusted', 'Adjusted model (holding the other listed fields constant)', [('Field', 'text'), ('Term', 'text'),
+                (label, 'number'), ('95% CI low', 'number'), ('95% CI high', 'number'), ('p-value', 'p')], result.regression, evidence=evidence,
+                note=result.regression_note))
+        if result.dropped_vif:
+            items.append(table('multivariate-vif', f'Fields left out of the adjusted model (VIF above {cfg.vif_maximum:g})', [('Field', 'text'), ('VIF', 'number')],
+                               result.dropped_vif, evidence=evidence))
+        for name, curve in result.ale.items():
+            fig = go.Figure(go.Scatter(x=curve['upper_edges'], y=curve['ale'], mode='lines+markers', line={'color': visuals.TEAL}))
+            fig.add_hline(y=0, line_dash='dot', line_color=visuals.AMBER)
+            label = 'probability' if spec.kind == 'binary' else spec.column
+            items.append(figure(item_id(name, 'ale'), f'{name}: accumulated local effect', visuals.style(fig, f'{name}: accumulated local effect on predicted {label}',
+                                name, f'Effect on predicted {label}'), evidence=evidence))
+    output['sections']['multivariate'] = items
+    output['multivariate'] = deep_clean({'metrics': result.metrics, 'no_signal': result.no_signal, 'signal': result.signal, 'importance': result.importance,
+                              'verdicts': result.verdicts, 'regression': result.regression, 'dropped_vif': result.dropped_vif, 'ale': result.ale,
+                              'sample_rows': result.sample_rows, 'total_rows': result.total_rows, 'fields': result.fields})
+    if result.total_rows > result.sample_rows:
+        output['sampling'].append(['multivariate model', result.sample_rows, result.total_rows, cfg.seed, 'rows ordered by hash(_row_id + seed)'])
+    return f'{len(fields)} fields; ' + ('little joint signal' if result.no_signal else f'model gain {result.signal:.3f}')
+
+
 # ---------------- stage 6 ----------------
 MEASURE_COLUMNS = [('cramers_v', "Cramér's V"), ('rank_biserial', '|rank-biserial r|'), ('epsilon_squared', 'epsilon-squared'), ('spearman', '|Spearman ρ|')]
 
@@ -1157,11 +1275,14 @@ def ranking_stage(output, state):
         cluster = structure.cluster_for(e['field']) if structure else None
         cluster_text = '' if not cluster else ('representative of ' if cluster.representative == e['field'] else 'with ') + ', '.join(
             m for m in cluster.members if m != e['field'])
+        suspect = next((s for s in output.get('leakage', []) if s['field'] == e['field']), None)
         rows.append([rank, e['field'], e['type'], e.get('subset', 'all rows'), e.get('power_metric'), e.get('power'), e.get('power_sd'),
-                     e.get('nmi_adjusted'), e['test'], e['n'], *measures, e['p_value'], e['adjusted_p'], cluster_text])
+                     e.get('nmi_adjusted'), e['test'], e['n'], *measures, e['p_value'], e['adjusted_p'], cluster_text,
+                     'yes: ' + '; '.join(suspect['reasons']) if suspect else ''])
     columns = [('Rank', 'count'), ('Field', 'text'), ('Field type', 'text'), ('Rows analysed', 'text'), ('Power metric', 'text'),
                ('Predictive power', 'effect'), ('Fold sd', 'effect'), ('NMI minus permutation mean', 'effect'), ('Test', 'text'), ('n', 'count'),
-               *[(label, 'effect') for _, label in MEASURE_COLUMNS], ('p-value', 'p'), ('Benjamini–Hochberg adjusted p', 'p'), ('Redundancy cluster', 'text')]
+               *[(label, 'effect') for _, label in MEASURE_COLUMNS], ('p-value', 'p'), ('Benjamini–Hochberg adjusted p', 'p'), ('Redundancy cluster', 'text'),
+               ('Leakage suspect', 'text')]
     items = [table('ranking', 'Fields ranked by cross-validated predictive power: statistical associations, not causes', columns, rows,
         evidence={'version': output['analysis_version'], 'computation': 'Predictive power, effect sizes and p-values from each field section; '
                   'Benjamini–Hochberg adjustment across all ranked fields', 'queries': []},
@@ -1301,7 +1422,7 @@ def configuration_for(a):
 
 def iter_items(output):
     sections = output['sections']
-    for key in ('quality', 'target_selection', 'corrections', 'structure', 'target', 'ranking'):
+    for key in ('quality', 'target_selection', 'corrections', 'structure', 'target', 'leakage', 'ranking', 'multivariate'):
         yield from sections.get(key, [])
     for field in sections.get('fields', []):
         yield from field['items']

@@ -7,7 +7,7 @@ encoding: out-of-fold ΔAUC over 0.5 for classification, out-of-fold R² for reg
 import numpy as np
 
 from ....datasets import quote
-from ...profile import numeric_expression
+from ...profile import date_expression, numeric_expression
 from ...store import literal
 from .. import stats
 
@@ -48,6 +48,10 @@ def field_power(a, spec, column, kind, cfg, absent_sql):
     where = spec.ok
     if kind == 'numeric':
         bin_sql, edges, count = numeric_bins(a, column, where, cfg.numeric_bins); setup = [edges]; grouping = f'{count} equal-count bins'
+    elif kind == 'date':
+        d = date_expression(column)
+        bin_sql = f"CASE WHEN {d} IS NULL THEN {literal(MISSING_BIN)} ELSE strftime(date_trunc('month',{d}),'%Y-%m') END"
+        setup = []; grouping = 'calendar months plus a missing bin'
     else:
         bin_sql, levels, grouped = level_bins(a, column, where, cfg.ranking_level_cap, absent_sql); setup = [levels]
         grouping = f'top {cfg.ranking_level_cap} levels plus one group' if grouped else 'every level'
@@ -92,3 +96,17 @@ def rate_columns(positives, rows, overall, confidence):
     rate = positives / rows if rows else None
     low, high = stats.wilson_interval(positives, rows, confidence)
     return [rate, low, high, (rate - overall) * 100 if rate is not None else None, rate / overall if rate is not None and overall else None]
+
+
+def monotone_share(values, weights):
+    """Share of the weighted between-bin variation explained by the best monotone (isotonic) fit.
+
+    1 means a monotone curve explains the bins fully; low values with real differences between bins
+    indicate a non-linear shape such as a U or a threshold (isotonic regression: Barlow et al. 1972).
+    """
+    from sklearn.isotonic import IsotonicRegression
+    v = np.asarray(values, dtype=float); w = np.asarray(weights, dtype=float); x = np.arange(len(v))
+    total = float((w * (v - np.average(v, weights=w)) ** 2).sum())
+    if len(v) < 3 or total <= 0: return None
+    best = min(float((w * (v - IsotonicRegression(increasing=up).fit(x, v, sample_weight=w).predict(x)) ** 2).sum()) for up in (True, False))
+    return 1 - best / total

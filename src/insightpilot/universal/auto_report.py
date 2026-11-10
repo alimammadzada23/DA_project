@@ -17,7 +17,8 @@ from .auto_analysis import SETTINGS, iter_items
 from .report import safe_spreadsheet_frame
 
 SECTION_TITLES = [('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'), ('structure', 'Structure'),
-                  ('target', 'Target overview'), ('ranking', 'Ranking'), ('fields', 'Fields'),
+                  ('target', 'Target overview'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'),
+                  ('fields', 'Fields'),
                   ('relationships', 'Relationships between fields'), ('time', 'Time analysis')]
 
 
@@ -121,6 +122,13 @@ def method_items(output):
         ['Derived columns', 'C ≈ k·A or k·(A op B), k fitted through the origin, confirmed by R² on all rows; listed under their sources in the ranking'],
         ['Redundancy clusters', "Average-linkage clusters of fields whose association (bias-corrected Cramér's V, Spearman ρ, correlation ratio η) exceeds the threshold"],
         ['Explained missing values', 'A condition is reported when it meets the coverage, lift and precision thresholds'],
+        ['Leakage screen', 'Single-field power above the AUC/R² threshold, an exact dependency with the target, or a post-outcome date-name hint'],
+        ['Multivariate model', 'HistGradientBoosting with native missing-value and categorical handling, cross-validated (stratified, or time-ordered '
+                               'with a time axis) against baselines; permutation importance on held-out folds, grouped for redundancy clusters'],
+        ['Adjusted model', 'Logistic (odds ratios) or linear (HC3) regression on cluster representatives, standardised numbers, pooled rare levels and '
+                           'VIF pruning; associations holding the other listed fields constant'],
+        ['Accumulated local effects', 'First-order ALE (Apley & Zhu 2020) on equal-count intervals, centred to mean zero'],
+        ['Non-linear shapes', 'Flagged when the best monotone (isotonic) fit explains less of the between-bin variation than the threshold and the bins differ (p < 0.01)'],
     ]
     thresholds = [[key.replace('_', ' '), value] for key, value in s.items()]
     thresholds += [[key.replace('_', ' '), value] for key, value in (output.get('config') or {}).items() if key != 'config_version']
@@ -146,6 +154,8 @@ def html_report(output):
     parts = ['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
              f'<title>{escape(title)}</title><style>{STYLE}</style></head><body>', f'<h1>{escape(title)}</h1>']
     parts.append('<table>' + ''.join(f'<tr><th>{escape(k)}</th><td>{escape(str(v))}</td></tr>' for k, v in header_rows(output)) + '</table>')
+    if output.get('warnings'):
+        parts.append('<div class="failed"><strong>Warnings</strong><ul>' + ''.join(f'<li>{escape(w)}</li>' for w in output['warnings']) + '</ul></div>')
     failed = [s for s in output['stages'] if s['status'] == 'failed']
     if failed:
         parts.append('<div class="failed"><strong>Failed stages</strong><ul>' + ''.join(

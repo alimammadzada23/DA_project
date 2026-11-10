@@ -40,6 +40,27 @@ class AnalysisConfig:
     missing_explanation_lift: float = 3.0        # P(condition | missing) / P(condition)
     missing_explanation_precision: float = 0.5   # share of rows meeting the condition that are missing
     missing_explanation_columns: int = 50
+    # Target warnings
+    imbalance_share: float = 0.05           # warn when a class is below this share (or above 1 − share)
+    minority_rows_minimum: int = 50
+    # Leakage screen
+    leakage_auc: float = 0.95
+    leakage_r2: float = 0.90
+    # Multivariate model
+    model_sample_rows: int = 100_000        # seeded sample used to fit models
+    model_iterations: int = 100             # boosting iterations
+    model_level_cap: int = 30               # categorical levels given to the model; the rest are pooled
+    permutation_rows: int = 5_000           # held-out rows per fold used for permutation importance
+    importance_fields: int = 25             # top-ranked fields (plus their clusters) given permutation importance
+    permutation_repeats: int = 3
+    signal_minimum: float = 0.02            # ΔAUC or R² over the baseline needed before importance is reported
+    vif_maximum: float = 5.0
+    adjusted_fields: int = 10               # fields in the univariate vs adjusted table
+    weakens_share: float = 0.5              # adjusted below this share of univariate = weakens substantially
+    ale_fields: int = 5
+    ale_bins: int = 10
+    # Shape
+    monotone_share_minimum: float = 0.8     # below this share of between-bin variation explained by a monotone fit = non-linear
 
     def to_dict(self):
         return {'config_version': CONFIG_VERSION, **asdict(self)}

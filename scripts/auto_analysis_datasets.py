@@ -116,6 +116,14 @@ def verify_telco(output, raw, checks):
     for field in ('gender', 'PhoneService'):
         check(checks, f'{field}: predictive power below 0.01', bool(abs(ranking.loc[field, 'Predictive power']) < 0.01), True)
     check(checks, 'Analyst conclusions section empty', '<div class="conclusions"></div>' in html_report(output), True)
+    # Phase 2 analyst checks
+    metrics = {row[0]: row for row in output['multivariate']['metrics']}
+    check(checks, 'Model AUC beats 0.5 by more than 0.25, with fold spread', bool(metrics['AUC'][1] > 0.75 and metrics['AUC'][2] is not None), True)
+    check(checks, 'Model accuracy beats the majority baseline', bool(metrics['Accuracy'][1] > metrics['Accuracy'][3]), True)
+    check(checks, 'Majority baseline accuracy', metrics['Accuracy'][3], 1 - (raw.Churn == 'Yes').mean(), 0.02)
+    verdicts = {v[0]: v[8] for v in output['multivariate']['verdicts']}
+    check(checks, 'Univariate vs adjusted table covers Contract and tenure', {'Contract', 'tenure'} <= set(verdicts), True)
+    check(checks, 'No leakage suspects in Telco', output['leakage'], [])
 
 
 def adult(workspace, source):

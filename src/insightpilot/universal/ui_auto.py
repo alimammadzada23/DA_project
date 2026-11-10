@@ -126,8 +126,11 @@ def show_report(output, key):
     if output.get('saved_blocks'):
         st.caption(f'{output["saved_blocks"]:,} charts were also saved as evidence for the report builder and the rest of the manual workflow.')
     sections = output['sections']
+    for warning in output.get('warnings', []):
+        st.warning(warning)
     for section, title in [('target_selection', 'Target selection'), ('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'),
-                           ('target', 'Target overview'), ('ranking', 'Ranking')]:
+                           ('structure', 'Structure'), ('target', 'Target overview'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'),
+                           ('multivariate', 'Multivariate model')]:
         if sections.get(section):
             with st.expander(title, expanded=section in ('ranking', 'target')):
                 show_items(sections[section], key)

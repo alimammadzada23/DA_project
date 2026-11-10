@@ -38,7 +38,8 @@ def test_number_formatting(value, kind, expected):
 def test_report_structure_in_order(output):
     html = html_report(output)
     headings = re.findall(r'<h2 id="section-([a-z]+)">', html)
-    assert headings == ['quality', 'corrections', 'structure', 'target', 'ranking', 'fields', 'relationships', 'method', 'evidence', 'conclusions']
+    assert headings == ['quality', 'corrections', 'structure', 'target', 'leakage', 'ranking', 'multivariate', 'fields', 'relationships', 'method',
+                        'evidence', 'conclusions']
     for text in ('Upload SHA-256', output['source_sha256'], 'Positive class', 'Analysed version', 'Analyst conclusions',
                  'Statistical associations are not causes', 'Benjamini–Hochberg'):
         assert text in html

@@ -43,8 +43,31 @@ def missingness(rng, n=2000):
                          'outcome': np.where(rng.random(n) < 0.3, 'yes', 'no')})
 
 
+def leakage(rng, n=3000):
+    """#2: 'copy' is the target with 2% of values flipped; 'closed_on' is a date recorded only when the outcome happened."""
+    x = rng.normal(size=n); outcome = rng.random(n) < 1 / (1 + np.exp(-(x - 0.5)))
+    flipped = np.where(rng.random(n) < 0.02, ~outcome, outcome)
+    days = rng.integers(0, 365, n)
+    closed = [(pd.Timestamp('2024-01-01') + pd.Timedelta(days=int(d))).date().isoformat() if o else '' for d, o in zip(days, outcome)]
+    return pd.DataFrame({'x': np.round(x, 4), 'copy': np.where(flipped, 'Y', 'N'), 'closed_on': closed,
+                         'region': rng.choice(['north', 'south', 'east'], size=n), 'outcome': np.where(outcome, 'yes', 'no')})
+
+
+def nonlinear(rng, n=4000):
+    """#7: the positive rate is U-shaped in x (high at both ends, low in the middle)."""
+    x = rng.uniform(-3, 3, n); p = 1 / (1 + np.exp(-(-2.5 + 0.6 * x * x)))
+    return pd.DataFrame({'x': np.round(x, 4), 'noise': np.round(rng.normal(size=n), 4), 'outcome': np.where(rng.random(n) < p, 'yes', 'no')})
+
+
+def imbalance(rng, n=20000):
+    """#17: overall positive rate about 1%; group 'b' about 2%, group 'a' about 0.5%."""
+    group = rng.choice(['a', 'b'], size=n); rate = np.where(group == 'b', 0.02, 0.005)
+    return pd.DataFrame({'group': group, 'z': np.round(rng.normal(size=n), 4), 'outcome': np.where(rng.random(n) < rate, 'yes', 'no')})
+
+
 FIXTURES = {'ENGINE-01-conditional.csv': conditional, 'ENGINE-03-derived.csv': derived,
-            'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness}
+            'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness, 'ENGINE-02-leakage.csv': leakage,
+            'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance}
 
 
 if __name__ == '__main__':
