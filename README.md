@@ -14,6 +14,7 @@ No account, no cloud and no coding needed.
 - **Checks quality:** finds missing values, duplicates and problem fields.
 - **Makes charts:** trends, rankings, distributions and more, in a few clicks.
 - **Builds dashboards:** Power BI-style report pages with DAX measures.
+- **Analyses automatically:** pick a target column and get one complete report with every table, chart and test.
 - **Answers questions:** an optional AI analyst runs on your computer through Ollama.
 - **Creates reports:** save your findings and export them.
 
@@ -44,12 +45,17 @@ On a Mac, after the first run, you can double-click **Start InsightPilot.command
 
 Press **Save Project** in the left sidebar to keep your work. Nothing is saved until you do.
 
+### Or let it analyse automatically
+
+After adding a file, choose **Run automatic analysis**. Pick the column you care about (for example, whether a customer left), and InsightPilot checks the data, makes safe fixes, compares every column with it and builds a report you can download as HTML or Excel. It shows the numbers; you draw the conclusions.
+
 ## Built with
 
 Python · Streamlit · DuckDB · Plotly
 
 ## Learn more
 
+- [Automatic analysis](docs/AUTOMATIC_ANALYSIS.md)
 - [Working with large tables](docs/LARGE_DATA.md)
 - [BI Studio: dashboards and DAX](docs/BI_STUDIO.md)
 - [Everyday use on a Mac](docs/MAC_EVERYDAY_USE.md)
