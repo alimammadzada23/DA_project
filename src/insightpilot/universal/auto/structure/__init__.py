@@ -8,6 +8,8 @@ from itertools import combinations
 import math
 
 import numpy as np
+import pandas as pd
+from scipy import stats
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
@@ -81,6 +83,9 @@ class StructureResult:
     clusters: list = field(default_factory=list)
     checked_columns: list = field(default_factory=list)
     limits: list = field(default_factory=list)
+    sample: object = field(default=None, repr=False)
+    sample_rows: int = 0
+    total_rows: int = 0
     queries: dict = field(default_factory=dict)
 
     def log(self, section, *queries):
@@ -113,11 +118,27 @@ def discover(a, facts, cfg, absent_sql):
         categorical = categorical[:cfg.structure_column_cap]
     counts = level_counts(a, categorical, absent_sql, result)
     result.conditional = conditional_categories(a, counts, cfg, result)
+    result.sample = sample_frame(a, facts, cfg, absent_sql, result)
     explained = {(c.column, c.parent) for c in result.conditional}
     # A conditional column's real levels imply the parent's applicable value; that is not a separate finding.
     result.dependencies = [d for d in dependencies(a, facts, cfg, absent_sql, result) if (d.determinant, d.dependent) not in explained]
     result.derived = derived_columns(a, facts, cfg, result)
     return result
+
+
+def sample_frame(a, facts, cfg, absent_sql, result):
+    """One seeded sample (at most cfg.association_sample_rows rows): categorical fields as text, numeric fields as numbers."""
+    columns = [n for n, f in facts.items() if f['type'] in ('categorical', 'binary', 'numeric')]
+    if not columns: return None
+    numeric = {n for n in columns if facts[n]['type'] == 'numeric'}
+    projection = ','.join((numeric_expression(n) if n in numeric else f'CASE WHEN {absent_sql(n)} THEN NULL ELSE {text_value(n)} END') + f' AS {quote(n)}'
+                          for n in columns)
+    data, evidence = a.frame(f'SELECT {projection} FROM selected ORDER BY hash(_row_id + {cfg.seed}),_row_id LIMIT {cfg.association_sample_rows}',
+                             'Seeded sample for structure screening and field associations')
+    total = a.run('SELECT count(*) FROM selected', 'Rows')['rows'][0][0]
+    result.log('associations', evidence)
+    result.sample_rows, result.total_rows = len(data), total
+    return data
 
 
 def level_counts(a, columns, absent_sql, result):
@@ -174,23 +195,45 @@ def conditional_categories(a, counts, cfg, result):
 
 
 def dependencies(a, facts, cfg, absent_sql, result):
-    """A determines B when B has a single value within ≥ cfg.dependency_overlap of A's groups with two or more rows."""
+    """A determines B when B has a single value within ≥ cfg.dependency_overlap of A's groups with two or more rows.
+
+    Candidates are screened on the shared sample with a looser 95% threshold, then every candidate is
+    checked exactly on all rows. A dependency that holds on all rows also holds in any subset of rows.
+    """
     eligible = [n for n, f in facts.items() if f['type'] in ('categorical', 'binary', 'numeric') and 2 <= f['distinct_clean'] <= cfg.dependency_level_cap
                 and f['distinct_clean'] <= 0.5 * max(f['clean'], 1)]
     if len(eligible) > cfg.structure_column_cap:
         result.limits.append(f'Functional dependencies were checked for the first {cfg.structure_column_cap} of {len(eligible)} eligible columns.')
         eligible = eligible[:cfg.structure_column_cap]
+    data = result.sample
+    codes = {n: pd.factorize(data[n], use_na_sentinel=True)[0] for n in eligible} if data is not None else {}
+    candidates = []
+    for determinant in eligible:
+        dependents = [d for d in eligible if d != determinant and facts[determinant]['distinct_clean'] >= facts[d]['distinct_clean']]
+        if data is None:
+            candidates += [(determinant, d) for d in dependents]; continue
+        key = codes[determinant]; present = key >= 0
+        order = np.argsort(key[present], kind='stable'); sorted_key = key[present][order]
+        if not len(sorted_key): continue
+        starts = np.flatnonzero(np.r_[True, sorted_key[1:] != sorted_key[:-1]])
+        for dependent in dependents:
+            value = codes[dependent][present][order]; known = value >= 0
+            count = np.add.reduceat(known.astype(np.int64), starts)
+            low = np.minimum.reduceat(np.where(known, value, np.iinfo(np.int64).max), starts)
+            high = np.maximum.reduceat(np.where(known, value, -1), starts)
+            checked = count >= 2
+            # Screening only: the exact rule is applied to every candidate on all rows below.
+            if checked.any() and (low[checked] == high[checked]).mean() >= 0.95:
+                candidates.append((determinant, dependent))
     found = {}
-    for a_col, b_col in combinations(eligible, 2):
-        for determinant, dependent in ((a_col, b_col), (b_col, a_col)):
-            if facts[determinant]['distinct_clean'] < facts[dependent]['distinct_clean']: continue
-            query = a.run(f'''SELECT count(*) FILTER (WHERE d=1),count(*) FROM (SELECT {text_value(determinant)} AS k,count(DISTINCT {text_value(dependent)}) AS d,
-                count(*) AS n FROM selected WHERE NOT {absent_sql(determinant)} AND NOT {absent_sql(dependent)} GROUP BY 1) WHERE n>=2''',
-                f'Does {determinant} determine {dependent}?')
-            result.log('dependencies', query)
-            consistent, groups = query['rows'][0]
-            if groups and consistent / groups >= cfg.dependency_overlap:
-                found[(determinant, dependent)] = Dependency(determinant, dependent, 'determines', groups, consistent / groups)
+    for determinant, dependent in candidates:
+        query = a.run(f'''SELECT count(*) FILTER (WHERE d=1),count(*) FROM (SELECT {text_value(determinant)} AS k,count(DISTINCT {text_value(dependent)}) AS d,
+            count(*) AS n FROM selected WHERE NOT {absent_sql(determinant)} AND NOT {absent_sql(dependent)} GROUP BY 1) WHERE n>=2''',
+            f'Does {determinant} determine {dependent}?')
+        result.log('dependencies', query)
+        consistent, groups = query['rows'][0]
+        if groups and consistent / groups >= cfg.dependency_overlap:
+            found[(determinant, dependent)] = Dependency(determinant, dependent, 'determines', groups, consistent / groups)
     output = []
     for (determinant, dependent), item in found.items():
         if (dependent, determinant) in found:
@@ -290,49 +333,81 @@ def trimmed_fit(c, f):
 
 
 # ---------------- associations and clusters ----------------
-def associations(a, facts, structure, cfg, category_sql, correlation, correlation_ratio, absent_sql):
-    """Pairwise association of non-identifier fields; conditional fields are measured on their applicable rows."""
+def associations(a, facts, structure, cfg, absent_sql):
+    """Pairwise association of fields, computed in memory from one seeded sample of at most cfg.association_sample_rows rows.
+
+    Categorical pairs: bias-corrected Cramér's V; numeric pairs: Spearman ρ on complete pairs; mixed pairs:
+    correlation ratio η. Categorical fields keep their 30 most frequent levels (others grouped, missing as its
+    own level). Pairs that include a conditional field use the rows where it applies.
+    """
     fields = [n for n, f in facts.items() if f['type'] in ('categorical', 'binary', 'numeric')]
     if len(fields) > cfg.structure_column_cap:
         structure.limits.append(f'Associations were computed for the first {cfg.structure_column_cap} of {len(fields)} fields.')
         fields = fields[:cfg.structure_column_cap]
     structure.checked_columns = fields
+    if len(fields) < 2: return []
+    numeric = {n for n in fields if facts[n]['type'] == 'numeric'}
+    data = structure.sample if structure.sample is not None else sample_frame(a, facts, cfg, absent_sql, structure)
+    if structure.total_rows > structure.sample_rows:
+        structure.limits.append(f'Associations between fields use a seeded sample of {structure.sample_rows:,} of {structure.total_rows:,} rows (seed {cfg.seed}).')
+    codes = {}
+    for n in fields:
+        if n in numeric: continue
+        counts = data[n].value_counts()
+        top = sorted(counts.index, key=lambda v: (-counts[v], str(v)))[:cfg.category_limit]
+        mapping = {v: i for i, v in enumerate(top)}
+        codes[n] = np.array([mapping.get(v, len(top)) if v is not None and v == v else len(top) + 1 for v in data[n]], dtype=np.int64)
+    values = {n: pd.to_numeric(data[n], errors='coerce').to_numpy(dtype=float) for n in numeric}
+    applicable = {}
+    for c in structure.conditional:
+        if c.column in fields:
+            applicable[c.column] = (data[c.parent].to_numpy(dtype=object) != c.parent_value), f'rows where {c.parent} ≠ {c.parent_value}', c.parent
     output = []
     for first, second in combinations(fields, 2):
-        conditions = []; notes = []
+        mask = np.ones(len(data), dtype=bool); notes = []
+        skip = False
         for column in (first, second):
-            conditional = structure.conditional_for(column)
-            if conditional and conditional.parent in (first, second):
-                conditions = None; break
-            if conditional:
-                conditions.append(conditional.applicable_where); notes.append(f'rows where {conditional.parent} ≠ {conditional.parent_value}')
-        if conditions is None: continue
-        where = ' AND '.join(conditions) or 'true'
-        kinds = tuple('numeric' if facts[c]['type'] == 'numeric' else 'categorical' for c in (first, second))
-        if kinds == ('numeric', 'numeric'):
-            stats_, query = correlation(a, f'CASE WHEN {where} THEN {numeric_of(first)} END', f'CASE WHEN {where} THEN {numeric_of(second)} END',
-                                        f'Spearman ρ of {first} and {second}')
-            value, measure, n = stats_['spearman'], 'Spearman ρ', stats_['n']; queries = [query]
-        elif kinds == ('categorical', 'categorical'):
-            left, _, top_left = category_sql(a, first, where); right, _, top_right = category_sql(a, second, where)
-            query = a.run(f'SELECT {left} AS x,{right} AS y,count(*) AS n FROM selected WHERE {where} GROUP BY 1,2', f'{first} × {second}')
-            table = contingency(query['rows'])
-            value, measure, n = cramers_v_corrected(table), "Cramér's V (bias-corrected)", int(table.sum()); queries = [top_left, top_right, query]
+            if column in applicable:
+                rows, note, parent = applicable[column]
+                if parent in (first, second): skip = True; break
+                mask &= rows; notes.append(note)
+        if skip: continue
+        kinds = (first in numeric, second in numeric)
+        if kinds == (True, True):
+            x, y = values[first][mask], values[second][mask]
+            keep = ~np.isnan(x) & ~np.isnan(y)
+            n = int(keep.sum())
+            value = float(stats.spearmanr(x[keep], y[keep]).statistic) if n >= 3 and np.ptp(x[keep]) and np.ptp(y[keep]) else None
+            measure = 'Spearman ρ'
+        elif kinds == (False, False):
+            left, right = codes[first][mask], codes[second][mask]
+            width = right.max() + 1 if len(right) else 1
+            table = np.bincount(left * width + right, minlength=(left.max() + 1 if len(left) else 1) * width).reshape(-1, width)
+            value = cramers_v_corrected(table); measure = "Cramér's V (bias-corrected)"; n = int(table.sum())
         else:
-            category, number = (first, second) if kinds[0] == 'categorical' else (second, first)
-            expression, _, top = category_sql(a, category, where); x = numeric_of(number)
-            groups = a.run(f'SELECT {expression} AS g,count(v) AS n,avg(v) AS mean FROM (SELECT *,{x} AS v FROM selected WHERE {where}) '
-                           f'WHERE v IS NOT NULL GROUP BY 1', f'{number} by {category}')
-            total = a.run(f'SELECT count({x}),avg({x}),var_pop({x}) FROM selected WHERE {where}', f'{number} overall')
-            n, mean, variance = total['rows'][0]
-            value = correlation_ratio([(g_n, g_mean) for _, g_n, g_mean in groups['rows']], n, mean, variance)
-            measure = 'correlation ratio η'; queries = [top, groups, total]
-        structure.log('associations', *queries)
+            category, number = (first, second) if not kinds[0] else (second, first)
+            group, x = codes[category][mask], values[number][mask]
+            keep = ~np.isnan(x); group, x = group[keep], x[keep]; n = len(x)
+            if n < 2:
+                value = None
+            else:
+                sizes = np.bincount(group); sums = np.bincount(group, weights=x)
+                present = sizes > 0
+                value = correlation_ratio(list(zip(sizes[present], sums[present] / sizes[present])), n, float(x.mean()), float(x.var()))
+            measure = 'correlation ratio η'
         if value is not None and math.isfinite(value):
-            output.append(Association(first, second, measure, float(f'{value:.12g}'), int(n or 0), '; '.join(notes)))
+            output.append(Association(first, second, measure, float(f'{value:.12g}'), int(n), '; '.join(notes)))
     structure.associations = output
     structure.clusters = clusters(fields, output, cfg)
     return output
+
+
+def correlation_ratio(groups, total_n, total_mean, total_variance_population):
+    """η = sqrt(between-group sum of squares / total sum of squares)."""
+    total_ss = total_variance_population * total_n
+    if not total_ss or total_ss <= 0: return None
+    between = sum(n * (mean - total_mean) ** 2 for n, mean in groups if n)
+    return math.sqrt(min(1.0, between / total_ss))
 
 
 def numeric_of(column):

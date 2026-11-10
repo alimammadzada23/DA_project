@@ -129,6 +129,13 @@ class Analysis:
         if result['truncated']: raise ValueError(f'{computation}: more than {limit:,} result rows.')
         return result
 
+    def frame(self, sql, computation):
+        """Run a query whose size the caller has bounded, returning a DataFrame and its evidence record."""
+        full = f'WITH selected AS (SELECT * FROM {quote(self.version)}) ' + sql
+        with self.workspace.connect() as con:
+            data = con.execute(full).fetchdf()
+        return data, {'sql': full, 'parameters': [], 'version': self.version, 'method': {'automatic_analysis': computation}}
+
     def evidence(self, computation, *results):
         return {'version': self.version, 'computation': computation,
                 'queries': [{'sql': r['sql'], 'parameters': [str(p) for p in r['parameters']]} for r in results]}
@@ -1064,7 +1071,7 @@ def structure_stage(a, facts, spec, output, state):
     result = auto_structure.discover(a, facts, cfg, absent_sql)
     # The target is compared with each field elsewhere; associations here are between fields only.
     fields = {name: f for name, f in facts.items() if name != spec.column}
-    auto_structure.associations(a, fields, result, cfg, category_expression, correlation, auto_stats.correlation_ratio, absent_sql)
+    auto_structure.associations(a, fields, result, cfg, absent_sql)
     state['structure'] = result
     return (f'{len(result.conditional)} conditional, {len(result.dependencies)} dependencies, {len(result.derived)} derived, '
             f'{len(result.clusters)} clusters')

@@ -34,6 +34,7 @@ class AnalysisConfig:
     derived_sample_rows: int = 5000
     derived_column_cap: int = 30
     redundancy_threshold: float = 0.7
+    association_sample_rows: int = 200_000   # seeded sample for field-to-field associations
     # Missingness explanations
     missing_explanation_coverage: float = 0.95   # share of missing rows that meet the condition
     missing_explanation_lift: float = 3.0        # P(condition | missing) / P(condition)
