@@ -14,12 +14,16 @@ import re
 import time
 import uuid
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
 from ..datasets import quote
 from . import auto_stats, visuals
+from .auto import quality as auto_quality, structure as auto_structure, univariate as auto_univariate
+from .auto.config import DEFAULT as DEFAULT_CONFIG
+from .auto.stats import bootstrap_interval
 from .context import AnalysisContext
 from .engine import Engine, frame_of
 from .metrics import Metric
@@ -59,7 +63,7 @@ TARGET_HINTS = ('target', 'label', 'outcome', 'result', 'status', 'class', 'flag
                 'fraud', 'revenue', 'price', 'score')
 POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
-STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'),
+STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'), ('structure', 'Structure discovery'),
           ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('ranking', 'Ranking'),
           ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
@@ -389,8 +393,9 @@ def apply_corrections(analysis, facts, target, target_type):
 
 # ---------------- the run ----------------
 def run(workspace, table_name, *, target=None, target_type=None, positive=None, time_axis=None, progress=None,
-        prepared=None, save_evidence=True, apply_corrections_step=True):
+        prepared=None, save_evidence=True, apply_corrections_step=True, config=None):
     progress = progress or (lambda *args: None)
+    cfg = config or DEFAULT_CONFIG
     info = workspace.info(table_name)
     if prepared is None or prepared.get('version') != info['current']:
         prepared = None
@@ -400,8 +405,8 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
               'rows': info['rows'], 'column_count': len(info['columns']), 'original_version': info['current'], 'analysis_version': info['current'],
               'target': target, 'target_type': target_type if target else None, 'positive': positive if target_type == 'binary' else None,
               'time_axis': time_axis, 'settings': SETTINGS, 'stages': [], 'sections': {}, 'skipped': [], 'field_failures': [],
-              'sampling': [], 'small_sample_warnings': []}
-    state = {'prepared': prepared}
+              'sampling': [], 'small_sample_warnings': [], 'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed}
+    state = {'prepared': prepared, 'cfg': cfg}
 
     def stage(key, action, *, skip_reason=None):
         title = dict(STAGES)[key]
@@ -477,7 +482,7 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
             if f['missing']: not_changed.append([name, 'missing values', f['missing'], 'not filled'])
         items.append(table('corrections-not-changed', 'Issues reported but not changed', [('Column', 'text'), ('Issue', 'text'),
             ('Rows', 'count'), ('Action', 'text')], not_changed, evidence=state['corrected'].evidence('Facts of the analysed version', *queries)))
-        items.extend(missing_patterns(state['corrected'], facts_after))
+        items.append(explained_missing(state['corrected'], facts_after, cfg, output))
         output['sections']['corrections'] = items
         return f'{len(rows)} corrections' + (f'; version {version["table"]}' if version else '; no version needed')
 
@@ -486,9 +491,11 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
     facts = state.get('facts') or state['prepared']['facts']
     spec = TargetSpec(target, target_type, positive)
 
+    stage('structure', lambda: structure_stage(worker, facts, spec, output, state))
     stage('target_overview', lambda: target_overview(worker, spec, output), skip_reason=None if target else 'no target chosen')
     stage('fields', lambda: fields_stage(worker, spec, facts, time_axis, output, state))
     stage('ranking', lambda: ranking_stage(output, state), skip_reason=None if target else 'no target chosen')
+    finish_structure(output, state, bool(target))
     stage('relationships', lambda: relationships_stage(worker, spec, facts, time_axis, output, state))
     stage('time', lambda: time_stage(worker, spec, time_axis, output), skip_reason=None if time_axis else 'no time axis chosen')
     stage('evidence', lambda: save_blocks(worker, output) if save_evidence else 'not requested')
@@ -511,13 +518,19 @@ def validate_target(prepared, target, target_type, positive, time_axis):
 
 
 class TargetSpec:
-    def __init__(self, column, kind, positive):
-        self.column, self.kind, self.positive = column, kind, positive
+    def __init__(self, column, kind, positive, extra=None):
+        self.column, self.kind, self.positive, self.extra = column, kind, positive, extra
+
+    def restricted(self, where):
+        """The same target, analysed only on rows where `where` holds."""
+        return TargetSpec(self.column, self.kind, self.positive, where)
 
     @property
     def ok(self):
-        if self.kind == 'numeric': return f'{numeric_expression(self.column)} IS NOT NULL'
-        return f'NOT {absent_sql(self.column)}'
+        if self.column is None: base = 'true'
+        elif self.kind == 'numeric': base = f'{numeric_expression(self.column)} IS NOT NULL'
+        else: base = f'NOT {absent_sql(self.column)}'
+        return f'({base}) AND ({self.extra})' if self.extra else base
 
     @property
     def label(self): return f'trim(CAST({quote(self.column)} AS VARCHAR))'
@@ -604,12 +617,68 @@ def fields_stage(a, spec, facts, time_axis, output, state):
             output['skipped'].append([name, SKIP_REASONS[f['type']].format(mean_length=f['mean_length'] or 0)]); continue
         try:
             items, effect = analyse_field(a, spec, name, f, output)
+            items, effect = enrich_field(a, spec, name, f, items, effect, output, state)
         except Exception as exc:
             output['field_failures'].append([name, f'{type(exc).__name__}: {exc}']); continue
         sections.append({'field': name, 'type': f['type'], 'items': items})
         if effect: state['effects'].append(effect)
     output['sections']['fields'] = sections
     return f'{len(sections)} fields analysed, {len(output["skipped"])} skipped, {len(output["field_failures"])} failed'
+
+
+class _SuffixedResults(dict):
+    """Stores chart evidence under suffixed ids while a field is analysed a second time."""
+    def __init__(self, target, suffix):
+        super().__init__(); self.target, self.suffix = target, suffix
+
+    def __setitem__(self, key, value):
+        self.target[key + self.suffix] = value
+
+
+def enrich_field(a, spec, name, f, items, effect, output, state):
+    """Applicable-subset analysis for conditional fields, predictive power and structure flags."""
+    structure = state.get('structure'); cfg = state['cfg']
+    kind = 'categorical' if f['type'] in ('categorical', 'binary') else f['type']
+    conditional = structure.conditional_for(name) if structure else None
+    derived = structure.derived_for(name) if structure else None
+    notes = []
+    if derived:
+        notes.append(text(f'{name} is approximately derived: {name} ≈ {derived.factor:.4g} × ({derived.formula}), R² {derived.r2_full:.4f} on '
+                          f'{derived.rows:,} rows. It is listed under its source columns in the ranking, not as a separate field.'))
+    target_spec = spec
+    if conditional and spec.column:
+        target_spec = spec.restricted(conditional.applicable_where)
+        real = a.results; a.results = _SuffixedResults(real, '-applicable')
+        try:
+            subset_items, subset_effect = analyse_field(a, target_spec, name, f, output)
+        finally:
+            a.results = real
+        prefix = f'Applicable rows ({conditional.parent} ≠ {conditional.parent_value}): '
+        for item in subset_items:
+            if item['type'] != 'text': item['id'] += '-applicable'; item['title'] = prefix + item['title']
+        notes.append(text(f'{name} is conditional: its level "{conditional.level}" occurs exactly when {conditional.parent} = '
+                          f'{conditional.parent_value} ({conditional.rows:,} rows). Results on applicable rows come first and are used for ranking; '
+                          'results on all rows follow for reference.'))
+        reference = effect
+        items = subset_items + [text('Reference: all rows, including rows where the field does not apply.')] + items
+        effect = subset_effect
+        if effect and reference: effect['unconditional_effect'] = reference['effect']
+    if effect is None or not spec.column or kind == 'date':
+        return notes + items, effect
+    power = auto_univariate.field_power(a, target_spec, name, kind, cfg, absent_sql)
+    effect.update(power=_clean(power['value']), power_metric=power['metric'], power_sd=_clean(power['sd']), power_auc=_clean(power['auc']),
+                  nmi_adjusted=_clean(power['nmi_adjusted']), nmi_p=_clean(power['nmi_p']), derived=derived.formula if derived else None,
+                  subset=f'{conditional.parent} ≠ {conditional.parent_value}' if conditional else 'all rows')
+    folds = ', '.join(f'{v:.3f}' for v in power['folds'])
+    power_rows = [[power['metric'], power['value'], power['auc'], power['sd'], folds, power['nmi'], power['nmi_adjusted'], power['nmi_p'],
+                   power['grouping'], effect['subset']]]
+    notes.append(table(item_id(name, 'power'), f'{name}: cross-validated predictive power', [('Metric', 'text'), ('Value', 'effect'),
+        ('AUC', 'effect'), ('Fold sd', 'effect'), ('Per fold', 'text'), ('NMI', 'effect'), ('NMI minus permutation mean', 'effect'),
+        ('Permutation p', 'p'), ('Grouping', 'text'), ('Rows', 'text')], power_rows,
+        evidence=a.evidence(f'{cfg.cv_folds}-fold cross-validated target encoding (smoothing {cfg.encoding_smoothing:g}); '
+                            f'NMI against {cfg.permutations} permutations, seed {cfg.seed}', *power['queries']),
+        note='ΔAUC is the out-of-fold AUC minus 0.5 for a model that uses only this field; R² is its out-of-fold R². Folds are stratified and seeded.'))
+    return notes + items, effect
 
 
 def analyse_field(a, spec, name, f, output):
@@ -655,13 +724,15 @@ def categorical_binary(a, spec, name, output):
     result = a.run(f'SELECT {expression} AS category,count(*) AS total,sum({spec.positive_flag}) AS positives FROM selected WHERE {spec.ok} GROUP BY 1',
                    f'{name} by target')
     rows = sorted(result['rows'], key=lambda r: category_order(r[0], r[1]))
-    all_positive = sum(r[2] for r in rows) or 1
-    table_rows = [[category_label(c, other), t, p, t - p, p / t, p / all_positive, flag_small(t)] for c, t, p in rows]
+    all_positive = sum(r[2] for r in rows) or 1; overall = sum(r[2] for r in rows) / (sum(r[1] for r in rows) or 1)
+    confidence = DEFAULT_CONFIG.confidence
+    table_rows = [[category_label(c, other), t, p, t - p, *auto_univariate.rate_columns(p, t, overall, confidence), p / all_positive, flag_small(t)]
+                  for c, t, p in rows]
     chi = auto_stats.chi_square([[p, t - p] for _, t, p in rows])
     evidence = a.evidence('Counts per category; chi-square on the category × target table (SciPy)', top, result)
     items = [table(item_id(name, 'rates'), f'{name}: rows and positive rate ({spec.column} = {spec.positive})', [('Category', 'text'),
-        ('Rows', 'count'), ('Positives', 'count'), ('Negatives', 'count'), ('Positive rate', 'percent'), ('Share of all positives', 'percent'),
-        ('Flags', 'text')], table_rows, evidence=evidence, note=note_other(other)),
+        ('Rows', 'count'), ('Positives', 'count'), ('Negatives', 'count'), *RATE_COLUMNS, ('Share of all positives', 'percent'),
+        ('Flags', 'text')], table_rows, evidence=evidence, note=rate_note(overall, other)),
         table(item_id(name, 'test'), f'{name}: test of independence', TEST_COLUMNS, chi_rows(chi), evidence=evidence,
               note="Effect size: Cramér's V.")]
     labels = [r[0] for r in table_rows]
@@ -670,13 +741,25 @@ def categorical_binary(a, spec, name, output):
     items.append(figure(item_id(name, 'heatmap'), f'{name} × {spec.column}: rows', heatmap(pivot, f'{name} × {spec.column}: rows', spec.column, name), evidence=evidence))
     ordered = sorted(table_rows, key=lambda r: (-r[4], r[0]))
     bars = go.Figure(go.Bar(y=[r[0] for r in ordered], x=[r[4] for r in ordered], orientation='h', marker_color=visuals.TEAL,
+                            error_x={'type': 'data', 'symmetric': False, 'array': [r[6] - r[4] for r in ordered],
+                                     'arrayminus': [r[4] - r[5] for r in ordered], 'color': visuals.MUTED},
                             text=[f'{r[4]:.1%} of {r[1]:,}' for r in ordered], textposition='outside', cliponaxis=False))
+    bars.add_vline(x=overall, line_dash='dot', line_color=visuals.AMBER, annotation_text=f'overall {overall:.1%}')
     bars.update_xaxes(tickformat='.0%'); bars.update_yaxes(autorange='reversed')
     items.append(figure(item_id(name, 'rate'), f'{name}: positive rate', visuals.style(bars, f'{name}: share of rows with {spec.column} = {spec.positive}',
                         'Positive rate', name), evidence=evidence))
     a.results[item_id(name, 'heatmap')] = a.results[item_id(name, 'rate')] = result
     small_groups(output, name, table_rows, 1)
     return items, effect_row(name, 'categorical', "Chi-square", chi, 'cramers_v')
+
+
+RATE_COLUMNS = [('Positive rate', 'percent'), ('95% CI low', 'percent'), ('95% CI high', 'percent'), ('Difference vs overall (pp)', 'number'),
+                ('Lift', 'number')]
+
+
+def rate_note(overall, other=0):
+    note = f'Overall positive rate {overall:.1%}. Intervals are 95% Wilson intervals; lift is the group rate divided by the overall rate.'
+    return note + (' ' + note_other(other) if other else '')
 
 
 def small_groups(output, name, rows, count_index):
@@ -745,19 +828,38 @@ def categorical_numeric(a, spec, name, output):
     expression, other, top = category_expression(a, name, spec.ok)
     summary = a.run(group_summary_sql(expression, spec.value, spec.ok), f'{spec.column} by {name}')
     rows = sorted(summary['rows'], key=lambda r: category_order(r[0], r[1]))
-    rows = [[category_label(r[0], other), *r[1:], flag_small(r[2])] for r in rows]
+    intervals, sample, note = median_intervals(a, expression, spec.value, spec.ok, len(rows), f'{spec.column} by {name}')
+    rows = [[category_label(r[0], other), *r[1:], *intervals.get(r[0], (None, None)), flag_small(r[2])] for r in rows]
     test, ranks = kruskal(a, spec.value, expression, spec.ok, f'Ranks of {spec.column} by {name}')
-    evidence = a.evidence('Exact quantiles per category; Kruskal–Wallis from average ranks', top, summary, ranks)
+    evidence = a.evidence('Exact quantiles per category; Kruskal–Wallis from average ranks; ' + note, top, summary, ranks, sample)
     test_rows = [['Kruskal–Wallis H', test['statistic'], test['df'], test['p_value'], test['epsilon_squared'], test['n'], '']] if test else \
         [['Kruskal–Wallis H', None, None, None, None, None, 'undefined: fewer than two groups or all values tied']]
-    items = [table(item_id(name, 'summary'), f'{spec.column} by {name}', [('Category', 'text'), *SUMMARY_COLUMNS, ('Flags', 'text')], rows,
-                   evidence=evidence, note=note_other(other)),
+    items = [table(item_id(name, 'summary'), f'{spec.column} by {name}', [('Category', 'text'), *SUMMARY_COLUMNS, ('Median 95% CI low', 'number'),
+                   ('Median 95% CI high', 'number'), ('Flags', 'text')], rows, evidence=evidence, note=' '.join(filter(None, [note, note_other(other)]))),
              table(item_id(name, 'test'), f'{name}: test of differences in {spec.column}', TEST_COLUMNS, test_rows, evidence=evidence,
                    note='Effect size: epsilon-squared.'),
              figure(item_id(name, 'box'), f'{spec.column} by {name}', box(rows, f'{spec.column} by {name}', name, spec.column), evidence=evidence)]
     a.results[item_id(name, 'box')] = summary
     small_groups(output, name, rows, 2)
     return items, effect_row(name, 'categorical', 'Kruskal–Wallis', test, 'epsilon_squared')
+
+
+def median_intervals(a, group_sql, value_sql, where, groups, label):
+    """Percentile-bootstrap intervals for each group's median from a seeded sample of rows per group."""
+    cfg = DEFAULT_CONFIG
+    cap = max(30, min(cfg.bootstrap_rows_cap, 50_000 // max(groups, 1)))
+    sample = a.run(f'''SELECT g,v FROM (SELECT g,v,row_number() OVER (PARTITION BY g ORDER BY hash(_row_id + {cfg.seed}),_row_id) AS r FROM
+        (SELECT _row_id,{group_sql} AS g,{value_sql} AS v FROM selected WHERE {where}) WHERE v IS NOT NULL) WHERE r<={cap}''', f'Bootstrap sample: {label}')
+    values = {}
+    for g, v in sample['rows']: values.setdefault(g, []).append(float(v))
+    intervals = {}; sampled = False
+    for index, (g, group) in enumerate(sorted(values.items(), key=lambda t: str(t[0]))):
+        sampled = sampled or len(group) >= cap
+        resamples = cfg.bootstrap_resamples if len(group) <= cfg.bootstrap_large_n else 200
+        intervals[g] = bootstrap_interval(group, np.median, resamples, cfg.confidence, cfg.seed + index)
+    note = (f'Median intervals: percentile bootstrap, {cfg.bootstrap_resamples:,} resamples, seed {cfg.seed}'
+            + (f', from at most {cap:,} sampled rows per group' if sampled else '') + '.')
+    return intervals, sample, note
 
 
 def numeric_by_class(a, spec, name):
@@ -773,10 +875,11 @@ def numeric_binary(a, spec, name, output):
     groups = {g: (n, r, ties) for g, n, r, ties in ranks['rows']}
     test = auto_stats.mann_whitney(groups[1][0], groups[1][1], groups[0][0], groups[1][2]) if 1 in groups and 0 in groups else None
     bins = a.run(f'''SELECT bin,min(x) AS lower,max(x) AS upper,count(*) AS n,sum(y) AS positives FROM
-        (SELECT x,y,ntile({SETTINGS["quantile_bins"]}) OVER (ORDER BY x,_row_id) AS bin FROM
+        (SELECT x,y,ntile({DEFAULT_CONFIG.numeric_bins}) OVER (ORDER BY x,_row_id) AS bin FROM
         (SELECT {x} AS x,{spec.positive_flag} AS y,_row_id FROM selected WHERE {spec.ok}) WHERE x IS NOT NULL) GROUP BY 1 ORDER BY 1''',
         f'Positive rate by quantile bins of {name}')
-    bin_rows = [[b, low, high, n, p, p / n] for b, low, high, n, p in bins['rows']]
+    overall = sum(r[4] for r in bins['rows']) / (sum(r[3] for r in bins['rows']) or 1)
+    bin_rows = [[b, low, high, n, p, *auto_univariate.rate_columns(p, n, overall, DEFAULT_CONFIG.confidence)] for b, low, high, n, p in bins['rows']]
     evidence = a.evidence('Exact quantiles per class; Mann–Whitney U from average ranks; equal-count bins by value then _row_id', summary, ranks, bins)
     test_rows = [['Mann–Whitney U (normal approximation, tie and continuity corrected)', test['statistic'], None, test['p_value'],
                   test['rank_biserial'], test['n'], '']] if test else [['Mann–Whitney U', None, None, None, None, None, 'undefined']]
@@ -784,12 +887,15 @@ def numeric_binary(a, spec, name, output):
              table(item_id(name, 'test'), f'{name}: test of differences between classes', TEST_COLUMNS, test_rows, evidence=evidence,
                    note=f'Effect size: rank-biserial correlation r = 2U/(n₁n₂) − 1, where group 1 is {spec.column} = {spec.positive}; '
                         'positive r means larger values are more common in that group.'),
-             table(item_id(name, 'bins'), f'{name}: positive rate by {SETTINGS["quantile_bins"]} equal-count bins', [('Bin', 'count'),
-                   ('Lowest value', 'number'), ('Highest value', 'number'), ('Rows', 'count'), ('Positives', 'count'), ('Positive rate', 'percent')],
-                   bin_rows, evidence=evidence, note='Rows with tied values can fall into adjacent bins; ties are ordered by _row_id.'),
+             table(item_id(name, 'bins'), f'{name}: positive rate by {DEFAULT_CONFIG.numeric_bins} equal-count bins', [('Bin', 'count'),
+                   ('Lowest value', 'number'), ('Highest value', 'number'), ('Rows', 'count'), ('Positives', 'count'), *RATE_COLUMNS],
+                   bin_rows, evidence=evidence, note=rate_note(overall) + ' Rows with tied values can fall into adjacent bins; ties are ordered by _row_id.'),
              figure(item_id(name, 'box'), f'{name} by {spec.column}', box(rows, f'{name} by {spec.column}', spec.column, name), evidence=evidence)]
     line = go.Figure(go.Scatter(x=[f'{r[0]}: {visuals.compact(r[1])}–{visuals.compact(r[2])}' for r in bin_rows], y=[r[5] for r in bin_rows],
-                                mode='lines+markers', line={'color': visuals.TEAL}, text=[f'{r[5]:.1%} of {r[3]:,}' for r in bin_rows]))
+                                mode='lines+markers', line={'color': visuals.TEAL}, text=[f'{r[5]:.1%} of {r[3]:,}' for r in bin_rows],
+                                error_y={'type': 'data', 'symmetric': False, 'array': [r[7] - r[5] for r in bin_rows],
+                                         'arrayminus': [r[5] - r[6] for r in bin_rows], 'color': visuals.MUTED}))
+    line.add_hline(y=overall, line_dash='dot', line_color=visuals.AMBER, annotation_text=f'overall {overall:.1%}')
     line.update_yaxes(tickformat='.0%')
     items.append(figure(item_id(name, 'bins-chart'), f'{name}: positive rate by bin', visuals.style(line, f'{name}: positive rate by equal-count bin',
                         name, 'Positive rate'), evidence=evidence))
@@ -952,34 +1058,118 @@ def describe_field(a, name, kind, output):
             figure(item_id(name, 'histogram'), f'{name}: distribution', visuals.histogram(histogram, f'{name} distribution'), evidence=evidence)]
 
 
+# ---------------- structure ----------------
+def structure_stage(a, facts, spec, output, state):
+    cfg = state['cfg']
+    result = auto_structure.discover(a, facts, cfg, absent_sql)
+    auto_structure.associations(a, facts, result, cfg, category_expression, correlation, auto_stats.correlation_ratio, absent_sql)
+    state['structure'] = result
+    return (f'{len(result.conditional)} conditional, {len(result.dependencies)} dependencies, {len(result.derived)} derived, '
+            f'{len(result.clusters)} clusters')
+
+
+def finish_structure(output, state, has_target):
+    """Structure tables, written after ranking so cluster representatives can use predictive power."""
+    result = state.get('structure')
+    if not result: return
+    if not has_target:
+        total = max(1, output['rows'])
+        auto_structure.choose_representatives(result, None, {n: f['missing'] / total for n, f in (state.get('facts') or {}).items()})
+    version = output['analysis_version']
+
+    def evidence(section, computation):
+        return {'version': version, 'computation': computation,
+                'queries': [{'sql': q['sql'], 'parameters': [str(p) for p in q['parameters']]} for q in result.queries.get(section, [])]}
+    items = []
+    items.append(table('structure-conditional', 'Conditional categories', [('Column', 'text'), ('Level', 'text'), ('Occurs exactly when', 'text'),
+        ('Rows', 'count'), ('Overlap (level → parent)', 'percent'), ('Overlap (parent → level)', 'percent')],
+        [[c.column, c.level, f'{c.parent} = {c.parent_value}', c.rows, c.overlap_level, c.overlap_parent] for c in result.conditional],
+        evidence=evidence('conditional', f'A level and a value of another column cover the same rows (both overlaps ≥ {state["cfg"].dependency_overlap:.0%})'),
+        note='Target comparisons for these columns are run on applicable rows, where the parent column does not have that value.'))
+    items.append(table('structure-dependencies', 'Functional dependencies', [('Column', 'text'), ('Determines', 'text'), ('Kind', 'text'),
+        ('Groups checked', 'count'), ('Groups with one value', 'percent')],
+        [[d.determinant, d.dependent, d.kind, d.groups_checked, d.share_consistent] for d in result.dependencies],
+        evidence=evidence('dependencies', 'Groups of the first column with at least two rows, and how many have a single value of the second')))
+    items.append(table('structure-derived', 'Approximately derived columns', [('Column', 'text'), ('Formula', 'text'), ('Factor k', 'number'),
+        ('R² (sample, trimmed)', 'effect'), ('R² (all rows)', 'effect'), ('Rows', 'count')],
+        [[d.column, f'{d.column} ≈ k × ({d.formula})', d.factor, d.r2_sample, d.r2_full, d.rows] for d in result.derived],
+        evidence=evidence('derived', f'k fitted through the origin; trimmed R² on a seeded sample of {state["cfg"].derived_sample_rows:,} rows, '
+                          f'confirmed with R² ≥ {state["cfg"].derived_r2} on all complete rows')))
+    pairs = sorted(result.associations, key=lambda p: (-abs(p.value), p.first, p.second))
+    items.append(table('structure-associations', 'Associations between fields, largest first', [('Field', 'text'), ('Field', 'text'), ('Measure', 'text'),
+        ('Value', 'effect'), ('n', 'count'), ('Rows', 'text')], [[p.first, p.second, p.measure, p.value, p.n, p.subset or 'all rows'] for p in pairs[:20]],
+        evidence=evidence('associations', "Bias-corrected Cramér's V, Spearman ρ or correlation ratio η for every pair of checked fields"),
+        note='The 20 largest of ' + f'{len(pairs):,} pairs. Pairs that include a conditional column use its applicable rows.'))
+    items.append(table('structure-clusters', 'Redundancy clusters', [('Members', 'text'), ('Representative', 'text'), ('Chosen by', 'text')],
+        [[', '.join(c.members), c.representative, c.reason] for c in result.clusters],
+        evidence={'version': version, 'computation': f'Average-linkage clustering on 1 − |association|, cut at association {state["cfg"].redundancy_threshold}',
+                  'queries': []}))
+    items += [text(limit) for limit in result.limits]
+    output['sections']['structure'] = items
+    output['structure'] = result.to_dict()
+
+
+def explained_missing(a, facts, cfg, output):
+    explanations, queries = auto_quality.explain_missing(a, facts, cfg, missing_sql, display_value)
+    output['missing_explanations'] = [e.to_dict() for e in explanations]
+    return table('missing-explanations', 'Explained missing values', [('Column', 'text'), ('Missing rows', 'count'), ('Condition', 'text'),
+        ('Rows meeting the condition', 'count'), ('Coverage', 'percent'), ('Lift', 'number'), ('Precision', 'percent'), ('Missing ⇔ condition', 'text'),
+        ('Statement', 'text')],
+        [[e.column, e.missing_rows, f'{e.condition_column} = {e.condition_value}' if e.condition_value != '(missing)' else f'{e.condition_column} is missing',
+          e.condition_rows, e.coverage, e.lift, e.precision, 'yes' if e.equivalent else 'no', e.statement()] for e in explanations],
+        evidence=a.evidence('Most common value of every other column within the missing rows, then condition counts', *queries),
+        note=f'Listed only when the condition covers at least {cfg.missing_explanation_coverage:.0%} of the missing rows, has lift of at least '
+             f'{cfg.missing_explanation_lift:g} and at least {cfg.missing_explanation_precision:.0%} of the rows meeting it are missing. '
+             'Reported only; no values are filled.')
+
+
 # ---------------- stage 6 ----------------
 MEASURE_COLUMNS = [('cramers_v', "Cramér's V"), ('rank_biserial', '|rank-biserial r|'), ('epsilon_squared', 'epsilon-squared'), ('spearman', '|Spearman ρ|')]
 
 
 def ranking_stage(output, state):
-    effects = [e for e in state.get('effects', []) if e['effect'] is not None]
+    effects = [e for e in state.get('effects', []) if e.get('power') is not None or e['effect'] is not None]
     adjusted = auto_stats.benjamini_hochberg([e['p_value'] for e in effects])
     for effect, q in zip(effects, adjusted): effect['adjusted_p'] = q
-    effects.sort(key=lambda e: (-abs(e['effect']), e['field']))
-    state['ranked'] = [e['field'] for e in effects]
-    # Field sections follow the ranking; fields without a test (dates, undefined tests) keep column order after them.
+    structure = state.get('structure')
+    ranked = [e for e in effects if not e.get('derived')]
+    derived = [e for e in effects if e.get('derived')]
+    ranked.sort(key=lambda e: (e.get('power') is None, -(e.get('power') or 0), e['field']))
+    state['ranked'] = [e['field'] for e in ranked]
+    # Field sections follow the ranking; derived and untested fields keep column order after them.
     order = {name: index for index, name in enumerate(state['ranked'])}
     fields = output['sections'].get('fields', [])
     output['sections']['fields'] = sorted(fields, key=lambda f: (f['field'] not in order, order.get(f['field'], 0), fields.index(f)))
+    if structure:
+        auto_structure.choose_representatives(structure, {e['field']: e.get('power') for e in effects}, {})
     rows = []
-    for rank, e in enumerate(effects, 1):
-        measures = [abs(e['effect']) if e['measure'] == key else None for key, _ in MEASURE_COLUMNS]
-        rows.append([rank, e['field'], e['type'], e['test'], e['n'], *measures, e['p_value'], e['adjusted_p']])
-    columns = [('Rank', 'count'), ('Field', 'text'), ('Field type', 'text'), ('Test', 'text'), ('n', 'count'),
-               *[(label, 'effect') for _, label in MEASURE_COLUMNS], ('p-value', 'p'), ('Benjamini–Hochberg adjusted p', 'p')]
-    undefined = [[e['field'], e['test']] for e in state.get('effects', []) if e['effect'] is None]
-    output['sections']['ranking'] = [table('ranking', 'Fields ranked by effect size: statistical associations, not causes', columns, rows,
-        evidence={'version': output['analysis_version'], 'computation': 'Effect sizes and p-values from each field section; '
+    for rank, e in enumerate(ranked, 1):
+        measures = [abs(e['effect']) if e['effect'] is not None and e['measure'] == key else None for key, _ in MEASURE_COLUMNS]
+        cluster = structure.cluster_for(e['field']) if structure else None
+        cluster_text = '' if not cluster else ('representative of ' if cluster.representative == e['field'] else 'with ') + ', '.join(
+            m for m in cluster.members if m != e['field'])
+        rows.append([rank, e['field'], e['type'], e.get('subset', 'all rows'), e.get('power_metric'), e.get('power'), e.get('power_sd'),
+                     e.get('nmi_adjusted'), e['test'], e['n'], *measures, e['p_value'], e['adjusted_p'], cluster_text])
+    columns = [('Rank', 'count'), ('Field', 'text'), ('Field type', 'text'), ('Rows analysed', 'text'), ('Power metric', 'text'),
+               ('Predictive power', 'effect'), ('Fold sd', 'effect'), ('NMI minus permutation mean', 'effect'), ('Test', 'text'), ('n', 'count'),
+               *[(label, 'effect') for _, label in MEASURE_COLUMNS], ('p-value', 'p'), ('Benjamini–Hochberg adjusted p', 'p'), ('Redundancy cluster', 'text')]
+    items = [table('ranking', 'Fields ranked by cross-validated predictive power: statistical associations, not causes', columns, rows,
+        evidence={'version': output['analysis_version'], 'computation': 'Predictive power, effect sizes and p-values from each field section; '
                   'Benjamini–Hochberg adjustment across all ranked fields', 'queries': []},
-        note='Effect sizes of different measures are not directly comparable; each row is ordered by its own measure.')]
+        note='Predictive power is comparable across field types: out-of-fold ΔAUC (AUC − 0.5) for classification, out-of-fold R² for regression, '
+             'from a model that uses only that field. The test-specific effect sizes are detail and are not directly comparable with each other. '
+             'Conditional fields are measured on the rows where they apply.')]
+    if derived:
+        items.append(table('ranking-derived', 'Approximately derived columns (not ranked separately)', [('Field', 'text'), ('Formula', 'text'),
+            ('Predictive power', 'effect'), ('p-value', 'p'), ('Benjamini–Hochberg adjusted p', 'p')],
+            [[e['field'], e['derived'], e.get('power'), e['p_value'], e['adjusted_p']] for e in derived],
+            evidence={'version': output['analysis_version'], 'computation': 'See the structure section', 'queries': []}))
+    undefined = [[e['field'], e['test']] for e in state.get('effects', []) if e['effect'] is None]
     if undefined:
-        output['sections']['ranking'].append(table('ranking-undefined', 'Fields with an undefined test', [('Field', 'text'), ('Test', 'text')],
+        items.append(table('ranking-undefined', 'Fields with an undefined test', [('Field', 'text'), ('Test', 'text')],
             undefined, evidence={'version': output['analysis_version'], 'computation': 'Test undefined for the data', 'queries': []}))
+    output['sections']['ranking'] = items
+    output['ranking'] = [{k: v for k, v in e.items()} for e in ranked]
     return f'{len(rows)} fields ranked'
 
 
@@ -1102,44 +1292,12 @@ def configuration_for(a):
 
 def iter_items(output):
     sections = output['sections']
-    for key in ('quality', 'target_selection', 'corrections', 'target', 'ranking'):
+    for key in ('quality', 'target_selection', 'corrections', 'structure', 'target', 'ranking'):
         yield from sections.get(key, [])
     for field in sections.get('fields', []):
         yield from field['items']
     for key in ('relationships', 'time'):
         yield from sections.get(key, [])
-
-
-def missing_patterns(a, facts):
-    """For columns with missing values: other columns that have one shared value (or are also missing) in every such row."""
-    candidates = sorted([(f['missing'], n) for n, f in facts.items() if f['missing']], key=lambda t: (-t[0], t[1]))
-    rows = []; queries = []
-    for count, name in candidates[:SETTINGS['missing_pattern_columns']]:
-        others = [o for o, f in facts.items() if o != name and f['type'] not in ('empty', 'constant', 'identifier', 'text')]
-        if not others: continue
-        aggregates = ','.join(f'count(DISTINCT CAST({quote(o)} AS VARCHAR)) AS "d{i}",min(CAST({quote(o)} AS VARCHAR)) AS "v{i}",count({quote(o)}) AS "n{i}"'
-                              for i, o in enumerate(others))
-        result = a.run(f'SELECT count(*) AS rows_,{aggregates} FROM selected WHERE {missing_sql(name)}', f'Values in rows where {name} is missing')
-        queries.append(result)
-        values = dict(zip(result['columns'], result['rows'][0])); found = 0
-        for i, other in enumerate(others):
-            if found >= SETTINGS['missing_patterns_per_column']: break
-            if values[f'n{i}'] == 0:
-                total = a.run(f'SELECT count(*) FROM selected WHERE {quote(other)} IS NULL', f'Rows where {other} is missing')
-                queries.append(total); found += 1
-                rows.append([name, count, other, '(missing)', total['rows'][0][0]])
-            elif values[f'd{i}'] == 1 and values[f'n{i}'] == count:
-                shared = values[f'v{i}']
-                total = a.run(f'SELECT count(*) FROM selected WHERE CAST({quote(other)} AS VARCHAR)={literal(shared)}', f'Rows where {other} = {shared}')
-                queries.append(total); found += 1
-                rows.append([name, count, other, display_value(shared, facts[other]), total['rows'][0][0]])
-    # Patterns whose value occurs only in the missing rows come first, then by how common the value is.
-    rows.sort(key=lambda r: (r[0], r[4] - r[1], r[2]))
-    return [table('missing-patterns', 'Observed patterns in missing values', [('Column with missing values', 'text'), ('Missing rows', 'count'),
-        ('Other column', 'text'), ('Value in every missing row', 'text'), ('Rows with that value in total', 'count')], rows,
-        evidence=a.evidence('Distinct values of every other column within the missing rows', *queries),
-        note=f'Checked for up to {SETTINGS["missing_pattern_columns"]} columns, listing at most {SETTINGS["missing_patterns_per_column"]} '
-             'other columns each. Reported only; no values are filled.')]
 
 
 def display_value(value, fact):

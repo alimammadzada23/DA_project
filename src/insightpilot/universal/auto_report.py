@@ -16,7 +16,7 @@ import plotly.io as pio
 from .auto_analysis import SETTINGS, iter_items
 from .report import safe_spreadsheet_frame
 
-SECTION_TITLES = [('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'),
+SECTION_TITLES = [('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'), ('structure', 'Structure'),
                   ('target', 'Target overview'), ('ranking', 'Ranking'), ('fields', 'Fields'),
                   ('relationships', 'Relationships between fields'), ('time', 'Time analysis')]
 
@@ -96,7 +96,8 @@ def header_rows(output):
             ('Original version', output['original_version']), ('Analysed version', output['analysis_version']),
             ('Analysis date (UTC)', output['created_at']), ('Target', output.get('target') or 'none'),
             ('Target type', output.get('target_type') or '—'), ('Positive class', output.get('positive') or '—'),
-            ('Time axis', output.get('time_axis') or 'none')]
+            ('Time axis', output.get('time_axis') or 'none'), ('Configuration hash', output.get('config_hash', '—')),
+            ('Seed', output.get('seed', '—'))]
 
 
 def method_items(output):
@@ -111,8 +112,18 @@ def method_items(output):
         ['Field pairs', "Cramér's V (categorical), Spearman ρ (numeric), correlation ratio η (mixed)"],
         ['Multiple comparisons', 'Benjamini–Hochberg adjusted p-values across all ranked fields'],
         ['Missing values', 'Missing, blank and NA-like values form their own "(missing)" category for categorical fields and are excluded from numeric calculations'],
+        ['Ranking', 'Cross-validated single-feature predictive power: each field is binned (levels, or equal-count bins for numbers, plus a missing bin), '
+                    'encoded with its smoothed target rate or mean from the other folds, and scored out of fold (ΔAUC = AUC − 0.5, macro one-vs-rest '
+                    'for multiclass; R² for numeric targets). Normalised mutual information minus its mean under exact permutations is the second measure'],
+        ['Group rates', 'Wilson score 95% intervals; difference vs the overall rate in percentage points; lift = group rate / overall rate'],
+        ['Group medians', 'Percentile bootstrap 95% intervals (seeded)'],
+        ['Conditional categories', 'A level of one column and a value of another cover the same rows; target comparisons use the applicable rows'],
+        ['Derived columns', 'C ≈ k·A or k·(A op B), k fitted through the origin, confirmed by R² on all rows; listed under their sources in the ranking'],
+        ['Redundancy clusters', "Average-linkage clusters of fields whose association (bias-corrected Cramér's V, Spearman ρ, correlation ratio η) exceeds the threshold"],
+        ['Explained missing values', 'A condition is reported when it meets the coverage, lift and precision thresholds'],
     ]
     thresholds = [[key.replace('_', ' '), value] for key, value in s.items()]
+    thresholds += [[key.replace('_', ' '), value] for key, value in (output.get('config') or {}).items() if key != 'config_version']
     items = [{'type': 'table', 'id': 'method-tests', 'title': 'Methods', 'columns': [{'name': 'Situation', 'kind': 'text'}, {'name': 'Method', 'kind': 'text'}],
               'rows': tests, 'note': 'Statistical associations are not causes. Effect sizes are reported as numbers without labels.'},
              {'type': 'table', 'id': 'method-thresholds', 'title': 'Thresholds and limits', 'columns': [{'name': 'Setting', 'kind': 'text'},

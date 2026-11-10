@@ -71,7 +71,7 @@ def test_run_shows_stages_report_and_downloads(session):
     ok(app.radio(key='reports-view').set_value('Automatic analysis').run())
     ok(by_label(app.selectbox, 'Time axis (optional)').set_value('signup').run())
     ok(by_label(app.button, 'Run automatic analysis').click().run())
-    assert stage_table(app).Status.tolist() == ['done'] * 9
+    assert stage_table(app).Status.tolist() == ['done'] * 10
     assert {b.label for b in app.get('download_button')} >= {'Download HTML', 'Download Excel'}
     assert len(app.get('plotly_chart')) > 10
     runs = aa.list_runs(session.workspace)
