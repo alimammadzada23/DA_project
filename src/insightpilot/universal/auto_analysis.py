@@ -226,7 +226,7 @@ def suggest_targets(columns):
                    'multiclass': [f'{column["distinct"]} distinct categories'],
                    'numeric': ['numeric values']}[kind]
         score = {'binary': 3, 'multiclass': 2, 'numeric': 1}[kind]
-        lowered = re.sub(r'[^a-z0-9]+', ' ', re.sub(r'([a-z])([A-Z])', r'\1 \2', name)).lower()
+        lowered = re.sub(r'[^a-z0-9]+', ' ', re.sub(r'([a-z])([A-Z])', r'\1 \2', name).lower())
         hints = [hint for hint in TARGET_HINTS if hint in lowered.split() or hint in lowered.replace(' ', '')]
         if hints:
             score += 2; reasons.append('name contains ' + ', '.join(repr(h) for h in hints) + ' (a hint only)')
@@ -962,6 +962,10 @@ def ranking_stage(output, state):
     for effect, q in zip(effects, adjusted): effect['adjusted_p'] = q
     effects.sort(key=lambda e: (-abs(e['effect']), e['field']))
     state['ranked'] = [e['field'] for e in effects]
+    # Field sections follow the ranking; fields without a test (dates, undefined tests) keep column order after them.
+    order = {name: index for index, name in enumerate(state['ranked'])}
+    fields = output['sections'].get('fields', [])
+    output['sections']['fields'] = sorted(fields, key=lambda f: (f['field'] not in order, order.get(f['field'], 0), fields.index(f)))
     rows = []
     for rank, e in enumerate(effects, 1):
         measures = [abs(e['effect']) if e['measure'] == key else None for key, _ in MEASURE_COLUMNS]

@@ -341,3 +341,18 @@ def test_no_rows_are_loaded_into_pandas(workspace, monkeypatch):
     monkeypatch.setattr(aa.Analysis, 'run', lambda self, sql, computation, limit=50_000: seen.append(limit) or real(self, sql, computation, limit=limit))
     aa.run(workspace, 'numeric', target='y', target_type='numeric', save_evidence=False)
     assert max(seen) <= aa.SETTINGS['scatter_sample_rows'] * 10
+
+
+def test_name_hints_ignore_capitalization():
+    columns = {'IsFraud': {'allowed_target_types': ['binary'], 'values': [['0', 5], ['1', 3]], 'position': 0, 'distinct': 2},
+               'Churn': {'allowed_target_types': ['binary'], 'values': [['No', 5], ['Yes', 3]], 'position': 1, 'distinct': 2},
+               'Region': {'allowed_target_types': ['binary'], 'values': [['a', 5], ['b', 3]], 'position': 2, 'distinct': 2}}
+    reasons = {s['column']: s['reasons'] for s in aa.suggest_targets(columns)}
+    assert any("'fraud'" in r for r in reasons['IsFraud']) and any("'churn'" in r for r in reasons['Churn'])
+    assert not any('name contains' in r for r in reasons['Region'])
+
+
+def test_field_sections_follow_the_ranking(binary):
+    ranked = rows(binary, 'ranking').Field.tolist()
+    order = [f['field'] for f in binary['sections']['fields']]
+    assert order[:len(ranked)] == ranked and order[len(ranked):] == ['local_date']
