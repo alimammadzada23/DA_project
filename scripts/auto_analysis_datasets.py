@@ -80,12 +80,42 @@ def verify_telco(output, raw, checks):
         for label, value in raw.assign(v=raw[field].astype(float)).groupby('Churn').v.median().items():
             check(checks, f'Median {field}, Churn = {label}', medians[label], value)
     blank = raw.TotalCharges.str.strip() == ''
-    patterns = table(output, 'missing-patterns')
-    tenure = patterns[(patterns['Column with missing values'] == 'TotalCharges') & (patterns['Other column'] == 'tenure')].iloc[0]
-    check(checks, 'TotalCharges missing rows', int(tenure['Missing rows']), int(blank.sum()))
-    check(checks, 'All missing TotalCharges have tenure = 0', tenure['Value in every missing row'], '0')
-    check(checks, 'tenure = 0 rows in total', int(tenure['Rows with that value in total']), int((raw.tenure == '0').sum()))
+    explanation = next(e for e in output['missing_explanations'] if e['column'] == 'TotalCharges')
+    check(checks, 'TotalCharges missing rows', explanation['missing_rows'], int(blank.sum()))
+    check(checks, 'All missing TotalCharges have tenure = 0', (explanation['condition_column'], explanation['condition_value'], explanation['coverage']), ('tenure', '0', 1.0))
+    check(checks, 'tenure = 0 rows in total', explanation['condition_rows'], int((raw.tenure == '0').sum()))
     check(checks, 'customerID skipped as identifier', dict(output['skipped']).get('customerID', '').startswith('identifier'), True)
+    # Phase 1 analyst checks (spec §9.3)
+    explained = [(e['column'], e['condition_column'], e['condition_value'], e['equivalent']) for e in output['missing_explanations']]
+    check(checks, 'Only explanation of missing values: TotalCharges ⇔ tenure = 0', explained, [('TotalCharges', 'tenure', '0', True)])
+    addons = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
+    conditional = {c['column']: (c['parent'], c['parent_value']) for c in output['structure']['conditional']}
+    check(checks, 'Six add-ons conditional on InternetService = No', [conditional.get(c) for c in addons], [('InternetService', 'No')] * 6)
+    check(checks, 'MultipleLines conditional on PhoneService = No', conditional.get('MultipleLines'), ('PhoneService', 'No'))
+    applicable = raw[raw.InternetService != 'No']
+    for field in addons:
+        reported = table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size']
+        expected = stats.contingency.association(pd.crosstab(applicable[field], applicable.Churn), method='cramer')
+        check(checks, f"Conditional Cramér's V, {field}", reported, expected, 1e-9)
+    ranking = table(output, 'ranking').set_index('Field')
+    for field in ('StreamingTV', 'StreamingMovies'):
+        check(checks, f'{field}: conditional V < 0.1 and ranked below 10', bool(table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size'] < 0.1
+              and ranking.loc[field, 'Rank'] > 10), True)
+    for field in ('OnlineSecurity', 'TechSupport'):
+        check(checks, f'{field}: conditional V > 0.2', bool(table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size'] > 0.2), True)
+    derived = {d['column']: d for d in output['structure']['derived']}
+    check(checks, 'TotalCharges derived from tenure × MonthlyCharges', derived.get('TotalCharges', {}).get('formula'), 'tenure × MonthlyCharges')
+    total = pd.to_numeric(raw.TotalCharges, errors='coerce'); product = raw.tenure.astype(float) * raw.MonthlyCharges.astype(float)
+    keep = total.notna(); k = (total[keep] * product[keep]).sum() / (product[keep] ** 2).sum()
+    r2 = 1 - ((total[keep] - k * product[keep]) ** 2).sum() / ((total[keep] - total[keep].mean()) ** 2).sum()
+    check(checks, 'Derived R² on all rows', derived['TotalCharges']['r2_full'], r2, 1e-6)
+    clusters = [set(c['members']) for c in output['structure']['clusters']]
+    check(checks, 'tenure and TotalCharges in one redundancy cluster', any({'tenure', 'TotalCharges'} <= c for c in clusters), True)
+    pairs = {frozenset((p['first'], p['second'])): p['value'] for p in output['structure']['associations']}
+    check(checks, 'tenure–Contract association reported', pairs.get(frozenset(('tenure', 'Contract'))) is not None, True)
+    for field in ('gender', 'PhoneService'):
+        check(checks, f'{field}: predictive power below 0.01', bool(abs(ranking.loc[field, 'Predictive power']) < 0.01), True)
+    check(checks, 'Analyst conclusions section empty', '<div class="conclusions"></div>' in html_report(output), True)
 
 
 def adult(workspace, source):

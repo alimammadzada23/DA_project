@@ -1,0 +1,3001 @@
+service,addon,region,outcome
+basic,Yes,north,yes
+basic,Yes,north,no
+basic,Yes,east,yes
+none,No service,north,no
+basic,Yes,south,no
+none,No service,east,no
+none,No service,north,no
+premium,Yes,south,yes
+basic,No,south,no
+premium,No,east,no
+premium,Yes,north,no
+none,No service,north,no
+none,No service,east,no
+premium,No,south,no
+basic,No,east,no
+none,No service,east,no
+none,No service,south,no
+basic,No,east,yes
+basic,Yes,east,no
+premium,No,north,no
+premium,Yes,north,no
+none,No service,south,no
+basic,Yes,north,yes
+basic,Yes,east,no
+none,No service,north,no
+none,No service,east,yes
+basic,Yes,south,yes
+basic,No,east,no
+premium,No,north,no
+premium,Yes,north,yes
+none,No service,east,no
+basic,No,east,yes
+premium,Yes,north,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,south,yes
+basic,No,south,no
+premium,Yes,north,no
+none,No service,south,no
+basic,Yes,south,yes
+basic,Yes,south,no
+none,No service,north,no
+none,No service,east,no
+none,No service,east,no
+basic,Yes,east,no
+premium,Yes,east,no
+premium,No,east,yes
+premium,Yes,east,no
+basic,Yes,south,yes
+basic,Yes,east,no
+basic,No,north,no
+premium,No,south,yes
+premium,Yes,south,yes
+premium,Yes,east,yes
+basic,Yes,north,yes
+none,No service,east,no
+none,No service,north,yes
+premium,Yes,south,no
+none,No service,north,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,south,no
+basic,Yes,north,no
+premium,Yes,north,no
+none,No service,south,no
+premium,No,east,no
+basic,Yes,east,no
+basic,No,east,no
+none,No service,east,no
+basic,No,north,yes
+basic,Yes,south,no
+basic,Yes,north,no
+none,No service,east,no
+none,No service,north,no
+none,No service,east,no
+premium,No,north,no
+premium,No,east,no
+basic,Yes,east,no
+basic,No,south,yes
+none,No service,south,no
+basic,Yes,north,yes
+premium,No,south,no
+premium,Yes,south,no
+none,No service,east,no
+premium,No,east,no
+basic,No,east,no
+premium,Yes,south,no
+basic,No,east,no
+basic,No,east,no
+basic,No,east,yes
+basic,No,north,yes
+premium,No,north,yes
+none,No service,east,no
+premium,Yes,east,yes
+premium,Yes,east,no
+basic,Yes,east,no
+basic,No,south,yes
+none,No service,north,yes
+basic,Yes,south,no
+basic,No,south,no
+none,No service,east,no
+basic,No,north,yes
+none,No service,north,yes
+basic,No,east,no
+premium,Yes,south,no
+premium,No,south,no
+basic,Yes,east,yes
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+premium,Yes,south,no
+none,No service,east,no
+basic,No,north,no
+basic,No,south,yes
+none,No service,east,no
+basic,No,north,no
+none,No service,east,no
+premium,Yes,north,no
+basic,Yes,north,no
+basic,Yes,north,no
+none,No service,north,no
+premium,No,north,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,east,no
+basic,Yes,north,yes
+basic,No,east,no
+none,No service,south,no
+basic,No,east,no
+none,No service,north,no
+basic,No,north,no
+basic,No,south,no
+basic,No,south,yes
+none,No service,east,no
+none,No service,east,yes
+basic,No,south,no
+none,No service,north,no
+premium,No,north,no
+basic,No,east,no
+basic,Yes,north,yes
+basic,Yes,south,yes
+basic,Yes,north,yes
+premium,No,east,yes
+basic,No,east,yes
+basic,Yes,south,yes
+basic,Yes,east,yes
+basic,No,south,yes
+none,No service,east,no
+premium,Yes,south,yes
+premium,No,south,yes
+basic,No,south,yes
+basic,Yes,east,yes
+basic,No,north,yes
+basic,No,south,no
+basic,Yes,east,yes
+premium,No,east,yes
+basic,Yes,south,yes
+none,No service,south,no
+basic,Yes,south,yes
+basic,Yes,south,yes
+basic,Yes,south,no
+premium,Yes,east,no
+none,No service,south,no
+premium,No,south,yes
+none,No service,east,no
+basic,No,south,no
+basic,Yes,south,no
+basic,Yes,north,no
+basic,Yes,south,no
+premium,No,south,no
+premium,No,north,yes
+none,No service,north,no
+none,No service,north,no
+basic,Yes,south,no
+premium,No,north,no
+basic,Yes,north,yes
+premium,No,east,no
+basic,Yes,east,yes
+none,No service,south,no
+none,No service,north,no
+none,No service,east,no
+premium,Yes,south,no
+basic,Yes,south,no
+basic,Yes,east,yes
+basic,No,south,no
+basic,Yes,east,yes
+premium,Yes,south,no
+basic,No,south,yes
+premium,Yes,east,no
+basic,No,south,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,north,no
+basic,Yes,east,no
+none,No service,south,no
+premium,No,east,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,north,no
+premium,Yes,south,yes
+none,No service,south,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,east,no
+premium,No,east,no
+premium,Yes,south,yes
+basic,Yes,east,yes
+none,No service,north,no
+basic,No,east,no
+basic,No,south,no
+basic,Yes,east,yes
+premium,No,north,no
+basic,No,south,yes
+none,No service,north,no
+premium,No,east,no
+premium,Yes,east,yes
+basic,No,north,yes
+basic,No,south,no
+premium,Yes,north,no
+none,No service,south,no
+none,No service,south,no
+basic,No,south,no
+premium,Yes,east,no
+none,No service,south,yes
+premium,No,south,no
+none,No service,north,no
+basic,Yes,east,no
+none,No service,east,no
+premium,No,east,no
+basic,Yes,north,no
+premium,Yes,east,no
+basic,No,north,yes
+basic,No,south,no
+basic,No,east,yes
+basic,Yes,east,yes
+basic,Yes,east,no
+premium,No,east,no
+basic,No,east,yes
+basic,Yes,north,no
+none,No service,north,no
+basic,No,south,no
+premium,Yes,north,yes
+none,No service,south,no
+basic,No,east,no
+premium,No,east,no
+none,No service,south,no
+none,No service,north,no
+basic,No,south,yes
+none,No service,north,no
+basic,No,east,yes
+premium,Yes,east,no
+premium,No,east,yes
+basic,Yes,north,yes
+none,No service,east,no
+basic,Yes,north,yes
+none,No service,north,no
+premium,Yes,south,yes
+basic,No,south,no
+basic,No,east,no
+premium,No,south,no
+none,No service,south,yes
+none,No service,south,yes
+none,No service,south,no
+basic,No,east,no
+none,No service,south,no
+none,No service,north,no
+premium,No,east,yes
+none,No service,east,no
+basic,No,east,no
+premium,Yes,north,no
+basic,No,north,no
+premium,Yes,south,no
+none,No service,north,no
+basic,No,south,no
+basic,Yes,east,yes
+none,No service,east,no
+none,No service,north,no
+none,No service,east,no
+basic,No,south,yes
+none,No service,east,no
+none,No service,north,no
+premium,Yes,south,no
+basic,Yes,north,yes
+basic,Yes,south,yes
+premium,No,north,no
+premium,Yes,north,yes
+basic,No,east,no
+premium,Yes,north,yes
+none,No service,south,no
+basic,No,north,yes
+premium,Yes,east,yes
+none,No service,south,no
+none,No service,north,no
+none,No service,east,no
+basic,No,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,No,south,yes
+premium,No,north,no
+none,No service,south,no
+premium,No,south,yes
+premium,No,east,yes
+premium,No,east,no
+premium,Yes,north,no
+none,No service,east,no
+basic,Yes,north,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,east,no
+none,No service,north,no
+premium,No,south,yes
+basic,Yes,north,yes
+premium,No,east,no
+none,No service,east,no
+none,No service,north,no
+none,No service,south,no
+premium,Yes,north,yes
+none,No service,south,no
+premium,Yes,north,no
+premium,No,south,no
+premium,Yes,north,no
+basic,No,south,yes
+basic,Yes,north,no
+basic,No,north,no
+basic,Yes,north,no
+basic,Yes,east,yes
+basic,No,south,yes
+premium,Yes,south,yes
+none,No service,south,yes
+premium,No,north,no
+none,No service,south,no
+premium,Yes,east,no
+premium,Yes,north,yes
+premium,Yes,south,yes
+basic,Yes,south,no
+none,No service,north,no
+none,No service,east,no
+none,No service,north,no
+premium,No,east,no
+basic,Yes,south,yes
+basic,No,south,no
+premium,No,east,no
+basic,No,north,no
+basic,No,south,no
+premium,No,south,yes
+none,No service,north,no
+basic,Yes,east,no
+none,No service,north,no
+premium,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+premium,No,north,no
+basic,Yes,north,yes
+basic,No,south,yes
+basic,No,south,no
+premium,Yes,south,yes
+none,No service,north,no
+premium,No,south,yes
+none,No service,south,no
+premium,No,north,no
+premium,No,east,yes
+basic,No,south,yes
+premium,Yes,south,no
+premium,No,south,yes
+basic,Yes,north,no
+basic,No,east,no
+basic,No,east,no
+basic,Yes,north,no
+basic,No,east,yes
+none,No service,east,no
+basic,Yes,north,yes
+premium,No,south,no
+basic,No,north,no
+basic,Yes,south,yes
+basic,No,south,yes
+none,No service,east,no
+basic,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+basic,No,south,yes
+none,No service,south,yes
+none,No service,north,no
+premium,Yes,east,no
+basic,No,north,no
+basic,Yes,south,no
+basic,No,east,no
+none,No service,north,no
+premium,No,north,yes
+none,No service,east,no
+basic,Yes,south,yes
+basic,No,north,no
+basic,No,north,no
+basic,No,south,no
+premium,Yes,east,no
+none,No service,south,yes
+premium,No,south,yes
+basic,Yes,north,no
+basic,No,east,yes
+premium,No,north,no
+premium,No,south,no
+basic,Yes,east,yes
+basic,No,east,no
+none,No service,south,no
+premium,Yes,north,yes
+none,No service,east,yes
+basic,Yes,north,no
+none,No service,south,yes
+basic,Yes,south,no
+premium,No,north,yes
+basic,No,east,no
+premium,No,south,yes
+premium,No,south,yes
+none,No service,south,no
+none,No service,east,no
+basic,Yes,east,no
+none,No service,south,no
+none,No service,east,no
+none,No service,south,no
+none,No service,east,no
+basic,No,east,no
+premium,No,north,no
+basic,Yes,east,no
+basic,Yes,east,yes
+none,No service,east,no
+premium,Yes,south,yes
+none,No service,north,no
+basic,Yes,east,no
+premium,No,north,no
+none,No service,north,no
+basic,No,south,yes
+premium,Yes,north,yes
+premium,Yes,east,no
+basic,Yes,east,no
+basic,No,south,yes
+basic,Yes,north,yes
+premium,No,north,no
+basic,No,east,no
+premium,No,east,no
+premium,No,north,no
+basic,Yes,south,no
+basic,No,south,no
+none,No service,east,no
+none,No service,south,no
+none,No service,north,no
+premium,No,east,no
+premium,Yes,south,yes
+basic,Yes,south,no
+premium,No,east,yes
+basic,Yes,south,no
+none,No service,south,no
+premium,No,north,no
+basic,Yes,north,no
+premium,Yes,east,no
+none,No service,north,no
+premium,Yes,east,no
+basic,No,east,no
+premium,Yes,east,no
+basic,Yes,east,yes
+premium,Yes,east,no
+premium,Yes,south,yes
+basic,No,north,no
+premium,Yes,east,no
+basic,No,north,no
+premium,No,east,no
+premium,Yes,south,yes
+basic,No,north,no
+premium,No,north,no
+basic,Yes,east,yes
+none,No service,north,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,north,no
+premium,No,east,no
+basic,Yes,east,no
+basic,No,south,yes
+none,No service,south,no
+basic,No,east,no
+premium,Yes,east,yes
+basic,No,south,no
+premium,Yes,south,no
+basic,No,south,no
+premium,No,east,yes
+premium,No,south,no
+basic,No,north,yes
+basic,No,east,no
+premium,No,south,yes
+premium,Yes,south,no
+none,No service,south,yes
+none,No service,east,no
+premium,No,east,no
+premium,No,north,yes
+basic,No,east,yes
+none,No service,north,no
+premium,Yes,north,no
+premium,Yes,east,yes
+premium,Yes,east,no
+none,No service,south,no
+basic,No,south,yes
+premium,No,north,no
+basic,Yes,north,no
+basic,Yes,north,no
+premium,Yes,east,no
+premium,No,north,no
+basic,No,east,no
+none,No service,east,no
+none,No service,south,no
+none,No service,north,no
+basic,No,south,no
+none,No service,east,no
+none,No service,east,no
+none,No service,east,no
+basic,Yes,south,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+none,No service,north,no
+none,No service,east,no
+basic,No,north,yes
+basic,Yes,east,no
+none,No service,south,no
+premium,No,south,no
+premium,Yes,south,no
+premium,Yes,east,yes
+premium,No,east,no
+basic,Yes,north,yes
+basic,No,south,yes
+none,No service,north,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,yes
+premium,No,south,yes
+premium,No,south,yes
+premium,No,east,yes
+none,No service,south,no
+basic,Yes,east,no
+none,No service,south,no
+basic,No,north,no
+premium,No,south,yes
+none,No service,north,no
+premium,Yes,north,yes
+none,No service,east,no
+basic,Yes,south,yes
+none,No service,east,no
+basic,No,south,yes
+premium,Yes,east,yes
+basic,No,east,yes
+none,No service,south,yes
+premium,Yes,south,no
+none,No service,south,no
+basic,Yes,south,no
+none,No service,north,no
+premium,Yes,north,no
+premium,No,east,yes
+none,No service,east,no
+none,No service,south,no
+none,No service,south,no
+none,No service,north,no
+premium,No,south,no
+basic,No,east,yes
+none,No service,south,no
+basic,Yes,east,no
+basic,No,north,no
+basic,No,east,yes
+basic,Yes,south,yes
+basic,No,north,yes
+none,No service,north,no
+premium,Yes,south,no
+none,No service,south,no
+premium,No,south,no
+basic,Yes,east,no
+premium,Yes,east,no
+none,No service,east,no
+basic,Yes,east,no
+basic,No,east,yes
+none,No service,north,yes
+premium,No,south,no
+premium,No,north,no
+none,No service,south,no
+basic,No,east,no
+basic,No,east,no
+premium,Yes,north,no
+basic,No,north,no
+none,No service,east,no
+premium,Yes,north,no
+none,No service,south,no
+premium,Yes,east,no
+basic,Yes,north,yes
+basic,No,east,no
+premium,No,north,no
+none,No service,east,no
+none,No service,north,no
+premium,Yes,east,yes
+basic,Yes,east,yes
+basic,Yes,north,yes
+basic,No,east,yes
+premium,Yes,south,no
+premium,Yes,north,no
+none,No service,east,no
+basic,No,north,no
+none,No service,east,no
+premium,Yes,north,no
+premium,No,south,no
+basic,No,south,no
+basic,No,north,yes
+premium,Yes,south,yes
+none,No service,east,no
+basic,No,north,no
+none,No service,south,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,south,no
+basic,No,south,no
+none,No service,south,no
+basic,Yes,east,no
+premium,No,east,no
+none,No service,north,yes
+premium,Yes,east,no
+premium,No,north,no
+premium,No,east,yes
+basic,Yes,north,no
+none,No service,east,no
+premium,No,north,yes
+premium,Yes,east,no
+basic,Yes,east,no
+basic,No,north,no
+basic,Yes,east,no
+basic,No,south,yes
+none,No service,north,no
+basic,Yes,east,no
+premium,Yes,north,yes
+basic,No,east,yes
+basic,Yes,north,no
+basic,No,south,no
+none,No service,east,no
+premium,Yes,north,no
+basic,No,east,no
+premium,No,south,no
+basic,Yes,south,no
+premium,Yes,south,yes
+none,No service,east,no
+none,No service,south,no
+basic,No,north,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,north,yes
+premium,Yes,east,yes
+basic,No,east,no
+none,No service,south,yes
+premium,No,south,yes
+premium,No,south,no
+basic,No,east,no
+basic,Yes,north,yes
+none,No service,north,no
+none,No service,north,no
+premium,Yes,south,yes
+none,No service,east,no
+basic,Yes,south,no
+premium,Yes,north,yes
+none,No service,east,no
+basic,Yes,south,no
+basic,Yes,south,no
+none,No service,north,no
+premium,No,east,no
+premium,No,south,yes
+premium,Yes,south,no
+premium,No,south,no
+premium,Yes,north,yes
+basic,No,east,yes
+none,No service,east,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,south,no
+premium,Yes,east,no
+premium,No,north,no
+premium,Yes,east,yes
+none,No service,south,no
+premium,No,north,yes
+basic,Yes,south,yes
+basic,Yes,north,no
+basic,Yes,north,no
+none,No service,east,no
+none,No service,south,yes
+basic,No,east,yes
+basic,No,north,yes
+basic,Yes,north,yes
+basic,No,east,yes
+none,No service,south,no
+none,No service,south,no
+basic,No,north,no
+none,No service,north,no
+basic,No,south,no
+basic,No,south,yes
+premium,Yes,north,no
+none,No service,north,no
+none,No service,north,no
+none,No service,north,no
+basic,No,south,no
+basic,Yes,south,no
+premium,Yes,east,no
+premium,Yes,north,no
+none,No service,north,no
+none,No service,south,no
+none,No service,north,no
+none,No service,north,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,north,no
+basic,Yes,east,no
+premium,No,north,no
+basic,No,north,yes
+basic,No,north,yes
+premium,No,east,yes
+basic,Yes,south,yes
+basic,No,east,yes
+premium,No,east,no
+none,No service,south,no
+basic,Yes,south,no
+premium,No,east,no
+premium,Yes,north,yes
+none,No service,east,no
+none,No service,north,no
+basic,No,east,yes
+premium,Yes,north,yes
+basic,Yes,north,no
+basic,Yes,east,no
+basic,No,north,yes
+basic,Yes,south,yes
+premium,No,north,yes
+premium,Yes,south,yes
+basic,Yes,north,no
+basic,Yes,north,yes
+basic,No,east,yes
+basic,No,south,no
+none,No service,south,no
+none,No service,south,no
+premium,No,north,no
+premium,Yes,east,no
+basic,Yes,south,no
+premium,Yes,south,yes
+none,No service,east,no
+premium,Yes,south,yes
+basic,Yes,north,yes
+basic,Yes,east,no
+premium,No,north,yes
+basic,No,north,no
+basic,Yes,east,no
+premium,No,north,no
+none,No service,east,no
+basic,Yes,south,no
+basic,Yes,east,no
+none,No service,north,no
+premium,No,east,no
+none,No service,north,no
+premium,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+basic,Yes,south,no
+none,No service,south,no
+none,No service,south,no
+premium,No,south,no
+basic,No,south,no
+premium,Yes,east,no
+none,No service,south,yes
+premium,Yes,north,no
+none,No service,south,no
+none,No service,south,no
+none,No service,north,yes
+none,No service,north,no
+basic,Yes,east,yes
+none,No service,north,no
+basic,No,east,yes
+none,No service,north,no
+premium,Yes,north,no
+premium,Yes,north,no
+premium,Yes,north,no
+none,No service,north,no
+basic,Yes,south,no
+basic,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,north,no
+none,No service,east,no
+none,No service,east,yes
+none,No service,east,no
+basic,No,south,no
+premium,Yes,north,yes
+none,No service,north,no
+none,No service,east,no
+basic,No,north,yes
+premium,No,east,no
+basic,No,south,yes
+basic,Yes,south,no
+none,No service,east,no
+basic,No,south,no
+premium,Yes,north,yes
+premium,Yes,east,no
+premium,Yes,north,no
+none,No service,north,no
+basic,Yes,east,no
+none,No service,north,no
+basic,No,south,no
+premium,Yes,north,no
+basic,Yes,east,no
+none,No service,north,no
+basic,Yes,south,no
+none,No service,south,no
+premium,No,north,no
+basic,No,south,yes
+basic,No,east,yes
+none,No service,north,no
+basic,Yes,east,no
+none,No service,north,yes
+basic,No,east,no
+basic,Yes,north,no
+basic,No,south,yes
+none,No service,south,no
+basic,No,east,yes
+basic,No,south,no
+premium,Yes,east,no
+premium,No,south,no
+premium,Yes,north,no
+basic,Yes,north,yes
+basic,No,east,no
+basic,No,north,no
+basic,Yes,east,yes
+premium,Yes,south,no
+premium,No,south,no
+basic,No,north,no
+premium,Yes,north,no
+basic,No,east,no
+basic,No,east,no
+basic,No,north,yes
+basic,Yes,east,no
+basic,No,east,no
+none,No service,north,no
+basic,No,north,yes
+none,No service,south,no
+basic,Yes,north,yes
+basic,Yes,south,no
+none,No service,north,no
+basic,Yes,north,no
+none,No service,east,no
+basic,Yes,east,yes
+basic,Yes,east,no
+basic,No,east,no
+basic,No,north,no
+none,No service,south,no
+none,No service,east,yes
+basic,Yes,north,no
+basic,Yes,north,yes
+basic,Yes,north,no
+basic,Yes,north,no
+basic,Yes,east,no
+basic,No,east,no
+none,No service,south,no
+premium,Yes,north,no
+premium,Yes,south,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,south,no
+basic,No,north,yes
+basic,Yes,south,no
+premium,Yes,east,no
+premium,Yes,north,no
+basic,No,east,no
+basic,Yes,east,no
+premium,No,east,no
+premium,No,north,yes
+none,No service,south,no
+premium,Yes,south,no
+basic,No,south,no
+premium,Yes,east,no
+basic,Yes,south,no
+premium,No,east,no
+none,No service,north,no
+basic,No,south,no
+basic,No,east,no
+none,No service,east,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,north,no
+premium,No,north,yes
+premium,Yes,east,no
+premium,Yes,north,no
+basic,Yes,east,yes
+basic,No,south,no
+none,No service,east,no
+none,No service,north,no
+basic,No,east,yes
+basic,No,south,no
+none,No service,south,no
+none,No service,south,no
+basic,No,south,no
+premium,No,north,no
+none,No service,south,no
+none,No service,south,no
+premium,No,north,no
+premium,No,north,no
+premium,Yes,north,no
+basic,Yes,east,no
+basic,Yes,east,no
+basic,No,south,no
+none,No service,south,no
+basic,Yes,south,yes
+basic,No,south,no
+basic,No,east,no
+none,No service,north,yes
+basic,Yes,east,no
+basic,Yes,south,no
+none,No service,east,no
+basic,Yes,south,no
+basic,Yes,north,no
+basic,Yes,south,yes
+basic,No,south,no
+none,No service,east,no
+premium,Yes,north,yes
+basic,No,south,no
+premium,Yes,east,yes
+basic,Yes,east,no
+basic,Yes,north,yes
+none,No service,south,yes
+basic,No,north,yes
+none,No service,south,no
+premium,No,east,no
+basic,No,south,no
+basic,Yes,south,yes
+none,No service,south,no
+basic,Yes,south,no
+premium,No,south,yes
+basic,Yes,south,yes
+basic,No,east,no
+basic,No,north,no
+premium,No,north,yes
+premium,No,east,no
+basic,Yes,north,no
+basic,Yes,north,yes
+basic,No,east,yes
+none,No service,east,no
+premium,No,north,yes
+basic,No,north,yes
+basic,No,south,yes
+basic,No,south,yes
+basic,No,south,no
+premium,No,east,no
+none,No service,south,no
+premium,Yes,north,no
+basic,Yes,south,yes
+premium,No,south,no
+none,No service,north,no
+basic,No,north,no
+premium,No,east,no
+premium,No,south,no
+premium,No,east,yes
+premium,Yes,south,no
+none,No service,east,no
+basic,Yes,south,yes
+basic,Yes,south,yes
+none,No service,north,no
+premium,Yes,east,no
+none,No service,east,no
+basic,No,north,yes
+basic,No,north,no
+basic,Yes,south,no
+basic,No,east,yes
+basic,Yes,east,yes
+none,No service,east,no
+none,No service,north,no
+none,No service,north,no
+basic,No,north,yes
+basic,Yes,north,no
+none,No service,south,no
+basic,No,south,no
+none,No service,north,no
+basic,No,south,no
+basic,Yes,east,yes
+premium,Yes,south,no
+basic,No,north,yes
+none,No service,east,no
+none,No service,south,no
+basic,No,east,yes
+none,No service,east,no
+basic,No,north,yes
+premium,No,south,yes
+basic,No,north,no
+premium,Yes,north,no
+premium,No,east,no
+premium,No,south,no
+basic,Yes,north,no
+none,No service,north,no
+none,No service,east,no
+basic,No,south,no
+premium,Yes,south,yes
+basic,No,south,no
+basic,Yes,east,no
+basic,Yes,north,yes
+premium,No,north,no
+basic,Yes,north,no
+premium,Yes,south,no
+premium,Yes,east,no
+basic,No,south,no
+none,No service,north,no
+premium,Yes,south,no
+premium,No,south,no
+none,No service,east,no
+basic,No,east,yes
+basic,Yes,north,yes
+none,No service,east,no
+basic,Yes,east,yes
+none,No service,east,yes
+basic,Yes,north,yes
+none,No service,south,no
+premium,No,east,no
+basic,Yes,north,no
+none,No service,north,no
+basic,Yes,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,south,yes
+basic,No,south,yes
+none,No service,north,no
+premium,No,south,no
+premium,Yes,east,yes
+basic,No,east,no
+none,No service,south,no
+none,No service,east,no
+premium,No,east,no
+premium,Yes,north,no
+premium,Yes,east,no
+none,No service,south,no
+basic,Yes,south,yes
+premium,Yes,north,no
+none,No service,south,no
+premium,No,east,yes
+basic,Yes,south,yes
+basic,No,south,no
+basic,No,east,no
+none,No service,north,no
+none,No service,east,no
+none,No service,east,no
+premium,No,north,no
+premium,Yes,south,no
+premium,No,east,no
+basic,Yes,east,yes
+premium,No,north,no
+basic,Yes,north,no
+none,No service,east,yes
+basic,Yes,south,yes
+none,No service,north,no
+basic,Yes,south,no
+premium,Yes,south,no
+basic,Yes,north,no
+basic,No,south,no
+none,No service,south,no
+premium,No,north,no
+basic,Yes,north,no
+basic,No,south,no
+basic,No,south,yes
+premium,Yes,north,yes
+premium,Yes,south,no
+basic,No,south,no
+basic,No,south,no
+none,No service,south,no
+premium,No,east,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+basic,Yes,north,no
+basic,Yes,south,no
+premium,Yes,north,no
+premium,Yes,north,no
+basic,Yes,north,no
+basic,No,north,no
+basic,Yes,east,yes
+basic,No,east,no
+basic,No,south,yes
+none,No service,south,no
+basic,No,north,no
+basic,Yes,south,yes
+basic,Yes,east,yes
+none,No service,east,no
+basic,No,east,no
+basic,No,south,yes
+premium,Yes,east,no
+basic,No,north,no
+basic,Yes,north,yes
+basic,No,south,yes
+premium,Yes,east,yes
+none,No service,north,no
+none,No service,north,no
+none,No service,south,no
+basic,Yes,east,yes
+premium,Yes,south,no
+none,No service,south,no
+basic,No,south,no
+premium,No,south,no
+none,No service,north,no
+premium,Yes,north,no
+none,No service,north,no
+basic,Yes,south,no
+basic,No,south,yes
+basic,Yes,east,no
+premium,Yes,north,yes
+basic,No,east,no
+none,No service,south,no
+basic,Yes,east,yes
+basic,No,east,yes
+basic,No,south,no
+basic,Yes,east,yes
+premium,No,south,no
+basic,No,south,no
+none,No service,south,no
+basic,No,north,yes
+basic,Yes,north,no
+basic,No,north,no
+basic,No,south,no
+basic,No,south,yes
+basic,No,east,yes
+none,No service,east,no
+basic,Yes,south,yes
+basic,Yes,east,no
+basic,Yes,east,yes
+premium,No,south,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,east,no
+premium,Yes,east,no
+premium,Yes,south,no
+basic,Yes,south,yes
+basic,Yes,south,no
+premium,No,south,no
+none,No service,south,no
+basic,Yes,east,yes
+basic,No,north,yes
+none,No service,south,no
+premium,No,south,no
+basic,No,north,no
+none,No service,north,no
+basic,Yes,east,no
+basic,No,north,no
+premium,No,north,yes
+basic,No,north,no
+basic,No,east,yes
+none,No service,east,no
+premium,Yes,north,no
+premium,Yes,north,no
+basic,Yes,east,no
+basic,No,east,no
+premium,Yes,south,no
+none,No service,east,no
+none,No service,north,no
+premium,Yes,north,yes
+premium,Yes,east,yes
+none,No service,east,no
+premium,No,east,no
+none,No service,north,yes
+basic,No,north,yes
+premium,Yes,south,no
+none,No service,east,yes
+basic,Yes,east,yes
+basic,No,north,no
+none,No service,south,no
+none,No service,east,no
+basic,No,south,yes
+basic,Yes,east,no
+premium,No,south,yes
+premium,Yes,north,yes
+basic,Yes,south,yes
+none,No service,east,no
+basic,Yes,north,no
+basic,Yes,east,no
+premium,Yes,east,no
+basic,No,south,no
+none,No service,east,no
+none,No service,north,no
+basic,No,east,yes
+none,No service,south,no
+none,No service,east,no
+basic,Yes,south,no
+premium,No,north,yes
+none,No service,east,no
+premium,No,north,no
+none,No service,south,no
+basic,Yes,north,no
+none,No service,south,no
+premium,Yes,north,no
+basic,No,north,no
+basic,No,east,no
+basic,Yes,north,no
+premium,No,north,yes
+none,No service,south,no
+basic,No,east,no
+none,No service,north,no
+premium,Yes,north,no
+none,No service,east,no
+premium,No,north,no
+basic,Yes,east,yes
+basic,Yes,north,yes
+premium,No,east,yes
+none,No service,north,no
+premium,Yes,east,no
+premium,Yes,south,no
+none,No service,north,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,north,yes
+premium,No,north,yes
+basic,Yes,south,yes
+basic,No,south,no
+basic,Yes,north,yes
+basic,No,north,yes
+premium,Yes,south,no
+none,No service,east,yes
+none,No service,north,no
+premium,Yes,south,yes
+none,No service,north,yes
+basic,No,south,no
+basic,No,north,yes
+basic,No,south,no
+none,No service,north,no
+none,No service,north,no
+none,No service,north,no
+none,No service,east,no
+basic,No,south,no
+none,No service,east,no
+basic,Yes,east,no
+none,No service,south,no
+basic,No,south,yes
+premium,No,east,yes
+none,No service,east,no
+basic,No,north,no
+none,No service,south,no
+none,No service,north,no
+basic,No,north,no
+premium,Yes,east,no
+premium,Yes,north,no
+basic,Yes,north,yes
+basic,Yes,south,no
+basic,No,east,no
+premium,No,north,yes
+premium,No,east,yes
+none,No service,south,no
+basic,No,south,no
+none,No service,east,no
+premium,No,east,no
+basic,Yes,east,no
+basic,No,east,yes
+none,No service,north,no
+none,No service,east,no
+premium,Yes,north,yes
+none,No service,south,no
+basic,No,east,no
+basic,No,north,no
+basic,Yes,east,no
+premium,No,east,yes
+basic,No,north,no
+none,No service,south,yes
+basic,Yes,south,no
+basic,No,south,no
+basic,No,north,yes
+none,No service,north,no
+basic,Yes,north,yes
+none,No service,south,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,south,no
+basic,No,north,no
+basic,No,north,no
+none,No service,east,no
+premium,Yes,north,no
+none,No service,south,yes
+basic,Yes,east,yes
+basic,Yes,north,no
+none,No service,north,no
+basic,No,east,no
+basic,Yes,north,no
+premium,Yes,east,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,east,no
+none,No service,east,no
+premium,Yes,east,no
+basic,Yes,south,yes
+none,No service,south,no
+basic,No,north,no
+premium,No,north,yes
+basic,No,east,yes
+premium,Yes,north,no
+basic,No,north,no
+basic,Yes,north,no
+premium,No,north,yes
+none,No service,south,no
+basic,No,south,no
+premium,Yes,north,yes
+basic,No,north,yes
+premium,Yes,east,no
+premium,Yes,north,no
+premium,No,east,yes
+basic,Yes,east,yes
+none,No service,east,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,south,no
+basic,Yes,east,no
+premium,No,east,no
+basic,No,south,no
+basic,Yes,east,yes
+basic,No,east,yes
+basic,No,north,yes
+none,No service,north,no
+basic,Yes,east,no
+none,No service,east,no
+basic,No,east,yes
+premium,No,north,no
+premium,No,east,yes
+basic,Yes,south,yes
+premium,No,south,no
+none,No service,east,no
+none,No service,north,no
+none,No service,east,no
+basic,Yes,south,no
+basic,No,north,no
+premium,No,north,yes
+basic,Yes,north,no
+premium,Yes,south,yes
+none,No service,south,no
+basic,No,east,yes
+none,No service,north,no
+premium,No,south,no
+basic,No,east,no
+basic,Yes,north,no
+premium,Yes,east,yes
+premium,No,north,no
+basic,Yes,north,no
+basic,Yes,south,yes
+basic,No,east,no
+basic,Yes,north,no
+premium,No,east,no
+premium,No,north,yes
+none,No service,south,no
+none,No service,south,no
+basic,Yes,south,no
+basic,Yes,north,yes
+none,No service,east,no
+premium,No,east,no
+basic,Yes,south,no
+basic,Yes,east,no
+premium,No,east,yes
+basic,No,east,yes
+premium,No,north,yes
+none,No service,south,no
+premium,No,north,no
+basic,Yes,south,no
+basic,No,east,yes
+premium,Yes,south,yes
+premium,Yes,south,no
+basic,Yes,east,no
+none,No service,south,no
+none,No service,north,no
+none,No service,south,no
+basic,No,north,yes
+basic,Yes,north,yes
+none,No service,south,no
+basic,No,south,no
+basic,No,east,yes
+basic,Yes,east,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+premium,Yes,south,no
+premium,No,north,no
+basic,No,north,no
+none,No service,south,yes
+none,No service,east,no
+basic,Yes,north,yes
+none,No service,south,yes
+none,No service,east,no
+premium,No,north,no
+premium,No,north,yes
+premium,No,north,no
+basic,Yes,north,yes
+basic,Yes,north,no
+premium,No,east,no
+basic,Yes,north,yes
+none,No service,north,no
+basic,Yes,south,yes
+none,No service,east,no
+premium,Yes,south,yes
+none,No service,north,no
+none,No service,east,no
+basic,Yes,east,yes
+basic,Yes,east,yes
+none,No service,north,no
+basic,No,east,no
+none,No service,south,yes
+premium,Yes,south,no
+basic,Yes,south,no
+none,No service,south,no
+basic,No,east,yes
+basic,Yes,south,no
+premium,No,north,no
+basic,No,south,no
+basic,Yes,north,no
+premium,Yes,south,no
+basic,Yes,south,no
+none,No service,north,no
+premium,No,south,no
+basic,Yes,east,no
+basic,Yes,south,no
+none,No service,south,no
+basic,Yes,east,no
+premium,Yes,south,no
+basic,Yes,south,no
+premium,No,south,no
+basic,Yes,east,no
+premium,Yes,east,yes
+premium,No,north,no
+none,No service,east,yes
+basic,No,north,no
+premium,Yes,south,no
+premium,Yes,east,yes
+none,No service,north,no
+premium,Yes,north,no
+basic,No,north,no
+basic,Yes,south,yes
+basic,No,south,yes
+basic,Yes,north,no
+basic,No,north,no
+none,No service,east,no
+premium,No,south,no
+basic,Yes,east,yes
+basic,Yes,east,no
+none,No service,south,no
+basic,Yes,north,no
+basic,Yes,east,no
+premium,No,east,no
+premium,Yes,east,no
+basic,No,north,no
+none,No service,east,yes
+none,No service,north,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+premium,No,north,no
+none,No service,north,no
+premium,Yes,north,yes
+none,No service,north,no
+basic,Yes,north,no
+basic,Yes,east,yes
+basic,Yes,south,yes
+basic,Yes,north,yes
+premium,No,east,no
+premium,Yes,north,no
+basic,Yes,east,yes
+basic,No,south,no
+premium,No,south,no
+basic,Yes,north,no
+none,No service,south,no
+none,No service,east,no
+basic,No,south,no
+none,No service,north,no
+premium,No,north,no
+premium,No,east,no
+premium,No,north,no
+basic,No,east,no
+basic,No,south,no
+premium,Yes,south,no
+basic,No,south,no
+basic,No,south,no
+basic,No,south,no
+premium,Yes,north,yes
+none,No service,north,no
+premium,No,south,yes
+premium,Yes,north,yes
+premium,Yes,south,no
+basic,Yes,south,no
+premium,No,south,no
+premium,No,south,yes
+premium,No,south,yes
+premium,Yes,north,no
+premium,Yes,east,no
+basic,Yes,east,yes
+none,No service,south,no
+none,No service,east,no
+basic,Yes,north,no
+basic,Yes,south,no
+none,No service,east,no
+basic,No,south,yes
+basic,No,east,no
+none,No service,south,no
+premium,Yes,north,yes
+basic,No,east,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,north,no
+none,No service,south,no
+none,No service,south,no
+premium,Yes,south,no
+none,No service,south,no
+none,No service,east,no
+none,No service,east,no
+basic,Yes,east,no
+none,No service,east,no
+basic,Yes,north,no
+basic,No,north,no
+premium,No,east,yes
+basic,No,north,yes
+premium,No,south,no
+none,No service,north,yes
+basic,No,east,no
+premium,Yes,north,no
+basic,No,north,no
+none,No service,east,yes
+none,No service,east,yes
+premium,No,south,no
+basic,No,east,yes
+basic,Yes,south,no
+premium,No,north,yes
+basic,Yes,east,no
+none,No service,north,no
+none,No service,south,no
+premium,Yes,east,yes
+basic,No,east,no
+premium,Yes,north,no
+basic,Yes,north,no
+basic,Yes,north,no
+basic,No,east,yes
+basic,Yes,south,no
+premium,Yes,east,no
+basic,No,north,no
+premium,No,east,no
+none,No service,east,no
+premium,Yes,east,no
+premium,Yes,south,no
+none,No service,north,no
+premium,No,south,yes
+basic,Yes,south,no
+basic,Yes,south,yes
+basic,Yes,north,no
+premium,No,north,yes
+basic,Yes,east,no
+basic,Yes,east,no
+none,No service,south,yes
+basic,No,north,no
+premium,No,east,no
+premium,Yes,south,no
+premium,Yes,south,no
+none,No service,east,no
+premium,No,north,no
+basic,Yes,east,no
+none,No service,east,no
+premium,Yes,south,no
+premium,No,east,no
+basic,Yes,south,no
+none,No service,east,no
+premium,Yes,east,no
+basic,Yes,east,no
+basic,No,east,yes
+basic,Yes,north,yes
+basic,Yes,south,no
+premium,Yes,east,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,east,yes
+basic,Yes,south,yes
+basic,No,east,yes
+premium,No,north,yes
+basic,Yes,east,no
+none,No service,north,no
+premium,Yes,east,yes
+none,No service,south,no
+none,No service,north,no
+basic,No,east,no
+basic,No,north,no
+none,No service,north,no
+basic,No,east,no
+basic,No,east,no
+basic,No,south,no
+basic,No,east,no
+none,No service,south,no
+premium,Yes,south,no
+none,No service,south,no
+basic,Yes,south,no
+premium,Yes,east,yes
+premium,No,north,no
+premium,No,south,no
+premium,Yes,north,no
+basic,No,north,no
+premium,No,south,no
+basic,No,south,yes
+none,No service,south,no
+premium,Yes,south,no
+basic,Yes,east,no
+basic,No,south,no
+premium,Yes,south,yes
+basic,No,east,no
+basic,No,east,no
+basic,No,east,no
+premium,No,north,no
+none,No service,south,no
+basic,No,south,yes
+basic,No,north,no
+none,No service,east,no
+premium,Yes,north,yes
+basic,No,north,yes
+none,No service,east,no
+none,No service,north,no
+basic,Yes,east,no
+premium,No,south,no
+premium,No,south,no
+premium,Yes,north,no
+basic,Yes,north,yes
+none,No service,east,no
+none,No service,north,no
+none,No service,north,no
+premium,Yes,east,yes
+premium,No,east,no
+basic,No,south,no
+none,No service,east,no
+basic,No,north,yes
+basic,No,north,yes
+none,No service,south,no
+none,No service,east,yes
+none,No service,east,no
+none,No service,east,no
+none,No service,east,no
+basic,Yes,south,yes
+premium,Yes,east,no
+basic,Yes,east,no
+none,No service,north,no
+basic,No,north,yes
+none,No service,east,no
+basic,Yes,east,no
+basic,Yes,north,yes
+basic,No,north,no
+none,No service,east,no
+basic,No,east,no
+premium,Yes,east,yes
+basic,No,north,no
+premium,Yes,north,no
+premium,No,east,yes
+none,No service,east,no
+premium,Yes,east,yes
+none,No service,east,yes
+premium,No,east,yes
+none,No service,south,no
+none,No service,east,yes
+premium,No,east,no
+none,No service,north,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,north,no
+none,No service,north,no
+premium,No,north,no
+basic,Yes,south,no
+premium,Yes,east,no
+none,No service,north,yes
+premium,No,south,yes
+basic,Yes,south,no
+basic,No,south,no
+basic,No,south,no
+none,No service,north,no
+basic,No,north,no
+none,No service,north,no
+premium,Yes,north,no
+basic,Yes,south,no
+none,No service,north,no
+none,No service,east,no
+basic,Yes,east,no
+premium,No,east,yes
+basic,Yes,north,no
+basic,Yes,north,yes
+none,No service,south,no
+none,No service,north,no
+basic,No,south,yes
+premium,No,east,yes
+basic,No,east,no
+basic,Yes,north,no
+premium,Yes,east,yes
+basic,No,south,no
+none,No service,east,no
+premium,No,north,yes
+premium,Yes,east,no
+none,No service,south,no
+basic,Yes,south,no
+premium,Yes,north,yes
+premium,No,north,no
+basic,No,north,no
+none,No service,south,no
+premium,No,east,yes
+basic,No,north,no
+basic,Yes,east,yes
+none,No service,south,no
+premium,No,east,yes
+basic,Yes,north,yes
+basic,Yes,east,yes
+basic,Yes,east,yes
+basic,No,south,no
+basic,No,south,no
+premium,Yes,east,no
+premium,Yes,south,no
+basic,No,south,no
+basic,No,north,no
+premium,No,north,no
+none,No service,east,no
+basic,Yes,south,yes
+none,No service,south,no
+none,No service,north,no
+premium,No,east,no
+premium,No,south,no
+basic,Yes,east,yes
+basic,Yes,north,no
+premium,No,east,no
+basic,Yes,east,no
+premium,No,north,no
+none,No service,south,no
+premium,No,east,yes
+basic,No,south,no
+basic,No,east,yes
+premium,No,south,no
+basic,No,south,no
+basic,No,south,no
+basic,No,east,no
+none,No service,north,no
+premium,No,south,no
+basic,Yes,north,no
+basic,No,south,yes
+premium,Yes,north,no
+basic,Yes,south,no
+none,No service,east,no
+premium,No,east,no
+none,No service,east,no
+premium,No,north,no
+basic,Yes,north,no
+basic,No,east,no
+premium,No,north,yes
+premium,Yes,north,no
+basic,No,east,no
+basic,Yes,east,no
+premium,Yes,east,no
+none,No service,east,no
+premium,Yes,south,no
+basic,No,north,no
+none,No service,east,no
+none,No service,south,no
+basic,Yes,north,yes
+none,No service,north,no
+basic,Yes,south,yes
+premium,Yes,east,no
+none,No service,east,no
+basic,Yes,south,no
+none,No service,east,no
+none,No service,south,no
+basic,Yes,north,yes
+none,No service,north,no
+basic,Yes,east,no
+premium,Yes,north,yes
+basic,Yes,south,no
+none,No service,north,no
+basic,Yes,east,no
+none,No service,south,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,yes
+basic,Yes,north,no
+basic,No,north,no
+none,No service,east,no
+none,No service,south,no
+none,No service,south,no
+none,No service,north,no
+basic,No,north,yes
+premium,No,north,yes
+premium,Yes,north,no
+basic,Yes,north,yes
+none,No service,east,yes
+premium,No,east,yes
+none,No service,south,no
+basic,No,south,yes
+basic,No,north,no
+premium,No,north,no
+basic,Yes,north,no
+premium,No,east,no
+none,No service,south,no
+premium,Yes,south,yes
+basic,Yes,east,no
+basic,Yes,south,no
+basic,Yes,south,no
+none,No service,south,no
+basic,Yes,north,yes
+none,No service,north,no
+none,No service,south,no
+premium,No,north,no
+none,No service,south,no
+none,No service,north,no
+premium,No,north,yes
+premium,Yes,south,no
+premium,Yes,north,no
+premium,Yes,north,no
+premium,Yes,east,no
+premium,Yes,east,no
+basic,Yes,north,no
+premium,No,south,yes
+basic,No,east,no
+premium,Yes,north,no
+none,No service,south,no
+basic,No,east,no
+basic,No,south,no
+basic,Yes,south,no
+basic,Yes,south,yes
+basic,No,east,no
+basic,No,south,no
+basic,No,south,no
+basic,Yes,south,no
+premium,Yes,south,yes
+none,No service,south,no
+basic,No,north,no
+basic,Yes,east,yes
+none,No service,north,no
+premium,No,north,no
+basic,Yes,east,yes
+basic,Yes,east,no
+premium,No,north,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,No,north,no
+premium,No,south,no
+basic,Yes,south,no
+none,No service,south,no
+basic,No,east,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,east,yes
+none,No service,south,no
+basic,No,east,yes
+basic,Yes,north,no
+none,No service,east,no
+premium,Yes,north,yes
+basic,No,south,no
+premium,No,north,yes
+basic,Yes,north,no
+premium,No,east,yes
+basic,Yes,north,no
+premium,Yes,north,no
+none,No service,south,yes
+none,No service,north,no
+none,No service,south,no
+basic,No,east,yes
+basic,No,south,no
+premium,Yes,north,yes
+premium,No,south,no
+basic,No,south,no
+premium,No,north,no
+basic,No,north,yes
+premium,No,east,no
+premium,No,south,yes
+basic,Yes,north,no
+basic,Yes,east,yes
+none,No service,east,no
+premium,No,north,yes
+premium,Yes,north,yes
+premium,Yes,south,no
+none,No service,south,no
+premium,Yes,south,no
+premium,No,north,yes
+none,No service,north,no
+basic,Yes,east,yes
+none,No service,north,no
+basic,No,north,no
+premium,No,east,yes
+premium,No,south,no
+none,No service,east,no
+basic,Yes,north,no
+basic,Yes,east,yes
+none,No service,east,no
+premium,Yes,east,yes
+none,No service,north,no
+premium,Yes,north,no
+premium,No,south,no
+none,No service,north,no
+none,No service,south,yes
+basic,Yes,south,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+none,No service,south,yes
+basic,Yes,north,no
+premium,No,north,no
+premium,No,north,yes
+basic,Yes,east,yes
+none,No service,south,no
+basic,No,north,no
+basic,No,south,yes
+none,No service,north,no
+basic,Yes,south,yes
+none,No service,east,no
+basic,Yes,north,no
+basic,No,south,yes
+basic,Yes,north,no
+none,No service,east,yes
+none,No service,east,no
+premium,Yes,south,no
+basic,No,north,no
+premium,Yes,north,yes
+none,No service,south,yes
+none,No service,east,no
+basic,No,north,yes
+none,No service,south,no
+basic,No,north,no
+basic,No,north,no
+none,No service,east,no
+basic,No,east,yes
+premium,No,south,no
+none,No service,north,yes
+basic,Yes,south,no
+premium,Yes,south,no
+premium,No,east,no
+basic,Yes,east,no
+none,No service,south,no
+basic,No,north,no
+basic,No,north,yes
+none,No service,east,no
+premium,No,south,yes
+none,No service,south,yes
+none,No service,east,no
+none,No service,east,no
+none,No service,south,no
+none,No service,south,no
+basic,No,north,yes
+basic,Yes,north,yes
+premium,No,east,no
+none,No service,south,no
+basic,No,east,yes
+basic,No,south,no
+premium,Yes,north,no
+premium,Yes,east,no
+basic,No,north,no
+none,No service,north,yes
+premium,No,east,yes
+basic,No,south,no
+basic,Yes,east,no
+basic,No,north,yes
+basic,Yes,east,no
+premium,No,north,no
+none,No service,south,no
+none,No service,east,no
+none,No service,east,no
+none,No service,north,no
+none,No service,north,no
+none,No service,north,yes
+basic,No,north,no
+none,No service,south,no
+basic,Yes,south,no
+premium,No,east,no
+premium,No,north,yes
+none,No service,east,no
+basic,Yes,north,yes
+basic,Yes,south,yes
+basic,No,south,no
+basic,No,north,no
+basic,Yes,south,yes
+basic,No,east,no
+basic,No,south,no
+basic,No,north,yes
+premium,Yes,north,no
+basic,Yes,south,no
+premium,Yes,east,no
+basic,Yes,south,yes
+none,No service,south,no
+none,No service,north,no
+premium,No,north,no
+none,No service,north,no
+none,No service,north,no
+premium,Yes,north,no
+basic,Yes,south,no
+basic,No,south,no
+basic,Yes,south,yes
+none,No service,south,no
+premium,No,south,no
+basic,No,east,yes
+basic,No,east,no
+basic,No,east,no
+basic,Yes,south,no
+basic,Yes,south,yes
+none,No service,south,no
+basic,No,north,no
+premium,No,south,yes
+basic,No,east,no
+premium,No,east,yes
+none,No service,south,no
+premium,No,north,no
+basic,No,south,no
+basic,No,south,no
+basic,No,north,yes
+premium,Yes,east,yes
+premium,Yes,north,no
+premium,Yes,east,no
+premium,No,east,yes
+premium,No,north,no
+none,No service,north,no
+basic,No,south,yes
+basic,No,south,no
+none,No service,north,yes
+basic,No,east,yes
+basic,Yes,east,yes
+none,No service,south,no
+basic,Yes,north,no
+basic,No,north,no
+none,No service,south,no
+basic,Yes,east,yes
+none,No service,south,yes
+basic,No,south,no
+basic,Yes,east,no
+basic,No,south,no
+basic,No,north,no
+basic,Yes,south,no
+none,No service,north,no
+basic,Yes,north,no
+basic,No,north,yes
+none,No service,south,no
+premium,Yes,north,no
+none,No service,north,no
+premium,No,east,no
+premium,Yes,south,yes
+none,No service,south,no
+premium,No,north,no
+basic,No,south,no
+basic,Yes,north,no
+premium,Yes,north,no
+premium,Yes,east,yes
+none,No service,north,no
+premium,No,east,yes
+basic,Yes,east,no
+premium,No,east,no
+basic,No,east,no
+basic,Yes,south,no
+basic,Yes,east,no
+none,No service,south,no
+basic,No,south,no
+none,No service,east,no
+premium,Yes,south,no
+none,No service,north,no
+basic,No,south,yes
+basic,No,south,no
+premium,Yes,north,yes
+basic,No,east,yes
+none,No service,south,no
+basic,Yes,east,no
+basic,Yes,east,yes
+none,No service,south,no
+none,No service,south,no
+none,No service,east,no
+premium,Yes,east,yes
+basic,No,east,no
+premium,Yes,east,no
+basic,No,north,no
+none,No service,east,no
+basic,No,north,no
+basic,Yes,south,no
+premium,Yes,north,no
+basic,Yes,south,no
+premium,Yes,north,no
+basic,No,east,no
+premium,No,east,yes
+basic,No,south,no
+none,No service,north,no
+basic,Yes,east,no
+premium,No,south,no
+premium,No,north,yes
+premium,No,north,yes
+none,No service,south,no
+none,No service,north,yes
+premium,Yes,north,no
+premium,No,east,no
+premium,No,east,no
+basic,Yes,east,no
+premium,No,south,yes
+basic,No,north,yes
+premium,Yes,south,yes
+premium,No,north,no
+premium,No,south,no
+basic,Yes,south,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,No,east,no
+none,No service,east,no
+none,No service,south,no
+none,No service,east,no
+basic,No,east,no
+basic,No,east,no
+premium,No,north,no
+basic,No,south,no
+none,No service,north,no
+premium,Yes,south,yes
+basic,No,east,no
+basic,Yes,north,no
+none,No service,east,no
+none,No service,east,no
+none,No service,north,no
+premium,Yes,east,yes
+basic,No,east,no
+basic,Yes,north,yes
+premium,No,south,yes
+basic,No,east,no
+none,No service,south,no
+premium,Yes,east,no
+premium,No,east,yes
+basic,No,south,yes
+basic,Yes,east,yes
+basic,Yes,east,no
+basic,No,north,no
+premium,Yes,east,no
+none,No service,east,no
+none,No service,north,no
+none,No service,east,yes
+premium,Yes,east,yes
+basic,No,north,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,south,no
+basic,No,south,yes
+premium,No,south,no
+premium,No,east,yes
+none,No service,east,yes
+none,No service,east,no
+premium,Yes,east,yes
+premium,No,east,no
+none,No service,east,no
+none,No service,south,no
+basic,No,north,no
+basic,Yes,north,no
+none,No service,east,yes
+premium,No,south,no
+basic,Yes,north,no
+basic,No,south,no
+none,No service,east,no
+premium,No,north,no
+none,No service,north,no
+premium,Yes,north,no
+none,No service,east,no
+basic,No,south,no
+none,No service,south,no
+basic,No,south,no
+premium,Yes,east,no
+premium,No,east,no
+basic,Yes,north,yes
+premium,Yes,south,no
+basic,No,east,no
+basic,Yes,east,no
+none,No service,east,no
+basic,No,north,yes
+basic,No,south,yes
+premium,Yes,south,no
+premium,Yes,south,no
+basic,Yes,south,no
+basic,No,south,no
+basic,No,north,yes
+basic,Yes,north,no
+basic,No,south,yes
+basic,No,east,yes
+none,No service,north,no
+basic,No,north,no
+none,No service,north,no
+basic,No,north,no
+none,No service,south,no
+none,No service,south,no
+premium,No,south,no
+none,No service,north,yes
+premium,No,north,no
+basic,No,east,no
+premium,No,south,no
+none,No service,south,no
+none,No service,east,no
+none,No service,north,no
+premium,Yes,east,no
+premium,Yes,south,yes
+none,No service,south,no
+none,No service,north,no
+none,No service,east,no
+basic,Yes,east,yes
+none,No service,east,no
+basic,No,east,yes
+premium,Yes,south,no
+none,No service,east,no
+premium,No,south,no
+basic,Yes,east,no
+none,No service,east,no
+premium,Yes,north,no
+basic,No,south,no
+basic,Yes,south,yes
+basic,No,south,no
+none,No service,east,no
+premium,No,east,no
+premium,Yes,north,no
+basic,No,east,no
+basic,Yes,south,no
+premium,Yes,south,no
+basic,No,south,yes
+none,No service,north,yes
+premium,No,north,no
+basic,Yes,east,yes
+premium,No,north,yes
+basic,Yes,south,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,north,no
+premium,Yes,south,no
+basic,No,east,yes
+premium,No,north,no
+none,No service,east,no
+basic,No,east,no
+premium,Yes,south,yes
+none,No service,east,no
+none,No service,east,no
+none,No service,east,no
+premium,Yes,north,no
+none,No service,east,no
+basic,Yes,north,yes
+premium,No,north,no
+basic,No,north,no
+basic,Yes,south,no
+none,No service,east,no
+premium,Yes,east,no
+basic,Yes,east,yes
+none,No service,north,yes
+basic,Yes,north,yes
+none,No service,north,no
+basic,Yes,south,no
+none,No service,south,no
+premium,No,south,yes
+none,No service,east,no
+premium,No,east,no
+premium,Yes,east,no
+basic,Yes,east,no
+basic,No,north,no
+none,No service,east,no
+premium,Yes,south,no
+none,No service,east,no
+basic,Yes,east,yes
+basic,Yes,north,no
+basic,No,north,no
+none,No service,north,no
+basic,No,north,no
+premium,No,east,no
+basic,No,north,no
+none,No service,east,no
+basic,Yes,east,yes
+premium,No,north,no
+none,No service,east,no
+none,No service,east,no
+premium,Yes,east,no
+basic,No,north,no
+basic,Yes,east,no
+none,No service,north,yes
+basic,Yes,north,no
+none,No service,south,no
+basic,Yes,south,yes
+premium,No,east,yes
+basic,Yes,north,no
+premium,No,south,no
+basic,Yes,east,no
+premium,Yes,east,no
+basic,Yes,south,no
+basic,Yes,east,yes
+none,No service,south,no
+basic,Yes,south,no
+premium,Yes,east,yes
+none,No service,east,no
+none,No service,south,no
+none,No service,north,no
+basic,Yes,north,yes
+premium,No,east,no
+none,No service,north,no
+none,No service,south,no
+none,No service,south,no
+premium,No,north,no
+premium,Yes,north,no
+basic,No,east,no
+basic,No,east,no
+premium,Yes,north,no
+basic,No,south,no
+basic,No,north,no
+none,No service,east,no
+none,No service,north,no
+premium,No,east,no
+none,No service,east,no
+basic,No,south,yes
+premium,No,east,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+premium,No,north,no
+premium,No,south,no
+premium,Yes,south,no
+premium,Yes,south,no
+basic,Yes,south,no
+basic,No,south,yes
+basic,No,north,yes
+basic,No,east,no
+basic,Yes,east,no
+premium,Yes,south,no
+none,No service,north,no
+basic,Yes,east,yes
+basic,No,north,yes
+premium,No,east,no
+premium,Yes,north,yes
+basic,Yes,north,no
+none,No service,north,no
+basic,No,north,no
+premium,No,east,no
+premium,Yes,east,yes
+basic,Yes,east,yes
+premium,No,east,no
+basic,Yes,east,no
+premium,Yes,east,yes
+basic,No,east,no
+basic,No,north,yes
+basic,No,north,yes
+none,No service,south,no
+premium,No,north,yes
+basic,Yes,south,no
+none,No service,north,no
+basic,No,north,yes
+basic,Yes,south,no
+none,No service,north,no
+none,No service,east,no
+premium,No,north,no
+premium,Yes,south,no
+premium,Yes,south,no
+basic,Yes,north,yes
+premium,No,east,no
+premium,Yes,east,yes
+basic,No,south,no
+basic,Yes,south,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,east,no
+premium,Yes,north,yes
+none,No service,east,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,east,no
+basic,No,east,yes
+none,No service,east,yes
+premium,Yes,east,yes
+none,No service,south,no
+basic,No,north,no
+none,No service,east,yes
+basic,No,south,yes
+basic,Yes,south,no
+premium,Yes,east,no
+premium,No,north,yes
+premium,No,south,no
+basic,Yes,east,no
+none,No service,east,no
+none,No service,east,no
+none,No service,east,no
+premium,No,east,no
+basic,Yes,south,yes
+basic,Yes,east,no
+none,No service,east,no
+basic,No,east,no
+premium,No,south,no
+basic,Yes,north,no
+premium,Yes,south,no
+none,No service,north,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,east,no
+none,No service,north,no
+premium,Yes,east,no
+none,No service,north,no
+basic,No,east,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,south,yes
+basic,No,south,yes
+none,No service,north,yes
+basic,Yes,south,yes
+premium,No,south,no
+none,No service,north,no
+premium,Yes,east,yes
+basic,No,north,no
+basic,Yes,east,yes
+basic,Yes,north,no
+none,No service,south,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+premium,Yes,east,yes
+basic,No,east,yes
+basic,No,east,no
+none,No service,east,no
+basic,No,north,yes
+premium,No,south,no
+premium,Yes,north,no
+basic,No,east,no
+premium,No,east,no
+premium,No,north,no
+none,No service,south,yes
+basic,No,south,yes
+basic,No,north,no
+none,No service,north,no
+premium,No,south,no
+none,No service,east,no
+none,No service,north,no
+basic,No,south,no
+basic,No,south,yes
+basic,Yes,north,no
+premium,Yes,east,no
+basic,Yes,east,no
+premium,Yes,east,no
+basic,No,south,no
+none,No service,south,no
+premium,Yes,east,no
+premium,Yes,north,no
+none,No service,east,no
+premium,No,north,no
+none,No service,north,no
+none,No service,north,no
+basic,No,north,no
+none,No service,south,no
+premium,No,south,yes
+basic,Yes,east,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,east,no
+basic,Yes,north,no
+basic,No,east,no
+premium,No,north,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,north,no
+none,No service,south,no
+none,No service,east,no
+premium,No,north,yes
+premium,Yes,south,no
+basic,No,north,no
+none,No service,south,no
+basic,Yes,east,no
+basic,Yes,south,no
+premium,No,east,yes
+basic,No,north,yes
+none,No service,north,no
+none,No service,east,no
+premium,No,north,yes
+none,No service,north,no
+premium,Yes,east,no
+basic,No,east,yes
+basic,No,south,no
+none,No service,north,no
+basic,Yes,south,no
+none,No service,east,no
+basic,No,east,no
+basic,No,south,no
+basic,No,east,no
+premium,No,north,yes
+basic,No,north,no
+premium,No,south,yes
+basic,Yes,east,no
+premium,Yes,south,yes
+basic,No,north,yes
+none,No service,south,no
+premium,Yes,north,no
+basic,Yes,south,yes
+none,No service,east,no
+premium,No,east,no
+premium,No,north,no
+none,No service,east,no
+premium,Yes,north,yes
+basic,No,east,no
+none,No service,south,no
+premium,No,east,no
+premium,Yes,north,no
+basic,No,south,yes
+none,No service,north,no
+basic,Yes,north,yes
+premium,No,south,no
+basic,Yes,east,yes
+none,No service,east,no
+premium,No,east,yes
+none,No service,south,no
+basic,No,east,no
+basic,No,east,no
+basic,No,north,no
+none,No service,south,no
+premium,No,north,no
+premium,Yes,south,no
+none,No service,south,no
+none,No service,east,no
+basic,No,north,yes
+none,No service,south,no
+basic,No,north,no
+none,No service,north,no
+premium,Yes,north,no
+premium,Yes,east,yes
+basic,No,south,no
+premium,No,east,yes
+none,No service,south,no
+basic,Yes,north,no
+basic,No,north,no
+none,No service,east,no
+basic,Yes,east,no
+premium,Yes,east,no
+premium,Yes,south,yes
+none,No service,north,no
+premium,No,east,no
+basic,No,north,yes
+premium,No,north,yes
+basic,Yes,north,yes
+basic,Yes,north,no
+none,No service,east,no
+basic,Yes,north,no
+basic,Yes,south,yes
+none,No service,north,no
+premium,No,east,no
+basic,No,south,no
+premium,Yes,east,no
+basic,No,east,no
+basic,No,east,no
+premium,No,east,no
+premium,No,south,yes
+basic,No,north,yes
+none,No service,east,no
+none,No service,south,no
+basic,No,east,yes
+basic,Yes,south,no
+none,No service,south,no
+none,No service,south,yes
+basic,No,north,no
+basic,No,south,no
+basic,Yes,east,yes
+premium,No,east,no
+premium,No,north,no
+none,No service,north,no
+none,No service,south,no
+none,No service,east,no
+basic,Yes,south,no
+basic,No,south,no
+basic,Yes,east,yes
+basic,No,east,yes
+basic,Yes,east,no
+basic,Yes,east,yes
+none,No service,south,no
+basic,No,south,yes
+none,No service,east,no
+premium,No,south,no
+premium,No,north,no
+none,No service,north,no
+basic,Yes,north,yes
+none,No service,east,no
+none,No service,east,no
+none,No service,south,no
+basic,No,south,no
+basic,No,east,no
+premium,Yes,south,no
+basic,Yes,south,yes
+basic,Yes,south,no
+none,No service,north,no
+premium,Yes,north,no
+basic,No,east,no
+premium,No,north,yes
+none,No service,north,no
+premium,No,south,yes
+none,No service,south,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,east,yes
+basic,Yes,south,no
+basic,No,north,no
+none,No service,north,no
+premium,No,north,yes
+basic,No,east,yes
+basic,No,south,no
+basic,Yes,south,no
+premium,Yes,east,no
+premium,No,east,no
+none,No service,south,no
+none,No service,east,no
+none,No service,north,no
+basic,No,east,no
+premium,No,south,no
+none,No service,north,no
+basic,Yes,north,no
+none,No service,south,no
+none,No service,south,no
+none,No service,east,no
+none,No service,south,no
+basic,No,north,yes
+none,No service,south,no
+none,No service,east,no
+basic,Yes,south,no
+basic,No,south,yes
+premium,Yes,east,yes
+basic,No,east,yes
+basic,No,east,no
+none,No service,east,no
+basic,No,east,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,north,no
+premium,Yes,north,no
+none,No service,south,no
+basic,Yes,north,no
+basic,Yes,south,yes
+premium,Yes,east,no
+basic,Yes,south,yes
+basic,No,north,no
+basic,Yes,east,no
+none,No service,north,yes
+basic,No,north,no
+premium,No,south,no
+none,No service,north,no
+none,No service,north,no
+premium,Yes,north,yes
+premium,Yes,east,yes
+premium,Yes,south,no
+premium,No,east,yes
+none,No service,south,no
+basic,No,south,no
+premium,No,north,no
+basic,No,north,no
+basic,Yes,east,no
+none,No service,east,no
+none,No service,south,no
+premium,Yes,north,no
+none,No service,south,no
+premium,Yes,north,yes
+basic,Yes,east,no
+premium,Yes,north,no
+basic,No,east,yes
+basic,Yes,east,no
+none,No service,south,yes
+premium,Yes,south,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,south,yes
+premium,Yes,south,yes
+basic,Yes,east,yes
+basic,Yes,east,no
+premium,Yes,east,no
+premium,No,east,no
+premium,No,south,no
+basic,No,east,no
+none,No service,north,no
+none,No service,south,no
+premium,Yes,east,yes
+premium,Yes,south,no
+basic,No,east,no
+basic,Yes,north,yes
+none,No service,south,no
+none,No service,south,no
+none,No service,north,no
+premium,Yes,east,no
+basic,No,north,no
+none,No service,south,no
+basic,Yes,east,yes
+none,No service,east,no
+premium,No,south,yes
+basic,Yes,north,yes
+none,No service,south,no
+basic,Yes,south,no
+premium,Yes,south,no
+basic,Yes,south,yes
+none,No service,east,no
+basic,Yes,south,yes
+premium,No,south,yes
+premium,No,east,yes
+premium,No,north,no
+basic,No,east,no
+none,No service,south,yes
+basic,Yes,north,yes
+basic,Yes,east,yes
+basic,No,south,no
+basic,Yes,east,no
+none,No service,north,no
+none,No service,north,no
+none,No service,east,no
+premium,No,north,no
+basic,Yes,east,no
+premium,Yes,south,no
+premium,Yes,north,no
+basic,Yes,north,no
+basic,Yes,east,no
+basic,No,north,no
+premium,No,north,no
+basic,Yes,east,no
+basic,No,south,no
+basic,No,east,no
+none,No service,south,no
+basic,Yes,north,no
+basic,No,east,no
+none,No service,north,no
+premium,No,east,no
+premium,No,east,no
+premium,No,south,no
+none,No service,south,no
+premium,Yes,north,no
+basic,No,south,yes
+premium,Yes,north,no
+basic,No,south,no
+basic,Yes,north,yes
+basic,Yes,east,no
+basic,No,east,no
+basic,No,north,no
+none,No service,south,no
+none,No service,east,no
+basic,No,north,yes
+basic,No,north,no
+basic,No,east,yes
+basic,No,north,yes
+none,No service,south,no
+premium,No,north,no
+premium,Yes,south,no
+premium,No,south,no
+basic,No,south,no
+premium,No,south,yes
+none,No service,south,no
+premium,Yes,east,no
+premium,No,south,no
+basic,Yes,south,no
+none,No service,east,yes
+basic,No,east,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,south,no
+premium,Yes,south,yes
+none,No service,north,no
+basic,No,north,yes
+premium,Yes,east,no
+none,No service,north,no
+none,No service,north,yes
+premium,Yes,east,yes
+none,No service,north,no
+none,No service,south,no
+premium,Yes,south,no
+basic,Yes,south,no
+none,No service,north,no
+none,No service,north,yes
+premium,Yes,north,yes
+basic,Yes,north,yes
+none,No service,north,yes
+basic,No,east,no
+basic,Yes,south,yes
+none,No service,south,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,east,yes
+premium,Yes,north,no
+premium,Yes,north,yes
+basic,Yes,south,no
+premium,No,east,yes
+none,No service,east,no
+premium,No,north,yes
+premium,Yes,east,no
+none,No service,south,no
+none,No service,south,no
+none,No service,north,no
+premium,No,south,yes
+none,No service,east,no
+none,No service,north,no
+none,No service,south,no
+basic,No,south,no
+basic,Yes,east,no
+basic,Yes,south,no
+none,No service,north,no
+none,No service,south,no
+basic,No,north,yes
+premium,No,north,no
+basic,No,east,yes
+premium,No,east,no
+basic,No,north,no
+basic,No,north,yes
+premium,No,east,no
+basic,No,south,yes
+none,No service,east,no
+none,No service,east,no
+premium,Yes,south,yes
+premium,No,south,no
+basic,Yes,south,no
+none,No service,south,no
+premium,No,south,no
+premium,Yes,south,yes
+none,No service,north,no
+none,No service,north,no
+none,No service,east,no
+premium,No,east,no
+none,No service,north,no
+basic,Yes,east,no
+premium,Yes,south,yes
+none,No service,east,no
+basic,No,south,no
+basic,Yes,south,no
+none,No service,east,no
+none,No service,east,no
+none,No service,south,no
+premium,No,north,no
+none,No service,south,no
+none,No service,south,no
+none,No service,south,no
+basic,Yes,north,yes
+none,No service,east,no
+premium,Yes,south,no
+basic,Yes,south,no
+basic,No,south,no
+basic,Yes,south,no
+none,No service,south,no
+premium,No,east,yes
+basic,No,south,no
+basic,Yes,south,yes
+premium,No,east,yes
+basic,No,north,yes
+premium,No,east,yes
+basic,No,east,no
+none,No service,north,no
+none,No service,south,no
+premium,Yes,east,yes
+none,No service,north,no
+basic,No,north,yes
+none,No service,south,no
+basic,No,east,no
+basic,Yes,east,no
+premium,Yes,north,no
+none,No service,east,yes
+none,No service,north,yes
+basic,Yes,east,no
+none,No service,south,no
+basic,No,north,no
+premium,No,south,no
+premium,No,north,yes
+premium,No,east,no
+none,No service,south,no
+none,No service,south,no
+premium,Yes,south,yes
+basic,No,south,no
+premium,Yes,east,no
+none,No service,south,no
+premium,No,south,yes
+none,No service,south,yes
+none,No service,north,no
+none,No service,east,no
+none,No service,east,no
+basic,Yes,south,no
+none,No service,east,no
+premium,Yes,south,yes
+none,No service,east,no
+none,No service,south,no
+basic,Yes,east,no
+basic,No,east,no
+premium,Yes,south,no
+none,No service,north,no
+basic,No,north,no
+premium,No,south,no
+none,No service,south,no
+basic,No,south,no
+premium,No,south,yes
+basic,Yes,east,no
+none,No service,north,no
+premium,Yes,north,yes
+premium,Yes,north,no
+premium,No,east,yes
+premium,Yes,north,no
+none,No service,north,no
+basic,No,south,yes
+basic,Yes,south,no
+basic,Yes,east,yes
+none,No service,north,no
+basic,No,east,yes
+premium,No,north,no
+premium,Yes,south,yes
+premium,Yes,east,no
+basic,Yes,north,no
+none,No service,east,yes
+basic,Yes,north,yes
+premium,No,east,no
+basic,Yes,south,yes
+none,No service,north,no
+basic,No,east,no
+basic,No,north,no
+basic,Yes,north,no
+none,No service,south,no
+basic,No,north,yes
+none,No service,north,no
+basic,Yes,north,no
+basic,Yes,north,no
+premium,No,north,no
+basic,Yes,east,no
+premium,No,south,yes
+premium,No,east,yes
+premium,Yes,north,no
+basic,No,south,no
+premium,No,east,no
+none,No service,south,no
+basic,No,east,no
+none,No service,east,no
+none,No service,south,no
+basic,Yes,north,no
+basic,No,east,no
+basic,Yes,east,no
+basic,No,north,yes
+premium,No,south,no
+none,No service,north,no
+basic,No,north,no
+basic,Yes,north,no
+none,No service,east,no
+none,No service,north,no
+premium,No,south,yes
+none,No service,south,no
+none,No service,north,no
+basic,Yes,east,no
+basic,No,east,yes
+none,No service,south,no
+none,No service,north,no
+none,No service,south,no
+basic,Yes,north,no
+basic,No,north,yes
+none,No service,south,no
+basic,No,north,yes
+premium,Yes,north,no
+premium,No,north,yes
+premium,Yes,east,yes
+basic,No,south,no
+basic,Yes,south,no
+none,No service,north,no
+none,No service,north,no
+premium,No,south,no
+none,No service,east,no
+premium,Yes,north,yes
+premium,No,north,no
+premium,Yes,east,yes
+none,No service,north,no
+none,No service,east,no
+none,No service,north,no
+basic,Yes,east,no
+basic,Yes,east,yes
+premium,Yes,north,no
+none,No service,east,no
+premium,No,north,no
+none,No service,south,yes
+none,No service,east,no
+basic,No,south,no
+none,No service,north,no
+none,No service,east,no
+basic,Yes,east,no
+premium,No,north,yes
+basic,Yes,south,no
+none,No service,south,no
+basic,No,east,yes
+premium,No,south,no
+none,No service,north,no
+basic,No,south,no
+basic,Yes,east,no
+basic,Yes,north,no
+basic,No,east,yes
+none,No service,south,no
+none,No service,south,no
+basic,No,south,no
+basic,Yes,north,yes
+premium,No,east,no
+premium,Yes,south,no
+premium,Yes,east,yes
+basic,Yes,east,yes
+none,No service,east,no
+premium,No,east,no
+premium,No,east,yes
+none,No service,south,no
+premium,Yes,north,no
+premium,Yes,south,no
+none,No service,east,no
+basic,No,east,yes
+basic,No,east,no
+basic,Yes,north,no
+none,No service,east,no
+basic,No,north,yes
+premium,No,north,yes
+basic,No,south,no
+premium,No,east,no
+basic,Yes,east,no
+basic,No,north,no
+premium,Yes,south,yes
+basic,No,north,yes
+premium,No,north,yes
+none,No service,south,no
+premium,No,north,no
+none,No service,north,no

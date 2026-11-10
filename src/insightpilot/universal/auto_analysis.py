@@ -1062,7 +1062,9 @@ def describe_field(a, name, kind, output):
 def structure_stage(a, facts, spec, output, state):
     cfg = state['cfg']
     result = auto_structure.discover(a, facts, cfg, absent_sql)
-    auto_structure.associations(a, facts, result, cfg, category_expression, correlation, auto_stats.correlation_ratio, absent_sql)
+    # The target is compared with each field elsewhere; associations here are between fields only.
+    fields = {name: f for name, f in facts.items() if name != spec.column}
+    auto_structure.associations(a, fields, result, cfg, category_expression, correlation, auto_stats.correlation_ratio, absent_sql)
     state['structure'] = result
     return (f'{len(result.conditional)} conditional, {len(result.dependencies)} dependencies, {len(result.derived)} derived, '
             f'{len(result.clusters)} clusters')

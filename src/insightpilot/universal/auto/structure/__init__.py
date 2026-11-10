@@ -360,11 +360,16 @@ def clusters(fields, pairs, cfg):
 
 
 def choose_representatives(structure, power, missing_share):
-    """Representative: the member with the highest target power, or the lowest missing share without a target."""
+    """Representative: the member with the highest target power, or the lowest missing share without a target.
+
+    Derived columns represent a cluster only when every member is derived.
+    """
+    derived = {d.column for d in structure.derived}
     for cluster in structure.clusters:
+        members = [m for m in cluster.members if m not in derived] or cluster.members
         if power:
-            cluster.representative = max(cluster.members, key=lambda m: (power.get(m) if power.get(m) is not None else -1, -cluster.members.index(m)))
+            cluster.representative = max(members, key=lambda m: (power.get(m) if power.get(m) is not None else -1, -cluster.members.index(m)))
             cluster.reason = 'highest cross-validated predictive power'
         else:
-            cluster.representative = min(cluster.members, key=lambda m: (missing_share.get(m, 0), cluster.members.index(m)))
+            cluster.representative = min(members, key=lambda m: (missing_share.get(m, 0), cluster.members.index(m)))
             cluster.reason = 'lowest missing share'
