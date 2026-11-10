@@ -362,7 +362,7 @@ def quality_editor(workspace,table,report):
                 st.session_state['ux-date-basis-'+str(workspace.directory)+'-'+table]=basis
                 st.rerun()
     with st.expander('Prepare data reversibly',expanded=True):
-        operation=st.selectbox('Preparation operation',['numeric','date','date_parts','trim','nullify','deduplicate','rename','select'])
+        operation=st.selectbox('Preparation operation',['numeric','date','date_parts','trim','nullify','deduplicate','rename','select','fill_missing'])
         col=st.selectbox('Preparation column',info['columns'],key='prepare-column-'+table)
         spec={'kind':operation,'column':col}
         if operation=='numeric':
@@ -375,6 +375,14 @@ def quality_editor(workspace,table,report):
         elif operation=='rename': spec['new_name']=st.text_input('New column name')
         elif operation=='select': spec['columns']=st.multiselect('Columns to retain',info['columns'],default=info['columns'])
         elif operation=='nullify': spec['value']=st.text_input('Exact literal to treat as missing')
+        elif operation=='fill_missing':
+            spec['strategy']=st.selectbox('Fill strategy',['constant','median','mean','mode'],key='fill-strategy-'+table)
+            if spec['strategy']=='constant': spec['value']=st.text_input('Fill value',key='fill-value-'+table)
+            other=st.selectbox('Only where another column equals (optional)',[None]+[c for c in info['columns'] if c!=col],key='fill-condition-'+table,
+                               format_func=lambda v:'Every missing value' if v is None else v)
+            if other: spec['condition']={'column':other,'value':st.text_input('Value of '+other,key='fill-condition-value-'+table)}
+            spec['indicator']=st.checkbox(f'Add {col}_was_missing (1 where the value was missing)',key='fill-indicator-'+table)
+            st.caption('Median and mean need a numeric column; mode ties go to the smallest value. Filled row IDs are kept in a ledger.')
         st.caption('A new version is created. Source values and earlier versions remain available. Invalid conversions become NULL with original values and row references in a separate error ledger. Roles must be reviewed again after preparation.')
         if st.button('Apply preparation to a new version'):
             workspace.transform(table,spec); st.rerun()
@@ -383,6 +391,11 @@ def quality_editor(workspace,table,report):
         format_func=lambda i:f'{i+1} · {versions[i]["operation"]["kind"]} · {versions[i]["rows"]:,} rows · {versions[i]["errors"]:,} conversion errors')
     if st.button('Activate selected version'):
         workspace.activate(table,versions[version]['table']); st.rerun()
+    filled=workspace.filled_rows(table)
+    if len(filled):
+        receipt=next(v for v in versions if v['table']==info['current'])['operation']
+        st.info(f'This version filled {receipt["filled"]:,} missing values in {receipt["column"]} with {receipt["fill_value"]!r} ({receipt["strategy"]}). Filled rows (first 1,000):')
+        st.dataframe(filled,hide_index=True,width='stretch')
     errors=workspace.conversion_errors(table)
     if len(errors):
         st.warning('Conversion errors were retained, not silently discarded. Showing at most 1,000; the complete ledger remains in the workspace database.')

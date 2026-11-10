@@ -54,8 +54,9 @@ SETTINGS = {
     'duplicate_groups': 20,
 }
 NA_MARKERS = ('N/A', 'NA', 'NULL', '?', '-')
+# Generic outcome-like name fragments. They raise a suggestion's rank but never decide it.
 TARGET_HINTS = ('target', 'label', 'outcome', 'result', 'status', 'class', 'flag', 'churn', 'default', 'converted',
-                'fraud', 'sales', 'revenue', 'price', 'score')
+                'fraud', 'revenue', 'price', 'score')
 POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
 STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'),

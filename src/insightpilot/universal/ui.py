@@ -621,6 +621,9 @@ def _main():
         with brief:investigation_brief(engine,metric)
         with compare:investigation(engine,report,metric,scope)
     else:
+        if st.radio('Reports view',['Report builder','Automatic analysis'],horizontal=True,key='reports-view')=='Automatic analysis':
+            from .ui_auto import automatic_page
+            automatic_page(workspace,table); return
         from .ui_deliverables import report_builder
         report_builder(engine,metric)
         with st.expander('Quick selection report and manifest replay'):

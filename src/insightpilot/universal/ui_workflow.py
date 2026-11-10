@@ -126,6 +126,8 @@ def home(workspace):
     if b.button('Continue recent analysis',width='stretch'):go('Explore' if workspace.tables() else 'Data Hub')
     if c.button('Investigate a problem',width='stretch'):go('Investigate' if workspace.tables() else 'Data Hub')
     if d.button('View saved reports',width='stretch'):go('Reports')
+    if workspace.tables() and st.button('Run automatic analysis',key='ux-home-auto'):
+        go('Reports',presets={'reports-view':'Automatic analysis'})
     st.caption('Analyses and report drafts remain in this temporary working session. Save Project or Save Changes is the only way to update Saved Projects.')
     if st.button('New Project',width='stretch'):request_transition('new')
     st.subheader('Saved Projects')
@@ -250,6 +252,12 @@ def dataset_overview(workspace,table,report=None,*,new=False):
         st.text('Source: '+info['source']['origin']+' · SHA-256 '+info['source']['sha256'][:16])
         for warning in info.get('import_warnings',[]):st.warning(warning)
         sheet_overlap_details(info)
+        st.write('**How would you like to analyse this dataset?**')
+        manual,automatic=st.columns(2)
+        if manual.button('Analyze manually',key='ux-data-manual-'+table,width='stretch'):go('Quality & Preparation',table=table)
+        if automatic.button('Run automatic analysis',key='ux-data-auto-'+table,type='primary',width='stretch'):
+            go('Reports',table=table,presets={'reports-view':'Automatic analysis','auto-table':table})
+        st.caption('Manual: review quality, explore and investigate step by step. Automatic: one complete report you can read and download.')
         a,b,c=st.columns(3)
         if a.button('Explore data',key='ux-data-explore-'+table,type='primary',width='stretch'):go('Explore',table=table)
         if b.button('Review data quality',key='ux-data-quality-'+table,width='stretch'):go('Quality & Preparation',table=table)
