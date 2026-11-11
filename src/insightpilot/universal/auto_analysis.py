@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 
 from ..datasets import quote
 from . import auto_stats, visuals
-from .auto import leakage as auto_leakage, multivariate as auto_multivariate
+from .auto import confounding as auto_confounding, leakage as auto_leakage, multivariate as auto_multivariate, segments as auto_segments
 from .auto import quality as auto_quality, structure as auto_structure, univariate as auto_univariate
 from .auto.config import DEFAULT as DEFAULT_CONFIG
 from .auto.stats import bootstrap_interval
@@ -65,7 +65,7 @@ TARGET_HINTS = ('target', 'label', 'outcome', 'result', 'status', 'class', 'flag
 POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
 STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'), ('structure', 'Structure discovery'),
-          ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'),
+          ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'), ('confounding', 'Confounding and interactions'), ('segments', 'Segments'),
           ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
 
@@ -514,6 +514,8 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
     stage('leakage', lambda: leakage_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
     stage('ranking', lambda: ranking_stage(output, state), skip_reason=None if target else 'no target chosen')
     stage('multivariate', lambda: multivariate_stage(worker, spec, facts, time_axis, output, state), skip_reason=None if target else 'no target chosen')
+    stage('confounding', lambda: confounding_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
+    stage('segments', lambda: segments_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
     finish_structure(output, state, bool(target))
     stage('relationships', lambda: relationships_stage(worker, spec, facts, time_axis, output, state))
     stage('time', lambda: time_stage(worker, spec, time_axis, output), skip_reason=None if time_axis else 'no time axis chosen')
@@ -1242,12 +1244,109 @@ def multivariate_stage(a, spec, facts, time_axis, output, state):
             items.append(figure(item_id(name, 'ale'), f'{name}: accumulated local effect', visuals.style(fig, f'{name}: accumulated local effect on predicted {label}',
                                 name, f'Effect on predicted {label}'), evidence=evidence))
     output['sections']['multivariate'] = items
+    state['model_data'] = result.data
     output['multivariate'] = deep_clean({'metrics': result.metrics, 'no_signal': result.no_signal, 'signal': result.signal, 'importance': result.importance,
                               'verdicts': result.verdicts, 'regression': result.regression, 'dropped_vif': result.dropped_vif, 'ale': result.ale,
                               'sample_rows': result.sample_rows, 'total_rows': result.total_rows, 'fields': result.fields})
     if result.total_rows > result.sample_rows:
         output['sampling'].append(['multivariate model', result.sample_rows, result.total_rows, cfg.seed, 'rows ordered by hash(_row_id + seed)'])
     return f'{len(fields)} fields; ' + ('little joint signal' if result.no_signal else f'model gain {result.signal:.3f}')
+
+
+# ---------------- confounding, interactions and segments ----------------
+def model_fields(output, state, facts):
+    """Ranked, non-leakage fields with each redundancy cluster represented once; derived fields are already excluded."""
+    suspects = {s['field'] for s in output.get('leakage', [])}
+    structure = state.get('structure')
+    others = {m for c in (structure.clusters if structure else []) for m in c.members if m != c.representative}
+    return [e['field'] for e in output.get('ranking', []) if e['field'] not in suspects and e['field'] not in others and e['field'] in facts]
+
+
+def confounding_stage(a, spec, facts, output, state):
+    cfg = state['cfg']; structure = state.get('structure')
+    # Overlapping fields are exactly what this screen examines, so redundancy clusters are not collapsed here.
+    suspects = {s['field'] for s in output.get('leakage', [])}
+    ranked = [e['field'] for e in output.get('ranking', []) if e['field'] not in suspects and e['field'] in facts]
+    kinds = {n: 'numeric' if facts[n]['type'] == 'numeric' else 'categorical' for n in ranked}
+    applicable = {c.column: c.applicable_where for c in structure.conditional} if structure else {}
+    checks, queries, note = auto_confounding.screen(a, spec, ranked, kinds, cfg, absent_sql, applicable)
+    evidence = a.evidence('Exact counts per stratum, exposure and target on all rows; CMH (statsmodels StratifiedTable) or weighted mean differences', *queries)
+    items = [text(note)] if note else []
+    ratio = spec.kind == 'binary'
+    items.append(table('confounding-checks', 'Confounding screen: each field compared within levels of another field', [('Field', 'text'),
+        ('Comparison', 'text'), ('Stratified by', 'text'), ('Crude ' + ('odds ratio' if ratio else 'difference'), 'number'),
+        ('Stratified ' + ('odds ratio (CMH)' if ratio else 'difference'), 'number'), ('95% CI low', 'number'), ('95% CI high', 'number'),
+        ('p-value', 'p'), ('Homogeneity p (Breslow–Day)' if ratio else 'Homogeneity p', 'p'), ('Strata', 'count'), ('Flag', 'text')],
+        [[c.field, c.comparison, c.stratifier, c.crude, c.stratified, c.low, c.high, c.p_value, c.homogeneity_p, c.strata_used, c.flag] for c in checks],
+        evidence=evidence, note=f'The {cfg.confounding_fields} highest-ranked fields, each within the strata of the next {cfg.confounding_strata} '
+        'ranked fields (numbers in quartiles, categories by their 5 most frequent levels). Reverses: the direction changes and the stratified '
+        'interval excludes no effect. Drops by more than half: the stratified effect is under half the crude one (on the log scale for odds ratios). '
+        'Statistical associations, not causes.'))
+    for c in [c for c in checks if c.flag][:10]:
+        items.append(table(item_id(f'{c.field}-{c.stratifier}', 'strata'), f'{c.comparison}, within {c.stratifier}', [(c.stratifier, 'text'),
+            ('Rows in comparison group', 'count'), ('Rows in other group', 'count'), ('Odds ratio' if ratio else 'Difference', 'number')],
+            c.strata, evidence=evidence, note=f'Crude {c.crude:,.3g}; stratified {c.stratified:,.3g}; flag: {c.flag}.'))
+    output['confounding'] = deep_clean([vars(c) for c in checks])
+    interactions = []; data = state.get('model_data')
+    if data is not None:
+        fields = [f for f in ranked if f in data.fields][:cfg.interaction_fields]
+        rows, note = auto_confounding.interaction_screen(data.raw, data.y, spec.kind, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg)
+        state['interactions'] = [(r[0], r[1]) for r in rows if r[4]]
+        if note: items.append(text(note))
+        interactions = rows
+        model_evidence = {'version': output['analysis_version'], 'computation': f'For each pair: {cfg.cv_folds}-fold cross-validated '
+                          + ('L2 logistic regression (AUC)' if spec.kind == 'binary' else 'ridge regression (R²)') + ' with the two fields as separate levels '
+                          'vs their joint levels; numbers in quintiles, categories by their most frequent levels', 'queries': []}
+        items.append(table('interactions', 'Interaction screen: gain from joint levels over separate effects', [('Field', 'text'), ('Field', 'text'),
+            ('Gain (' + ('ΔAUC' if spec.kind == 'binary' else 'ΔR²') + ')', 'effect'), ('Standard error', 'effect'), ('LR p-value', 'p'),
+            ('Benjamini–Hochberg adjusted p', 'p'), ('Reported', 'text')],
+            [[r[0], r[1], r[2], r[3], r[5], r[6], 'yes' if r[4] else ''] for r in rows], evidence=model_evidence,
+            note=f'Reported when the likelihood-ratio test of the joint levels (vs separate levels) has a Benjamini–Hochberg adjusted p below 0.05 '
+                 f'across all pairs, and the cross-validated gain is at least {cfg.interaction_minimum} and more than twice its standard error.'))
+        for first, second, *_ in [r for r in rows if r[4]][:cfg.interactions_shown]:
+            kinds2 = {first: kinds[first], second: kinds[second]}
+            query = auto_confounding.two_way_table(a, spec, first, second, kinds2, absent_sql)
+            items.append(table(item_id(f'{first}-{second}', 'interaction'), f'{first} × {second}: target by joint levels', [(first, 'text'), (second, 'text'),
+                ('Rows', 'count'), ('Positive rate' if spec.kind == 'binary' else f'Mean {spec.column}', 'percent' if spec.kind == 'binary' else 'number')],
+                query['rows'], evidence=a.evidence('Counts and target by joint levels on all rows', query)))
+    output['interactions'] = deep_clean([{'first': r[0], 'second': r[1], 'gain': r[2], 'se': r[3], 'reported': r[4], 'p_value': r[5], 'adjusted_p': r[6]}
+                                         for r in interactions])
+    output['sections']['confounding'] = items
+    return f'{sum(1 for c in checks if c.flag)} flagged of {len(checks)} checks; {sum(1 for r in interactions if r[4])} interactions'
+
+
+def segments_stage(a, spec, facts, output, state):
+    cfg = state['cfg']; data = state.get('model_data')
+    if data is None: return 'no model sample'
+    fields = [f for f in model_fields(output, state, facts) if f in data.fields]
+    joint = [(x, y) for x, y in state.get('interactions', []) if facts[x]['type'] != 'numeric' and facts[y]['type'] != 'numeric' and x in data.fields and y in data.fields]
+    segments, note = auto_segments.discover(a, spec, data.raw, data.y, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg, absent_sql, joint)
+    kept = [s for s in segments if s.kept]
+    overall, queries = auto_segments.full_data(a, spec, kept) if kept else (None, [])
+    higher = sorted([s for s in kept if s.direction == 'higher'], key=lambda s: (-s.impact, s.rule))[:cfg.segments_high]
+    lower = sorted([s for s in kept if s.direction == 'lower'], key=lambda s: (-s.impact, s.rule))[:cfg.segments_low]
+    evidence = a.evidence(f'Decision tree (depth {cfg.segment_depth}, minimum leaf max({cfg.segment_min_rows}, {cfg.segment_min_share:.0%} of rows), seed {cfg.seed}); '
+                          'rules re-counted on every row', *queries)
+    binary = spec.kind == 'binary'
+    columns = [('Rule', 'text'), ('Rows', 'count'), ('Share of rows', 'percent'), ('Rate' if binary else 'Mean', 'percent' if binary else 'number'),
+               ('95% CI low', 'percent' if binary else 'number'), ('95% CI high', 'percent' if binary else 'number'), ('Lift', 'number'),
+               ('Share of all positives' if binary else 'Share of target total', 'percent'), ('Held-out rows', 'count'),
+               ('Held-out ' + ('rate' if binary else 'mean'), 'percent' if binary else 'number'), ('Held-out lift', 'number')]
+
+    def rows(group):
+        return [[s.rule, s.rows, s.share_of_rows, s.rate, s.low, s.high, s.lift, s.share_of_target, s.held_out_rows, s.held_out_rate, s.held_out_lift]
+                for s in group]
+    items = [text(note)]
+    items.append(table('segments-higher', 'Segments with a higher ' + ('rate' if binary else 'mean'), columns, rows(higher), evidence=evidence,
+                       note=f'Validated on held-out rows: lift at least {cfg.segment_lift_minimum} and a held-out 95% interval excluding the overall '
+                            f'{"rate" if binary else "mean"}. Ordered by rows × |difference from overall|. Rates and sizes are on every row.'))
+    items.append(table('segments-lower', 'Segments with a lower ' + ('rate' if binary else 'mean'), columns, rows(lower), evidence=evidence))
+    items.append(table('segments-dropped', 'Tree leaves that did not pass validation', [('Rule', 'text'), ('Held-out rows', 'count'),
+        ('Held-out lift', 'number'), ('Reason', 'text')], [[s.rule, s.held_out_rows, s.held_out_lift, s.reason] for s in segments if not s.kept],
+        evidence=evidence))
+    output['segments'] = deep_clean([vars(s) | {'conditions': [list(c) for c in s.conditions]} for s in higher + lower])
+    output['sections']['segments'] = items
+    return f'{len(higher)} higher, {len(lower)} lower of {len(segments)} leaves'
 
 
 # ---------------- stage 6 ----------------
@@ -1422,7 +1521,7 @@ def configuration_for(a):
 
 def iter_items(output):
     sections = output['sections']
-    for key in ('quality', 'target_selection', 'corrections', 'structure', 'target', 'leakage', 'ranking', 'multivariate'):
+    for key in ('quality', 'target_selection', 'corrections', 'structure', 'target', 'leakage', 'ranking', 'multivariate', 'segments', 'confounding'):
         yield from sections.get(key, [])
     for field in sections.get('fields', []):
         yield from field['items']

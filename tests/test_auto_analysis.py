@@ -279,7 +279,8 @@ def test_descriptive_report_without_target(descriptive):
 # ---------- robustness ----------
 def test_every_stage_records_its_status_and_time(binary):
     assert statuses(binary) == {'profile': 'done', 'target_selection': 'done', 'corrections': 'done', 'structure': 'done', 'target_overview': 'done',
-                                'fields': 'done', 'leakage': 'done', 'ranking': 'done', 'multivariate': 'done', 'relationships': 'done', 'time': 'done', 'evidence': 'done'}
+                                'fields': 'done', 'leakage': 'done', 'ranking': 'done', 'multivariate': 'done', 'confounding': 'done', 'segments': 'done',
+                                'relationships': 'done', 'time': 'done', 'evidence': 'done'}
     assert all(s['seconds'] >= 0 for s in binary['stages'])
 
 

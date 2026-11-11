@@ -130,7 +130,7 @@ def show_report(output, key):
         st.warning(warning)
     for section, title in [('target_selection', 'Target selection'), ('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'),
                            ('structure', 'Structure'), ('target', 'Target overview'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'),
-                           ('multivariate', 'Multivariate model')]:
+                           ('multivariate', 'Multivariate model'), ('segments', 'Segments'), ('confounding', 'Confounding and interactions')]:
         if sections.get(section):
             with st.expander(title, expanded=section in ('ranking', 'target')):
                 show_items(sections[section], key)

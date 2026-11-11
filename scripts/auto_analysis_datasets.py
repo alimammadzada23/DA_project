@@ -124,6 +124,14 @@ def verify_telco(output, raw, checks):
     verdicts = {v[0]: v[8] for v in output['multivariate']['verdicts']}
     check(checks, 'Univariate vs adjusted table covers Contract and tenure', {'Contract', 'tenure'} <= set(verdicts), True)
     check(checks, 'No leakage suspects in Telco', output['leakage'], [])
+    # Phase 3 analyst checks
+    high = [s for s in output['segments'] if s['direction'] == 'higher']
+    check(checks, 'At least one validated high-risk segment with held-out lift ≥ 1.5', bool(high and max(s['held_out_lift'] for s in high) >= 1.5), True)
+    best = max(high, key=lambda s: s['held_out_lift'])
+    mask = (raw.Contract == 'Month-to-month') & (raw.InternetService == 'Fiber optic') & (raw.tenure.astype(float) <= 17.5)
+    if best['rule'] == 'Contract = Month-to-month AND InternetService = Fiber optic AND tenure ≤ 17.5':
+        check(checks, 'Top segment size on all rows', best['rows'], int(mask.sum()))
+        check(checks, 'Top segment churn rate on all rows', best['rate'], (raw.Churn[mask] == 'Yes').mean())
 
 
 def adult(workspace, source):

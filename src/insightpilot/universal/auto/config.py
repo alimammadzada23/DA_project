@@ -59,6 +59,20 @@ class AnalysisConfig:
     weakens_share: float = 0.5              # adjusted below this share of univariate = weakens substantially
     ale_fields: int = 5
     ale_bins: int = 10
+    # Confounding and interactions
+    confounding_fields: int = 10
+    confounding_strata: int = 3
+    interaction_fields: int = 8
+    interaction_levels: int = 8
+    interaction_minimum: float = 0.01       # ΔAUC or ΔR² from joint levels needed to report an interaction
+    interactions_shown: int = 5
+    # Segments
+    segment_depth: int = 3
+    segment_min_rows: int = 30
+    segment_min_share: float = 0.01
+    segment_lift_minimum: float = 1.2
+    segments_high: int = 5
+    segments_low: int = 3
     # Shape
     monotone_share_minimum: float = 0.8     # below this share of between-bin variation explained by a monotone fit = non-linear
 

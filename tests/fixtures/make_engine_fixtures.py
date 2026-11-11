@@ -65,9 +65,33 @@ def imbalance(rng, n=20000):
     return pd.DataFrame({'group': group, 'z': np.round(rng.normal(size=n), 4), 'outcome': np.where(rng.random(n) < rate, 'yes', 'no')})
 
 
+def simpson(rng, n=4000):
+    """#5: within each stratum the treatment lowers the rate by 10 points, but treated rows sit mostly in the high-rate stratum."""
+    stratum = rng.choice(['A', 'B'], size=n)
+    treated = rng.random(n) < np.where(stratum == 'A', 0.9, 0.1)
+    rate = np.where(stratum == 'A', 0.8, 0.3) - np.where(treated, 0.1, 0.0)
+    return pd.DataFrame({'treatment': np.where(treated, 'yes', 'no'), 'stratum': stratum, 'noise': np.round(rng.normal(size=n), 4),
+                         'outcome': np.where(rng.random(n) < rate, 'yes', 'no')})
+
+
+def interaction(rng, n=4000):
+    """#6: the outcome depends on a XOR b (rate 80% when they differ, 20% when equal); neither has a main effect."""
+    a = rng.integers(0, 2, n); b = rng.integers(0, 2, n)
+    rate = np.where(a != b, 0.8, 0.2)
+    return pd.DataFrame({'a': np.where(a == 1, 'on', 'off'), 'b': np.where(b == 1, 'up', 'down'), 'c': np.round(rng.normal(size=n), 4),
+                         'outcome': np.where(rng.random(n) < rate, 'yes', 'no')})
+
+
+def null(rng, n=3000):
+    """#8: no field is related to the outcome."""
+    return pd.DataFrame({'p': np.round(rng.normal(size=n), 4), 'q': np.round(rng.exponential(size=n), 4), 'r': rng.choice(['x', 'y', 'z'], size=n),
+                         's': rng.choice(['k', 'l'], size=n), 't': rng.integers(0, 50, n), 'outcome': np.where(rng.random(n) < 0.3, 'yes', 'no')})
+
+
 FIXTURES = {'ENGINE-01-conditional.csv': conditional, 'ENGINE-03-derived.csv': derived,
             'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness, 'ENGINE-02-leakage.csv': leakage,
-            'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance}
+            'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance, 'ENGINE-05-simpson.csv': simpson,
+            'ENGINE-06-interaction.csv': interaction, 'ENGINE-08-null.csv': null}
 
 
 if __name__ == '__main__':

@@ -51,6 +51,7 @@ class MultivariateResult:
     notes: list = field(default_factory=list)
     sample_rows: int = 0
     total_rows: int = 0
+    data: object = field(default=None, repr=False)
 
 
 def load(a, spec, fields, facts, cfg, time_axis, absent_sql, text_value):
@@ -333,6 +334,7 @@ def analyse(a, spec, fields, facts, cfg, time_axis, absent_sql, text_value, clus
         result.notes.append('No fields are available for the multivariate model.'); return result, []
     data, evidence = load(a, spec, fields, facts, cfg, time_axis, absent_sql, text_value)
     result.sample_rows, result.total_rows = len(data.y), data.total_rows
+    result.data = data
     if data.total_rows > len(data.y):
         result.notes.append(f'Models use a seeded sample of {len(data.y):,} of {data.total_rows:,} rows (seed {cfg.seed}).')
     if data.time_ordered:

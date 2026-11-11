@@ -18,7 +18,7 @@ from .report import safe_spreadsheet_frame
 
 SECTION_TITLES = [('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'), ('structure', 'Structure'),
                   ('target', 'Target overview'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'),
-                  ('fields', 'Fields'),
+                  ('segments', 'Segments'), ('confounding', 'Confounding and interactions'), ('fields', 'Fields'),
                   ('relationships', 'Relationships between fields'), ('time', 'Time analysis')]
 
 
@@ -128,6 +128,10 @@ def method_items(output):
         ['Adjusted model', 'Logistic (odds ratios) or linear (HC3) regression on cluster representatives, standardised numbers, pooled rare levels and '
                            'VIF pruning; associations holding the other listed fields constant'],
         ['Accumulated local effects', 'First-order ALE (Apley & Zhu 2020) on equal-count intervals, centred to mean zero'],
+        ['Confounding screen', 'Cochran–Mantel–Haenszel common odds ratio with Breslow–Day homogeneity (binary targets) or a weighted within-stratum '
+                               'mean difference (numeric targets), compared with the crude effect'],
+        ['Interactions', 'Cross-validated L2 logistic or ridge regression of each pair of top fields as joint levels vs separate levels'],
+        ['Segments', 'A shallow decision tree grown on 80% of the model sample; each leaf validated on the other 20%; surviving rules re-counted on all rows'],
         ['Non-linear shapes', 'Flagged when the best monotone (isotonic) fit explains less of the between-bin variation than the threshold and the bins differ (p < 0.01)'],
     ]
     thresholds = [[key.replace('_', ' '), value] for key, value in s.items()]
