@@ -15,9 +15,33 @@ tables.
    multiclass or numeric), the positive class for a binary target, and optionally a
    date column as the time axis. **No target** gives a descriptive report.
 4. Press **Run automatic analysis** and watch each stage.
-5. Read the report in the app, or use **Download HTML** (standalone, opens offline) or
-   **Download Excel** (one sheet per table). Earlier reports stay under **Previous
-   reports**, and every chart is also saved as evidence for the manual report builder.
+5. Read the report in the app, or download it: **Download HTML** (one self-contained
+   file with inline SVG charts, opens offline, usually well under 2 MB), **Download
+   Excel** (one sheet per table plus a Findings sheet), `results.json` (every structured
+   result and finding; identical for identical data and settings), `findings.csv` and
+   `evidence.json` (the query or computation behind every table and chart). Earlier
+   reports stay under **Previous reports**, and every chart is also saved as evidence
+   for the manual report builder.
+
+## The report
+
+Sections, in order: header (file hash, versions, target, date, configuration hash,
+seed), at a glance (up to five numbers), warnings, top 10 findings, fields associated
+with the target, segments, structure, field details (collapsed), relationships,
+confounding and interactions, time, data quality and corrections, method and
+limitations, **Analyst conclusions** (left empty for you), and the evidence appendix.
+
+Each finding has an ID (F01, F02, …), a type, a severity from fixed rules
+(critical, important, informative), one templated sentence with its numbers and
+interval, caveats, and a link to the table or chart that supports it. Charts use the
+Okabe–Ito colour-blind-safe palette; rate charts show 95% intervals and a dashed
+overall-rate line.
+
+**Optional local AI summary.** Off by default. Under the report, **Write local AI
+summary** sends only the findings list to the local model. Every sentence must cite
+finding IDs, may only use numbers from the cited findings, and may not use causal
+wording; failing sentences are removed. The summary appears in the HTML as a separate,
+labelled section and is never part of `results.json`.
 
 ## Stages
 

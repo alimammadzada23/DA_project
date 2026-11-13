@@ -132,6 +132,18 @@ def verify_telco(output, raw, checks):
     if best['rule'] == 'Contract = Month-to-month AND InternetService = Fiber optic AND tenure ≤ 17.5':
         check(checks, 'Top segment size on all rows', best['rows'], int(mask.sum()))
         check(checks, 'Top segment churn rate on all rows', best['rate'], (raw.Churn[mask] == 'Yes').mean())
+    # Phase 4 analyst checks
+    nulls = {f['fields'][0] for f in output['findings'] if f['type'] == 'null_result'}
+    check(checks, 'gender and PhoneService reported as null results', {'gender', 'PhoneService'} <= nulls, True)
+    html = html_report(output)
+    check(checks, 'HTML report under 2 MB', len(html.encode()) < 2_000_000, True)
+    check(checks, 'Analyst conclusions still empty in the new layout', '<div class="conclusions"></div>' in html, True)
+    top = output['findings'][:10]
+    check(checks, 'Top findings include an association and a validated segment',
+          {'strong_association', 'high_impact_segment'} <= {f['type'] for f in top}, True)
+    contract = next(f for f in output['findings'] if f['type'] == 'strong_association' and f['fields'] == ['Contract'])
+    month = (raw[raw.Contract == 'Month-to-month'].Churn == 'Yes').mean()
+    check(checks, 'Contract finding states the month-to-month rate', f'{month * 100:.1f}%' in contract['statement'], True)
 
 
 def adult(workspace, source):

@@ -73,6 +73,12 @@ class AnalysisConfig:
     segment_lift_minimum: float = 1.2
     segments_high: int = 5
     segments_low: int = 3
+    # Findings digest
+    finding_power_auc: float = 0.05         # ΔAUC from one field before an association becomes a finding
+    finding_power_r2: float = 0.02
+    finding_missing_share: float = 0.20     # columns missing at least this share become a data-quality finding
+    null_power: float = 0.01                # |power| below this with adjusted p ≥ 0.05 is reported as no association
+    top_findings: int = 10
     # Shape
     monotone_share_minimum: float = 0.8     # below this share of between-bin variation explained by a monotone fit = non-linear
 

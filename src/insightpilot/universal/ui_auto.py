@@ -4,7 +4,9 @@ import plotly.io as pio
 import streamlit as st
 
 from . import auto_analysis as aa
-from .auto_report import excel_report, frame, html_report, method_items
+from .auto import narrative
+from .auto_report import REPORT_SECTIONS, downloads, excel_report, frame, html_report, method_items, tiles
+from .local_ai import LocalAIError, LocalConfig, OllamaClient
 
 STATUS_ICON = {'pending': '○', 'running': '…', 'done': '✓', 'done with errors': '✓ with errors', 'failed': '✗', 'skipped': '–'}
 TYPE_LABEL = {'binary': 'Binary (two classes)', 'multiclass': 'Multiclass (categories)', 'numeric': 'Numeric'}
@@ -110,39 +112,79 @@ def show_items(items, key):
                             config={'displaylogo': False})
 
 
+def findings_frame(findings):
+    return pd.DataFrame([{'ID': f['id'], 'Severity': f['severity'], 'Type': f['label'], 'Statement': f['statement'],
+                          'Evidence': f.get('evidence') or '', 'Caveats': ' '.join(f.get('caveats') or [])} for f in findings])
+
+
+def ai_panel(output, key):
+    """Optional and off by default: the local model sees only the findings digest; every sentence is checked before it is shown."""
+    store = st.session_state.setdefault('auto-ai', {})
+    with st.expander('Optional: local AI summary of the findings'):
+        st.caption('Runs only when you press the button, on the local model at a loopback address. The model receives the findings list '
+                   'only; sentences without a finding ID, with numbers that are not in the cited findings, or with causal wording are removed. '
+                   'The summary is added to the HTML download as a separate, labelled section.')
+        if st.button('Write local AI summary', key=f'auto-ai-{key}-{output["run_id"]}'):
+            try:
+                with st.spinner('Asking the local model…'):
+                    store[output['run_id']] = narrative.summarise(output, OllamaClient(LocalConfig()))
+            except LocalAIError as exc:
+                st.error(str(exc))
+        section = store.get(output['run_id'])
+        if section:
+            for sentence in section['sentences']: st.write('• ' + sentence['text'])
+            if section['rejected']: st.caption(f'{len(section["rejected"])} sentence(s) failed the checks and were removed.')
+    return store.get(output['run_id'])
+
+
 def show_report(output, key):
     st.markdown(f'### Report · {output["dataset"]}')
     failed = [s for s in output['stages'] if s['status'] == 'failed']
     for stage in failed:
         st.error(f'{stage["title"]} failed: {stage.get("error", "")}')
-    a, b = st.columns(2)
-    stem = f'analysis-{output["table"]}-{output["run_id"]}'
-    a.download_button('Download HTML', html_report(output), file_name=stem + '.html', mime='text/html', on_click='ignore',
-                      key=f'auto-html-{key}-{output["run_id"]}', width='stretch')
-    b.download_button('Download Excel', excel_report(output), file_name=stem + '.xlsx', on_click='ignore', key=f'auto-xlsx-{key}-{output["run_id"]}',
-                      mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch')
-    st.dataframe(pd.DataFrame([{'Stage': s['title'], 'Status': s['status'], 'Detail': s.get('detail') or s.get('error') or '',
-                                'Seconds': s['seconds']} for s in output['stages']]), hide_index=True, width='stretch')
-    if output.get('saved_blocks'):
-        st.caption(f'{output["saved_blocks"]:,} charts were also saved as evidence for the report builder and the rest of the manual workflow.')
-    sections = output['sections']
     for warning in output.get('warnings', []):
         st.warning(warning)
-    for section, title in [('target_selection', 'Target selection'), ('quality', 'Data quality'), ('corrections', 'Corrections applied and issues reported'),
-                           ('structure', 'Structure'), ('target', 'Target overview'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'),
-                           ('multivariate', 'Multivariate model'), ('segments', 'Segments'), ('confounding', 'Confounding and interactions')]:
-        if sections.get(section):
-            with st.expander(title, expanded=section in ('ranking', 'target')):
-                show_items(sections[section], key)
-    if sections.get('fields'):
-        st.markdown('#### Fields')
-        for index, field in enumerate(sections['fields']):
-            with st.expander(f'{field["field"]} · {field["type"]}', expanded=index == 0):
-                show_items(field['items'], key)
-    for section, title in [('relationships', 'Relationships between fields'), ('time', 'Time analysis')]:
-        if sections.get(section):
-            with st.expander(title):
-                show_items(sections[section], key)
+    found = tiles(output)
+    for column, (value, label) in zip(st.columns(len(found)), found):
+        column.metric(label, value)
+    ai_section = ai_panel(output, key)
+    stem = f'analysis-{output["table"]}-{output["run_id"]}'
+    buttons = st.columns(5)
+    buttons[0].download_button('Download HTML', html_report(output, ai_section), file_name=stem + '.html', mime='text/html', on_click='ignore',
+                               key=f'auto-html-{key}-{output["run_id"]}', width='stretch')
+    buttons[1].download_button('Download Excel', excel_report(output), file_name=stem + '.xlsx', on_click='ignore', key=f'auto-xlsx-{key}-{output["run_id"]}',
+                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch')
+    for column, (suffix, (data, mime)) in zip(buttons[2:], downloads(output).items()):
+        column.download_button(suffix, data, file_name=f'{stem}-{suffix}', mime=mime, on_click='ignore',
+                               key=f'auto-{suffix}-{key}-{output["run_id"]}', width='stretch')
+    findings = output.get('findings') or []
+    top = (output.get('config') or {}).get('top_findings', 10)
+    st.markdown(f'#### Top findings')
+    if findings:
+        st.caption('Ordered by severity; associations, not causes. Each finding names the table or chart that supports it.')
+        st.dataframe(findings_frame(findings[:top]), hide_index=True, width='stretch')
+        if len(findings) > top:
+            with st.expander(f'All {len(findings)} findings'):
+                st.dataframe(findings_frame(findings), hide_index=True, width='stretch')
+    else:
+        st.caption('No findings met the reporting thresholds.')
+    sections = output['sections']
+    for section, title, sources, empty in REPORT_SECTIONS:
+        present = [s for s in sources if sections.get(s)]
+        if section == 'fields':
+            if present:
+                st.markdown('#### Field details')
+                for index, field in enumerate(sections['fields']):
+                    with st.expander(f'{field["field"]} · {field["type"]}', expanded=False):
+                        show_items(field['items'], key)
+            continue
+        if not present: continue
+        with st.expander(title, expanded=section == 'drivers'):
+            for source in present: show_items(sections[source], key)
     with st.expander('Method and limitations'):
+        st.dataframe(pd.DataFrame([{'Stage': s['title'], 'Status': s['status'], 'Detail': s.get('detail') or s.get('error') or '',
+                                    'Seconds': s['seconds']} for s in output['stages']]), hide_index=True, width='stretch')
         show_items(method_items(output), key)
+    if output.get('saved_blocks'):
+        st.caption(f'{output["saved_blocks"]:,} charts were also saved as evidence for the report builder and the rest of the manual workflow.')
     st.caption('The downloaded HTML report also contains the evidence appendix and an empty Analyst conclusions section.')

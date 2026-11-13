@@ -21,6 +21,7 @@ import plotly.graph_objects as go
 
 from ..datasets import quote
 from . import auto_stats, visuals
+from .auto import findings as auto_findings
 from .auto import confounding as auto_confounding, leakage as auto_leakage, multivariate as auto_multivariate, segments as auto_segments
 from .auto import quality as auto_quality, structure as auto_structure, univariate as auto_univariate
 from .auto.config import DEFAULT as DEFAULT_CONFIG
@@ -66,7 +67,7 @@ POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
 STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'), ('structure', 'Structure discovery'),
           ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'), ('confounding', 'Confounding and interactions'), ('segments', 'Segments'),
-          ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('evidence', 'Saved evidence')]
+          ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('findings', 'Findings digest'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
 
 
@@ -408,6 +409,18 @@ def apply_corrections(analysis, facts, target, target_type):
 
 
 # ---------------- the run ----------------
+def software_versions():
+    """Versions of the packages whose numerics the results depend on."""
+    import platform
+    from importlib import metadata
+    versions = {'python': platform.python_version()}
+    for label, name in (('engine', 'insightpilot'), ('duckdb', 'duckdb'), ('numpy', 'numpy'), ('pandas', 'pandas'), ('scipy', 'scipy'),
+                        ('scikit-learn', 'scikit-learn'), ('statsmodels', 'statsmodels')):
+        try: versions[label] = metadata.version(name)
+        except metadata.PackageNotFoundError: versions[label] = 'not installed'
+    return versions
+
+
 def run(workspace, table_name, *, target=None, target_type=None, positive=None, time_axis=None, progress=None,
         prepared=None, save_evidence=True, apply_corrections_step=True, config=None):
     progress = progress or (lambda *args: None)
@@ -422,7 +435,7 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
               'target': target, 'target_type': target_type if target else None, 'positive': positive if target_type == 'binary' else None,
               'time_axis': time_axis, 'settings': SETTINGS, 'stages': [], 'sections': {}, 'skipped': [], 'field_failures': [],
               'sampling': [], 'small_sample_warnings': [], 'warnings': [], 'nonlinear': [], 'leakage': [],
-              'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed}
+              'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed, 'versions': software_versions()}
     state = {'prepared': prepared, 'cfg': cfg}
 
     def stage(key, action, *, skip_reason=None):
@@ -519,6 +532,7 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
     finish_structure(output, state, bool(target))
     stage('relationships', lambda: relationships_stage(worker, spec, facts, time_axis, output, state))
     stage('time', lambda: time_stage(worker, spec, time_axis, output), skip_reason=None if time_axis else 'no time axis chosen')
+    stage('findings', lambda: findings_stage(output, state))
     stage('evidence', lambda: save_blocks(worker, output) if save_evidence else 'not requested')
     return output
 
@@ -1323,6 +1337,7 @@ def segments_stage(a, spec, facts, output, state):
     segments, note = auto_segments.discover(a, spec, data.raw, data.y, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg, absent_sql, joint)
     kept = [s for s in segments if s.kept]
     overall, queries = auto_segments.full_data(a, spec, kept) if kept else (None, [])
+    output['segment_overall'] = _clean(overall) if overall is not None else None
     higher = sorted([s for s in kept if s.direction == 'higher'], key=lambda s: (-s.impact, s.rule))[:cfg.segments_high]
     lower = sorted([s for s in kept if s.direction == 'lower'], key=lambda s: (-s.impact, s.rule))[:cfg.segments_low]
     evidence = a.evidence(f'Decision tree (depth {cfg.segment_depth}, minimum leaf max({cfg.segment_min_rows}, {cfg.segment_min_share:.0%} of rows), seed {cfg.seed}); '
@@ -1347,6 +1362,16 @@ def segments_stage(a, spec, facts, output, state):
     output['segments'] = deep_clean([vars(s) | {'conditions': [list(c) for c in s.conditions]} for s in higher + lower])
     output['sections']['segments'] = items
     return f'{len(higher)} higher, {len(lower)} lower of {len(segments)} leaves'
+
+
+# ---------------- findings ----------------
+def findings_stage(output, state):
+    cfg = state['cfg']
+    findings = auto_findings.build(output, cfg)
+    output['findings'] = deep_clean([f.to_dict() for f in findings])
+    counts = {s: sum(1 for f in findings if f.severity == s) for s in ('critical', 'important', 'informative')}
+    output['finding_counts'] = counts
+    return ', '.join(f'{n} {s}' for s, n in counts.items())
 
 
 # ---------------- stage 6 ----------------
