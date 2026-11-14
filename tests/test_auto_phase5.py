@@ -221,3 +221,112 @@ def test_text_and_geo_fields(tmp_path):
     cells = items['site-lat-site-lon-geo-cells']
     overall = float(y.mean())
     assert cells['rows'][0][3] / cells['rows'][0][-1] == pytest.approx(overall, rel=1e-9)
+
+
+# ---------------- format detection ----------------
+def test_file_layout_detection():
+    from insightpilot.universal.auto import ingest
+    assert ingest.detect_encoding('Łódź;Kraków'.encode('cp1250'))[0] == 'cp1250'
+    assert ingest.detect_encoding('café;crème'.encode('cp1252'))[0] == 'cp1252'
+    assert ingest.detect_encoding(b'\xef\xbb\xbfa,b')[0] == 'utf-8-sig' and ingest.detect_encoding('żółw'.encode())[0] == 'utf-8'
+    layout = ingest.detect_layout('Report 2021\nnotes here\na;b;c\n1;2;3\n4;5;6\n')
+    assert layout == {'delimiter': ';', 'skip_rows': 2, 'fields': 3, 'consistency': pytest.approx(0.6)}
+
+
+def test_value_format_detection_rules():
+    from insightpilot.universal.auto import ingest
+    number = ingest.detect_number([('1 234,56', 5), ('12,50', 5), ('-3,5', 1)])
+    assert number['step'] == {'kind': 'number_format', 'decimal': ',', 'thousands': ' '}
+    money = ingest.detect_number([('1.234,00 €', 3), ('(12,00 €)', 2), ('5,10 €', 4)])
+    assert money['step'] == {'kind': 'number_format', 'decimal': ',', 'thousands': '.', 'currency': '€', 'accounting': True}
+    assert 'ambiguous' in ingest.detect_number([('1,234', 4), ('5,678', 3)])['decision']
+    assert 'mixed currencies' in ingest.detect_number([('$5.00', 3), ('€4.00', 3)])['decision']
+    assert ingest.detect_number([('12', 3), ('4.5', 2)]) is None and ingest.detect_number([('SKU 12', 3), ('SKU 13', 3)]) is None
+    assert ingest.detect_boolean([('Y', 3), ('N', 2), ('yes', 1)])['step']['true_values'] == ['y', 'yes']
+    assert ingest.detect_boolean([('Yes', 3), ('No', 2)]) is None and ingest.detect_boolean([('Y', 2), ('N', 2), ('maybe', 1)]) is None
+    dates = ingest.detect_dates([('2021-03-04', 3), ('15.11.2021', 2), ('4 Mar 2021', 2)])
+    assert dates['step']['kind'] == 'date' and set(dates['step']['formats']) == {'%Y-%m-%d', '%d.%m.%Y', '%d %b %Y'}
+    assert 'ambiguous' in ingest.detect_dates([('03/04/2021', 3), ('05/06/2021', 2)])['decision']
+    assert 'two-digit' in ingest.detect_dates([('03.04.21', 3), ('05.06.21', 2)])['decision']
+    assert 'Unix' in ingest.numeric_time_hint('event', 1.6e9, 1.7e9, True) and ingest.numeric_time_hint('amount', 30000, 50000, True) is None
+    assert 'Excel' in ingest.numeric_time_hint('order_date', 44000, 45000, True)
+
+
+def test_messy_file_is_read_and_converted_without_silent_guesses(tmp_path):
+    from insightpilot.universal.auto import ingest
+    prepared, report = ingest.prepare_file(FIXTURES / 'ENGINE-09-messy.csv', tmp_path)
+    assert report['encoding'] == 'cp1250' and report['delimiter'] == ';' and report['skipped_rows'] == 1
+    bom, bom_report = ingest.prepare_file(FIXTURES / 'ENGINE-09-messy-bom.csv', tmp_path)
+    assert bom_report['encoding'] == 'utf-8-sig' and bom.read_text(encoding='utf-8') == prepared.read_text(encoding='utf-8')
+    w = Workspace.create(tmp_path / 'w')
+    w.add_file(prepared, 'm', delimiter=';', provenance={'origin': 'synthetic', 'format_detection': report})
+    output = aa.run(w, 'm', target='kupił', target_type='binary', positive='tak', save_evidence=False)
+    items = {i.get('id'): i for i in aa.iter_items(output)}
+    applied = {(r[0], r[1]): r for r in items['corrections-applied']['rows']}
+    assert all(applied[(c, 'converted to numbers')][3] == 0 for c in ('cena', 'kwota', 'rabat'))
+    assert applied[('data', 'converted to dates')][2] == 600 and ('aktywny', 'unified as true / false') in applied
+    decisions = [r for r in items['corrections-not-changed']['rows'] if r[0] == 'termin']
+    assert len(decisions) == 1 and 'ambiguous day/month order' in decisions[0][1]
+    raw = pd.read_csv(prepared, sep=';', dtype=str, keep_default_na=False)
+    version = output['analysis_version']
+    with w.connect() as con:
+        converted = con.execute(f'SELECT sum(cena),sum(kwota),sum(rabat),count(data),min(data) FROM "{version}"').fetchone()
+    price = raw.cena[raw.cena != 'N/A'].str.replace(' ', '').str.replace(',', '.').astype(float)
+    amount = raw.kwota.str.replace(' €', '').str.replace('.', '').str.replace(',', '.').map(lambda v: -float(v[1:-1]) if v.startswith('(') else float(v))
+    discount = raw.rabat.str.rstrip('%').str.replace(',', '.').astype(float) / 100
+    dates = pd.to_datetime(raw.data, format='mixed', dayfirst=True)
+    assert converted[:3] == pytest.approx((price.sum(), amount.sum(), discount.sum())) and converted[3] == 600 and converted[4] == dates.min().date()
+
+
+def test_shared_read_connection_and_write_guard(tmp_path):
+    w = Workspace.create(tmp_path / 'w'); w.add_file(FIXTURES / 'ENGINE-08-null.csv', 'n')
+    with w.reading():
+        with w.connect() as first: pass
+        with w.connect() as second: pass
+        assert first is second
+        with pytest.raises(RuntimeError):
+            with w.connect(write=True): pass
+    with w.connect(write=True) as con: assert con.execute('SELECT 1').fetchone() == (1,)
+
+
+def test_stage_budget_marks_partial_stages(tmp_path):
+    from insightpilot.universal.auto.config import DEFAULT
+    w = Workspace.create(tmp_path / 'w'); w.add_file(FIXTURES / 'ENGINE-08-null.csv', 'n')
+    output = aa.run(w, 'n', target='outcome', target_type='binary', positive='yes', save_evidence=False,
+                    config=DEFAULT.with_changes(stage_budget_seconds=0.0))
+    statuses = {s['key']: s for s in output['stages']}
+    assert statuses['fields']['status'] == 'partial' and 'time budget' in statuses['fields']['detail']
+    assert any('is partial' in warning for warning in output['warnings'])
+    assert not [s for s in output['stages'] if s['status'] == 'failed']
+
+
+def test_wide_data_prescreen_keeps_the_informative_fields(tmp_path):
+    rng = np.random.default_rng(14); n = 2000
+    frame = pd.DataFrame({f'v{i:03d}': np.round(rng.normal(size=n), 3) for i in range(300)})
+    logit = 1.2 * frame.v010 - 1.0 * frame.v050 + 0.9 * frame.v100 + 0.8 * frame.v200 - 0.9 * frame.v290
+    frame['outcome'] = np.where(rng.random(n) < 1 / (1 + np.exp(-logit)), 'yes', 'no')
+    path = tmp_path / 'wide.csv'; frame.to_csv(path, index=False)
+    w = Workspace.create(tmp_path / 'w'); w.add_file(path, 'wide')
+    output = aa.run(w, 'wide', target='outcome', target_type='binary', positive='yes', save_evidence=False)
+    assert len(output['multivariate']['fields']) <= 60
+    assert {'v010', 'v050', 'v100', 'v200', 'v290'} <= set(output['multivariate']['fields'])
+    assert [e['field'] for e in output['ranking'][:5]] and {'v010', 'v050', 'v100', 'v200', 'v290'} == {e['field'] for e in output['ranking'][:5]}
+    assert any(w_.startswith('Wide data: 300 ranked fields') for w_ in output['warnings'])
+
+
+def test_cell_count_interaction_screen_matches_row_level_fits():
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import StratifiedKFold
+    from insightpilot.universal.auto import confounding
+    from insightpilot.universal.auto.config import DEFAULT
+    rng = np.random.default_rng(2); n = 3000
+    raw = pd.DataFrame({'a': rng.choice(['p', 'q'], n), 'b': rng.choice(['r', 's', 't'], n)})
+    y = (rng.random(n) < np.where((raw.a == 'p') & (raw.b == 'r'), 0.7, 0.3)).astype(int)
+    rows, _ = confounding.interaction_screen(raw, y, 'binary', ['a', 'b'], set(), DEFAULT)
+    main = pd.get_dummies(raw, dtype=float); joint = pd.get_dummies(raw.a + ' × ' + raw.b, dtype=float); gains = []
+    for train, test in StratifiedKFold(DEFAULT.cv_folds, shuffle=True, random_state=DEFAULT.seed).split(raw, y):
+        scores = [roc_auc_score(y[test], LogisticRegression(C=1.0, max_iter=1000).fit(X.iloc[train], y[train]).predict_proba(X.iloc[test])[:, 1])
+                  for X in (main, joint)]
+        gains.append(scores[1] - scores[0])
+    assert rows[0][2] == pytest.approx(np.mean(gains), abs=1e-6)

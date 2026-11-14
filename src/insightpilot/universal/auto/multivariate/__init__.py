@@ -105,6 +105,13 @@ def score(kind, fitted, X, y, classes):
     return roc_auc_score(y, proba, multi_class='ovr', average='macro', labels=list(fitted.classes_))
 
 
+def score_predictions(kind, fitted, predicted, y):
+    """The same score as `score`, from predictions already made."""
+    if kind == 'numeric': return r2_score(y, predicted)
+    if kind == 'binary': return roc_auc_score(y, predicted[:, list(fitted.classes_).index(1)])
+    return roc_auc_score(y, predicted, multi_class='ovr', average='macro', labels=list(fitted.classes_))
+
+
 def calibration_error(y, p, bins=10):
     """Expected calibration error: Σ_bins (n_b / n)·|mean prediction − observed rate|, equal-width bins."""
     edges = np.linspace(0, 1, bins + 1); index = np.clip(np.digitize(p, edges[1:-1]), 0, bins - 1); total = 0.0
@@ -116,18 +123,20 @@ def calibration_error(y, p, bins=10):
 
 def cross_validate(data, kind, cfg, groups):
     """Fold metrics against the baseline, plus permutation drops for every group of columns."""
-    folds = splits(data, kind, cfg); X = data.frame; y = data.y
+    folds = splits(data, kind, cfg); y = data.y
+    # Plain arrays: the same values the model sees from the frame, without per-call DataFrame overhead.
+    X = data.frame.to_numpy(dtype=float); position = {n: i for i, n in enumerate(data.frame.columns)}
     per_fold = {}; drops = {name: [] for name in groups}
     for index, (train, test) in enumerate(folds):
         if kind != 'numeric' and len(np.unique(y[test])) < 2: continue
-        fitted = model(kind, data, cfg).fit(X.iloc[train], y[train])
+        fitted = model(kind, data, cfg).fit(X[train], y[train])
         values = {}
         if kind == 'numeric':
-            prediction = fitted.predict(X.iloc[test]); baseline = np.full(len(test), np.median(y[train]))
+            prediction = fitted.predict(X[test]); baseline = np.full(len(test), np.median(y[train]))
             values['R²'] = (r2_score(y[test], prediction), r2_score(y[test], np.full(len(test), y[train].mean())))
             values['MAE'] = (mean_absolute_error(y[test], prediction), mean_absolute_error(y[test], baseline))
         else:
-            proba = fitted.predict_proba(X.iloc[test]); labels = list(fitted.classes_)
+            proba = fitted.predict_proba(X[test]); labels = list(fitted.classes_)
             majority = pd.Series(y[train]).value_counts().sort_index(key=lambda s: s.map(str)).idxmax()
             prior = np.tile([np.mean(y[train] == c) for c in labels], (len(test), 1))
             if kind == 'binary':
@@ -142,14 +151,23 @@ def cross_validate(data, kind, cfg, groups):
             values['Accuracy'] = (accuracy_score(y[test], np.array(labels)[proba.argmax(axis=1)]), float(np.mean(y[test] == majority)))
         for measure, pair in values.items(): per_fold.setdefault(measure, []).append(pair)
         rows = test[:cfg.permutation_rows]
-        base = score(kind, fitted, X.iloc[rows], y[rows], data.classes)
+        held = X[rows]
+        base = score(kind, fitted, held, y[rows], data.classes)
+        # Every shuffled copy of the held-out rows is predicted in one call, then scored copy by copy.
+        copies = []; owners = []
         for repeat in range(cfg.permutation_repeats):
             rng = np.random.default_rng(cfg.seed + 1000 * index + repeat)
             order = rng.permutation(len(rows))
             for name, columns in groups.items():
-                shuffled = X.iloc[rows].copy()
-                shuffled[columns] = shuffled[columns].to_numpy()[order]
-                drops[name].append(base - score(kind, fitted, shuffled, y[rows], data.classes))
+                shuffled = held.copy(); index_ = [position[c] for c in columns]
+                shuffled[:, index_] = held[order][:, index_]
+                copies.append(shuffled); owners.append(name)
+        if copies:
+            stacked = np.vstack(copies)
+            predicted = fitted.predict(stacked) if kind == 'numeric' else fitted.predict_proba(stacked)
+            for k, name in enumerate(owners):
+                part = predicted[k * len(rows):(k + 1) * len(rows)]
+                drops[name].append(base - score_predictions(kind, fitted, part, y[rows]))
     return per_fold, drops, len(folds)
 
 
@@ -227,12 +245,17 @@ def vif_prune(X, owner, maximum):
     return X, dropped
 
 
-def fit_regression(kind, y, X):
+def fit_regression(kind, y, X, start=None, robust=True):
+    """Logistic or linear regression. `start` (starting values) only speeds up convergence; `robust=False` skips the
+    HC3 covariance where only the log-likelihood is used."""
     import statsmodels.api as sm
     exog = sm.add_constant(X, has_constant='add')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        fitted = sm.Logit(y, exog).fit(disp=0, maxiter=200) if kind == 'binary' else sm.OLS(y, exog).fit(cov_type='HC3')
+        if kind == 'binary':
+            fitted = sm.Logit(y, exog).fit(disp=0, maxiter=200, start_params=None if start is None else start.reindex(exog.columns).fillna(0).to_numpy())
+        else:
+            fitted = sm.OLS(y, exog).fit(cov_type='HC3') if robust else sm.OLS(y, exog).fit()
     if kind == 'binary' and not fitted.mle_retvals.get('converged', True):
         raise ValueError('did not converge (possible separation)')
     return fitted
@@ -241,14 +264,19 @@ def fit_regression(kind, y, X):
 def adjusted_model(data, kind, fields, facts, cfg, not_applicable=None, binned=()):
     """Returns (rows, VIF-dropped fields, note, fitted model, design, column owners) for binary and numeric targets."""
     if kind == 'multiclass':
-        return [], [], 'Not computed for multiclass targets; see the per-class comparisons in each field section.', None, None, None
-    X, owner, labels = design(data.raw, fields, facts, cfg, not_applicable, binned)
-    if X.empty: return [], [], 'No usable fields for the adjusted model.', None, None, None
+        return [], [], 'Not computed for multiclass targets; see the per-class comparisons in each field section.', None, None, None, None
+    raw, y, sampled = data.raw, data.y, ''
+    if len(y) > cfg.regression_sample_rows:
+        keep = np.sort(np.random.default_rng(cfg.seed).choice(len(y), cfg.regression_sample_rows, replace=False))
+        raw, y = data.raw.iloc[keep].reset_index(drop=True), data.y[keep]
+        sampled = f' Fitted on a seeded subset of {len(keep):,} of the {len(data.y):,} model rows.'
+    X, owner, labels = design(raw, fields, facts, cfg, not_applicable, binned)
+    if X.empty: return [], [], 'No usable fields for the adjusted model.', None, None, None, None
     X, dropped = vif_prune(X, owner, cfg.vif_maximum)
     try:
-        fitted = fit_regression(kind, data.y, X)
+        fitted = fit_regression(kind, y, X)
     except Exception as exc:
-        return [], dropped, f'The adjusted model could not be estimated ({type(exc).__name__}: {exc}).', None, None, None
+        return [], dropped, f'The adjusted model could not be estimated ({type(exc).__name__}: {exc}).', None, None, None, None
     intervals = fitted.conf_int(); rows = []
     for column in X.columns:
         estimate, (low, high), p = fitted.params[column], intervals.loc[column], fitted.pvalues[column]
@@ -257,11 +285,11 @@ def adjusted_model(data, kind, fields, facts, cfg, not_applicable=None, binned=(
     note = ('Odds ratios from a logistic regression' if kind == 'binary' else 'Coefficients from a linear regression with HC3 standard errors')
     note += (', holding the other listed fields constant. Numbers are standardised (per 1 SD); categories are compared with their most '
              'common level among rows where they apply; rare levels are pooled; missing numbers are median-filled with a missing indicator. '
-             'Associations, not causes.')
-    return rows, dropped, note, fitted, X, owner
+             'Associations, not causes.') + sampled
+    return rows, dropped, note, fitted, X, owner, y
 
 
-def lr_comparison(kind, y, X, owner, fitted, name):
+def lr_comparison(kind, y, X, owner, fitted, name, null=None):
     """Likelihood-ratio contribution of one field alone (vs the null model) and adjusted (full vs full without it).
 
     LR = 2·(log L_bigger − log L_smaller), χ² with df = the field's number of columns. Unlike AUC gains, these do
@@ -271,9 +299,9 @@ def lr_comparison(kind, y, X, owner, fitted, name):
     columns = [c for c in X.columns if owner[c] == name]
     if not columns: return None
     alone = fit_regression(kind, y, X[columns])
-    null = fit_regression(kind, y, X.iloc[:, :0])
+    null = null if null is not None else fit_regression(kind, y, X.iloc[:, :0], robust=False)
     rest = [c for c in X.columns if owner[c] != name]
-    reduced = fit_regression(kind, y, X[rest]) if rest else null
+    reduced = fit_regression(kind, y, X[rest], start=fitted.params, robust=False) if rest else null
     univariate = 2 * (alone.llf - null.llf); adjusted = 2 * (fitted.llf - reduced.llf); df = len(columns)
     def sign(model):
         if len(columns) != 1 or not owner[columns[0]] == columns[0]: return ''
@@ -308,11 +336,18 @@ def ale(fitted, data, name, kind, cfg):
     effects = []; counts = []
     predict = (lambda frame: fitted.predict(frame)) if kind == 'numeric' else \
         (lambda frame: fitted.predict_proba(frame)[:, list(fitted.classes_).index(1)])
+    # All interval edges are predicted in one call: rows of each interval at its lower and at its upper edge.
+    parts = []; sizes = []
     for low, high in zip(edges[:-1], edges[1:]):
         inside = present & (x >= low) & (x <= high) if low == edges[0] else present & (x > low) & (x <= high)
-        if not inside.any(): effects.append(0.0); counts.append(0); continue
         lower = X[inside].copy(); upper = X[inside].copy(); lower[name] = low; upper[name] = high
-        effects.append(float(np.mean(predict(upper) - predict(lower)))); counts.append(int(inside.sum()))
+        parts += [lower, upper]; sizes.append(int(inside.sum()))
+    predictions = predict(pd.concat(parts, ignore_index=True)) if sum(sizes) else np.array([])
+    start = 0
+    for size in sizes:
+        if not size: effects.append(0.0); counts.append(0); continue
+        lower, upper = predictions[start:start + size], predictions[start + size:start + 2 * size]; start += 2 * size
+        effects.append(float(np.mean(upper - lower))); counts.append(size)
     accumulated = np.cumsum(effects)
     centre = np.average(accumulated, weights=counts) if sum(counts) else 0.0
     return {'upper_edges': [float(e) for e in edges[1:]], 'ale': [float(v - centre) for v in accumulated], 'rows': counts}
@@ -368,19 +403,20 @@ def analyse(a, spec, fields, facts, cfg, time_axis, absent_sql, text_value, clus
     in_cluster = {m for c in clusters for m in c.members}
     non_redundant = [n for n in fields if n not in in_cluster or n in representatives]
     if not result.no_signal:
-        result.regression, result.dropped_vif, result.regression_note, fitted, X, owner = adjusted_model(
+        result.regression, result.dropped_vif, result.regression_note, fitted, X, owner, y_used = adjusted_model(
             data, spec.kind, non_redundant, facts, cfg, not_applicable, binned)
         if binned and fitted is not None:
             result.regression_note += ' Fields with a non-linear shape (' + ', '.join(sorted(b for b in binned if b in non_redundant)) + \
                 ') enter as equal-count bins compared with their lowest bin.'
         importance = {r[0]: r for r in result.importance}
         dropped = {row[0] for row in result.dropped_vif}
+        null_fit = fit_regression(spec.kind, y_used, X.iloc[:, :0], robust=False) if fitted is not None else None
         for effect in [e for e in ranked_effects if e['field'] in fields][:cfg.adjusted_fields]:
             name = effect['field']
             cluster = next((c for c in clusters if name in c.members and len(c.members) > 1), None)
             shared = ('shares information with ' + ', '.join(m for m in cluster.members if m != name)) if cluster else ''
             in_model = {owner[column] for column in X.columns} if fitted is not None else set()
-            c = lr_comparison(spec.kind, data.y, X, owner, fitted, name) if name in in_model else None
+            c = lr_comparison(spec.kind, y_used, X, owner, fitted, name, null_fit) if name in in_model else None
             if c is not None:
                 result.verdicts.append([name, c['univariate'], c['adjusted'], c['df'], retained(c),
                                         c['p_adjusted'], c['sign_univariate'], c['sign_adjusted'], lr_verdict(c, cfg), shared])

@@ -51,6 +51,7 @@ class AnalysisConfig:
     model_iterations: int = 100             # boosting iterations
     model_level_cap: int = 30               # categorical levels given to the model; the rest are pooled
     permutation_rows: int = 5_000           # held-out rows per fold used for permutation importance
+    regression_sample_rows: int = 50_000    # seeded subset of the model sample for the adjusted regression and its LR tests
     importance_fields: int = 25             # top-ranked fields (plus their clusters) given permutation importance
     permutation_repeats: int = 3
     signal_minimum: float = 0.02            # ΔAUC or R² over the baseline needed before importance is reported
@@ -101,6 +102,10 @@ class AnalysisConfig:
     psi_bins: int = 10
     psi_levels: int = 20
     temporal_leakage_share: float = 0.99    # a date later than the time axis on this share of rows is a leakage suspect
+    # Scale
+    stage_budget_seconds: float = 600.0     # a stage that runs longer stops its remaining work and is marked partial
+    wide_columns: int = 200                 # above this many ranked fields, the model steps use a pre-screened subset …
+    wide_model_fields: int = 50             # … the top fields by single-field power plus every redundancy-cluster representative
     # No-target mode
     cluster_k_min: int = 2
     cluster_k_max: int = 8

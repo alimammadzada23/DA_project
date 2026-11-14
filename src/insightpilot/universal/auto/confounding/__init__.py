@@ -167,29 +167,26 @@ def bins(values, numeric, count):
 
 
 def interaction_screen(raw, y, kind, fields, numeric, cfg, time_ordered=False):
-    """Δ = mean over folds of (score with joint levels − score with separate levels) for each pair of fields."""
-    from sklearn.linear_model import LogisticRegression, Ridge
-    from sklearn.metrics import r2_score, roc_auc_score
+    """Δ = mean over folds of (score with joint levels − score with separate levels) for each pair of fields.
+
+    Both models use one-hot levels (L2 logistic regression with C = 1 for binary targets, ridge with α = 1 for numeric
+    ones). They are fitted on per-cell counts with the counts as weights, which has the same objective as fitting every
+    row, because every row in a cell (a level pair) has the same features."""
     from sklearn.model_selection import KFold, StratifiedKFold, TimeSeriesSplit
     if kind == 'multiclass': return [], 'Not computed for multiclass targets.'
     encoded = {name: bins(raw[name], name in numeric, cfg.interaction_levels) for name in fields}
+    codes = {name: np.unique(values.to_numpy(dtype=str), return_inverse=True) for name, values in encoded.items()}
     # Rows arrive in time order when a time axis exists: each fold then trains on earlier rows only.
     folds = list(TimeSeriesSplit(n_splits=cfg.cv_folds).split(raw)) if time_ordered else list((StratifiedKFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(raw, y) if kind == 'binary'
                   else KFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(raw)))
+    y = np.asarray(y, dtype=float)
     rows = []
     for first, second in combinations(fields, 2):
-        main = pd.get_dummies(pd.DataFrame({first: encoded[first], second: encoded[second]}), dtype=float)
-        joint = pd.get_dummies(encoded[first] + ' × ' + encoded[second], dtype=float)
+        (levels_a, a), (levels_b, b) = codes[first], codes[second]
+        cell = a * len(levels_b) + b; size = len(levels_a) * len(levels_b)
         gains = []
         for train, test in folds:
-            scores = []
-            for X in (main, joint):
-                if kind == 'binary':
-                    fitted = LogisticRegression(C=1.0, max_iter=1000).fit(X.iloc[train], y[train])
-                    scores.append(roc_auc_score(y[test], fitted.predict_proba(X.iloc[test])[:, 1]))
-                else:
-                    fitted = Ridge(alpha=1.0).fit(X.iloc[train], y[train]); scores.append(r2_score(y[test], fitted.predict(X.iloc[test])))
-            gains.append(scores[1] - scores[0])
+            gains.append(_cell_gain(kind, cell, y, train, test, len(levels_a), len(levels_b), size))
         mean = float(np.mean(gains)); se = float(np.std(gains, ddof=1) / math.sqrt(len(gains)))
         rows.append([first, second, mean, se, False, interaction_lr(kind, y, encoded[first], encoded[second]), None])
     from ...auto_stats import benjamini_hochberg
@@ -201,26 +198,76 @@ def interaction_screen(raw, y, kind, fields, numeric, cfg, time_ordered=False):
     return rows, ''
 
 
+def _cell_designs(cells, levels_b, size):
+    """One-hot designs for cells: separate levels (a, b) and joint levels (a × b), both with every level as a column."""
+    a, b = cells // levels_b, cells % levels_b
+    main = np.zeros((len(cells), size // levels_b + levels_b)); main[np.arange(len(cells)), a] = 1; main[np.arange(len(cells)), size // levels_b + b] = 1
+    joint = np.zeros((len(cells), size)); joint[np.arange(len(cells)), cells] = 1
+    return main, joint
+
+
+def _cell_gain(kind, cell, y, train, test, levels_a, levels_b, size):
+    from sklearn.linear_model import LogisticRegression, Ridge
+    from sklearn.metrics import roc_auc_score
+    n_train = np.bincount(cell[train], minlength=size); s_train = np.bincount(cell[train], weights=y[train], minlength=size)
+    n_test = np.bincount(cell[test], minlength=size); s_test = np.bincount(cell[test], weights=y[test], minlength=size)
+    fit_cells = np.flatnonzero(n_train); test_cells = np.flatnonzero(n_test)
+    scores = []
+    for which in (0, 1):
+        X_fit = _cell_designs(fit_cells, levels_b, size)[which]; X_test = _cell_designs(test_cells, levels_b, size)[which]
+        if kind == 'binary':
+            positives, negatives = s_train[fit_cells], n_train[fit_cells] - s_train[fit_cells]
+            X = np.vstack([X_fit, X_fit]); target = np.r_[np.ones(len(fit_cells)), np.zeros(len(fit_cells))]; weight = np.r_[positives, negatives]
+            keep = weight > 0
+            fitted = LogisticRegression(C=1.0, max_iter=1000).fit(X[keep], target[keep], sample_weight=weight[keep])
+            p = fitted.predict_proba(X_test)[:, 1]
+            pos_te, neg_te = s_test[test_cells], n_test[test_cells] - s_test[test_cells]
+            scores.append(roc_auc_score(np.r_[np.ones(len(p)), np.zeros(len(p))], np.r_[p, p], sample_weight=np.r_[pos_te, neg_te]))
+        else:
+            ss_test = np.bincount(cell[test], weights=y[test] ** 2, minlength=size)[test_cells]
+            fitted = Ridge(alpha=1.0).fit(X_fit, s_train[fit_cells] / n_train[fit_cells], sample_weight=n_train[fit_cells])
+            pred = fitted.predict(X_test); n_te, s_te = n_test[test_cells], s_test[test_cells]
+            sse = float(np.sum(ss_test - 2 * pred * s_te + n_te * pred * pred)); total = float(ss_test.sum() - s_te.sum() ** 2 / n_te.sum())
+            scores.append(1 - sse / total if total > 0 else 0.0)
+    return scores[1] - scores[0]
+
+
 def interaction_lr(kind, y, first, second):
     """Likelihood-ratio test of joint levels against separate levels (nested models, in-sample):
     LR = 2·(log L_joint − log L_main), χ² with df = difference in model rank. Each design drops one reference level
-    per factor. None when either model cannot be fitted or does not converge."""
+    per factor. Fitted on per-cell counts (frequency weights for the binary GLM; within-cell sums of squares for OLS),
+    which gives the same likelihoods as fitting every row. None when either model cannot be fitted or does not converge."""
     import statsmodels.api as sm
     from scipy import stats as scipy_stats
-    main = pd.get_dummies(pd.DataFrame({'a': first.to_numpy(), 'b': second.to_numpy()}), drop_first=True, dtype=float)
-    joint = pd.get_dummies(pd.Series((first + ' × ' + second).to_numpy()), drop_first=True, dtype=float)
+    y = np.asarray(y, dtype=float)
+    frame = pd.DataFrame({'a': first.to_numpy(), 'b': second.to_numpy(), 'y': y})
+    grouped = frame.groupby(['a', 'b'], sort=True).y.agg(['count', 'sum'])
+    grouped['ss'] = frame.assign(y2=y * y).groupby(['a', 'b'], sort=True).y2.sum()
+    cells = grouped.reset_index()
+    main = pd.get_dummies(cells[['a', 'b']], drop_first=True, dtype=float)
+    joint = pd.get_dummies(pd.Series((cells.a + ' × ' + cells.b).to_numpy()), drop_first=True, dtype=float)
+    n = cells['count'].to_numpy(dtype=float); s = cells['sum'].to_numpy(dtype=float); ss = cells['ss'].to_numpy(dtype=float)
     fits = []
     for design in (main, joint):
         exog = sm.add_constant(design, has_constant='add')
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                fitted = sm.GLM(y, exog, family=sm.families.Binomial()).fit() if kind == 'binary' else sm.OLS(y, exog).fit()
-                llf = float(fitted.llf)
+                if kind == 'binary':
+                    X = pd.concat([exog, exog], ignore_index=True); target = np.r_[np.ones(len(cells)), np.zeros(len(cells))]
+                    weight = np.r_[s, n - s]; keep = weight > 0
+                    fitted = sm.GLM(target[keep], X[keep], family=sm.families.Binomial(), freq_weights=weight[keep]).fit()
+                    llf = float(fitted.llf)
+                    if not getattr(fitted, 'converged', True): return None
+                else:
+                    fitted = sm.WLS(s / n, exog, weights=n).fit()
+                    pred = fitted.predict(exog)
+                    sse = float(np.sum(ss - 2 * pred * s + n * pred * pred)); total_n = n.sum()
+                    llf = -total_n / 2 * (math.log(2 * math.pi * sse / total_n) + 1) if sse > 0 else math.inf
             except Exception:
                 return None
         # A fit that did not converge (for example, a joint level that is all one outcome) gives no valid test.
-        if (kind == 'binary' and not getattr(fitted, 'converged', True)) or not math.isfinite(llf): return None
+        if not math.isfinite(llf): return None
         fits.append((llf, np.linalg.matrix_rank(exog.to_numpy())))
     (l_main, k_main), (l_joint, k_joint) = fits
     df = k_joint - k_main

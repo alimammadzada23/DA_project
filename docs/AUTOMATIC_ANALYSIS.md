@@ -47,18 +47,84 @@ labelled section and is never part of `results.json`.
 
 | Stage | What it does |
 | --- | --- |
-| 1. Data profile | Row and column counts, the detected type of every column, duplicates, missing values with their `_row_id`s, numbers or dates stored as text, NA-like markers, whitespace, spellings that differ only by case or whitespace, identifiers, constant and near-constant columns, high-cardinality text and extreme values |
-| 2. Target selection | Ranked suggestions with reasons. Column names are only hints. You confirm the target |
-| 3. Safe corrections | Trims whitespace, turns NA-like markers into missing values, converts numbers and unambiguous dates stored as text. All of this is one new reversible version; your active version stays active. Missing values, duplicates, ambiguous dates and spelling variants are only reported. Missing values are checked for a shared value in other columns |
-| 4. Target overview | Class counts and shares and the accuracy of always predicting the majority class, or a numeric summary with a histogram |
-| 5. Fields versus the target | Every usable field, with the method chosen by field and target type (below) |
-| 6. Ranking | All fields by effect size, with raw and Benjamini–Hochberg adjusted p-values |
-| 7. Relationships | Associations between the top 8 fields (or the first 12 fields without a target), with detail for the 3 closest pairs |
-| 8. Time analysis | Rows and the target per period, with incomplete first and last periods flagged |
-| 9. Saved evidence | Each chart is stored as a normal evidence block |
+| 1. Data profile | Row and column counts, the detected type of every column, duplicates, missing values, NA-like markers, whitespace, spelling variants, identifiers, constant columns, free text and extreme values |
+| 2. Target selection | Ranked suggestions with reasons. Column names are only hints. You confirm the target, or choose none |
+| 3. Safe corrections | One new version (your active version stays active): trimmed whitespace, NA-like markers as missing, numbers and dates stored as text converted, plus format detection (below). Ambiguous cases are listed, not converted |
+| 4. Structure | Conditional categories, functional dependencies, approximately derived columns, associations between fields and redundancy clusters |
+| 5. Target overview | Class counts, or a numeric summary |
+| 6. Fields versus the target | Every usable field with the test for its type, cross-validated single-field power, free-text and geographic summaries |
+| 7. Leakage screen | Fields that predict the target too well, mirror it, or are dated after the time axis |
+| 8. Ranking | All fields by cross-validated power, with Benjamini–Hochberg adjusted p-values |
+| 9. Multivariate model | Gradient boosting against a baseline, permutation importance, univariate vs adjusted effects |
+| 10. Confounding and interactions | Effects within strata of other fields, and pairs that matter jointly |
+| 11. Segments | Decision-tree segments checked on held-out rows |
+| 12. Clusters and unusual rows | Without a target only: clusters, unusual rows and distribution shapes |
+| 13. Relationships | Associations (with 95% intervals) between the top fields |
+| 14. Time analysis | With a time axis: aggregation level, trend, seasonality, breaks and drift |
+| 15. Findings digest | Ranked, templated findings with evidence links |
+| 16. Saved evidence | Each chart is stored as a normal evidence block |
 
 If a stage fails, later stages still run where they can, and the report lists the
-failed stage and its error at the top.
+failed stage and its error at the top. A stage that reaches its time budget stops,
+keeps what it finished and is marked **partial** with the reason.
+
+## Time analysis
+
+Choose a date or timestamp column as the time axis. The engine reports coverage, the
+granularity (median gap between timestamps), rows sharing a timestamp and empty periods,
+then aggregates to the finest level (hour, day, week, month, quarter, year) with at
+least 20 periods and 30 rows per period on average. Incomplete first and last periods
+are left out of the tests.
+
+- **Trend:** Mann–Kendall test (variance inflated for positive autocorrelation) and the
+  Theil–Sen slope with its 95% interval, for the row count and for the target rate or mean.
+- **Seasonality:** STL decomposition when two full cycles exist; seasonal strength with a
+  permutation p-value. Strength ≥ 0.4 with p ≤ 0.01 is a finding and is removed before
+  the trend and break tests.
+- **Breaks:** binary segmentation into straight-line segments with a BIC-type penalty
+  raised for autocorrelation; dates with the level jump.
+- **Drift:** population stability index per field between the first and last 25% of the
+  time range (above 0.25 is a major shift).
+- With a time axis, every cross-validation (single-field power, the model, interactions,
+  segments) trains on earlier rows and checks on later rows. A date that falls after the
+  time axis on 99% of rows is a leakage suspect.
+
+## No target
+
+Without a target the report adds clusters, unusual rows and distribution shapes, all on
+a seeded sample (up to 200,000 rows) that the report discloses:
+
+- **Clusters:** Gower distance with k-medoids for mixed fields, standardised k-means for
+  complete numeric fields; k from 2 to 8 by silhouette, checked with bootstrap adjusted
+  Rand index. Without silhouette ≥ 0.25 and ARI ≥ 0.6 the report says there is no
+  stable cluster structure. Each cluster is described by its most different fields.
+- **Unusual rows:** Isolation Forest; the top 1% with the fields that make each row
+  unusual. Rows are never removed.
+- **Shape:** skewness, excess kurtosis, values beyond the outer fences and Hartigan's
+  dip test of unimodality.
+
+## Free text and geographic fields
+
+Free text (many distinct values with spaces and a mean length of 30 characters or more)
+is described by length, empty share, frequent words and word pairs after stop-words of
+the detected language (English, German, French, Spanish, Italian, Portuguese, Dutch),
+and by the target per text-length group. ISO 3166 country codes are recognised and
+invalid codes listed; latitude/longitude pairs (name hints plus valid ranges) get range
+checks and counts and the target per grid cell.
+
+## Format detection
+
+At import, **Detect encoding, separator and title rows above the table** (off by
+default) reads UTF-8, cp1250 or cp1252, picks the separator with the most consistent
+field count and leaves out rows above the table; everything detected is shown and kept
+in the table's provenance. During safe corrections, text columns are checked for
+formatted numbers (decimal comma, thousands separators, currency symbols or codes,
+percent signs divided by 100, accounting negatives in parentheses), mixed yes/no
+spellings and dates in other formats. A column is converted only when one reading
+explains at least 95% of its rows; failed values become missing and are kept in the
+error ledger. Ambiguous separators, ambiguous day/month order, mixed currencies,
+two-digit years and numbers that look like Excel serial dates or Unix timestamps are
+listed for you and left unchanged.
 
 ## Methods
 
@@ -67,6 +133,7 @@ failed stage and its error at the top.
 | Categorical | Rows, positives, positive rate and share of positives per category; count heatmap; positive-rate chart; chi-square and Cramér's V | Counts and row shares; stacked share chart; chi-square and Cramér's V | Count, median, mean and quartiles per category; box plot; Kruskal–Wallis and epsilon-squared |
 | Numeric | Summary and box plot per class; positive rate by 5 equal-count bins; Mann–Whitney U and rank-biserial r | Summary and box plot per class; Kruskal–Wallis and epsilon-squared | Spearman ρ (Pearson for reference); median by 10 equal-count bins; scatter plot |
 | Date | Positive rate per period | Class shares per period | Median per period |
+| Free text | Summary, frequent words, rate by text length (chi-square) | Summary and frequent words | Summary, frequent words, mean by text length (Spearman ρ) |
 
 - Rank tests use average ranks with tie corrections, computed inside DuckDB, so no
   table is loaded into memory. Mann–Whitney uses the normal approximation with tie
@@ -75,13 +142,15 @@ failed stage and its error at the top.
   flagged; groups with fewer than 30 rows are flagged.
 - Epsilon-squared is H / (n − 1). Rank-biserial r is 2U / (n₁n₂) − 1, positive when
   values tend to be larger in the positive class.
-- Field pairs: Cramér's V (categorical), Spearman ρ (numeric), correlation ratio η (mixed).
+- Field pairs: Cramér's V (categorical), Spearman ρ (numeric), correlation ratio η (mixed),
+  with 95% intervals (Fisher z for ρ; noncentral χ² and F inversion for V and η).
 - Effect sizes are reported as numbers only, without labels such as "strong".
 
 ## Rules and thresholds
 
-All thresholds live in `SETTINGS` in `src/insightpilot/universal/auto_analysis.py`
-and are printed in every report.
+Thresholds live in `AnalysisConfig` (`src/insightpilot/universal/auto/config.py`) and
+`SETTINGS` (`src/insightpilot/universal/auto_analysis.py`); the configuration and its
+hash are printed in every report.
 
 - Types come from the data. Identifiers are text columns with at least 99% distinct
   values, or whole-number columns where every value is distinct (at least 20 values).
@@ -90,21 +159,35 @@ and are printed in every report.
   values parse; numbers with leading zeros stay text.
 - Categorical fields show the 30 most frequent categories; the rest are grouped as
   "(other)", and missing values form "(missing)".
-- NA-like markers: `N/A`, `NA`, `NULL`, `?`, `-` (any case), empty and whitespace-only values.
+- NA-like markers: `N/A`, `NA`, `NULL`, `NaN`, `?`, `-`, `--`, `#N/A`, `missing` (any case),
+  empty and whitespace-only values. `None` is not a marker by default, because it is often a
+  real level (for example a service level "none").
 - Dates in `dd/mm/yyyy` or `mm/dd/yyyy` are converted only when a value larger than 12
   decides the order; otherwise they are reported and left as text.
-- Periods are months for ranges up to 2 years, quarters up to 8 years, otherwise years.
-- Only scatter plots are sampled (5,000 rows ordered by `hash(_row_id + 42)`); every
-  statistic uses all rows. Sampling is listed in the report.
+- Date fields compared with the target use months for ranges up to 2 years, quarters up to
+  8 years, otherwise years; the time analysis chooses its own level (above).
+- Counts, rates and tests use all rows. Samples (rows ordered by `hash(_row_id + 42)`) are
+  used for scatter plots, field associations (200,000 rows), models (100,000 rows; the
+  adjusted regression 50,000) and clusters; every sample is listed in the report.
+- Wide data: above 200 ranked fields, the model steps use the 50 with the highest
+  single-field power plus every redundancy-cluster representative, and the report says so.
+- Time budget: 600 seconds per stage (`stage_budget_seconds`).
 - Statistical associations are not causes, and the report says so.
 
 ## What it does not do
 
-It does not fill missing values, remove duplicates, merge spellings, build predictive
-models or explain results. To fill missing values yourself after reading the report,
-use **Quality & Preparation → fill_missing** (constant, median, mean or mode, an
-optional condition on another column, and an optional `<column>_was_missing`
-indicator). The fill value and filled rows are recorded in the version history.
+It does not fill missing values, remove duplicates, merge spellings or explain results.
+To fill missing values yourself after reading the report, use **Quality & Preparation →
+fill_missing** (constant, median, mean or mode, an optional condition on another
+column, and an optional `<column>_was_missing` indicator). The fill value and filled
+rows are recorded in the version history.
+
+## Scale
+
+On a 10-core Mac with 16 GB of memory, a synthetic table of 100,000 rows × 50 columns
+takes about 65 seconds and 1,000,000 rows × 50 columns about 3 minutes. DuckDB may use
+up to 55% of memory by default; with `INSIGHTPILOT_DUCKDB_MEMORY=2GB` the 1,000,000-row
+run peaks at about 3.2 GB of memory at the same speed.
 
 ## Tested datasets
 
@@ -112,14 +195,14 @@ Runtimes on a 16 GB, 10-core Mac, measured with
 `scripts/auto_analysis_datasets.py`. "Checks" compares reported numbers with pandas and
 SciPy on the raw file (for Online Retail II, with direct SQL on the original version).
 
-| Dataset | Domain | Rows × columns | Target | Import | Profile | Analysis | Reports | Checks |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d) | Telecom | 7,043 × 21 | Churn (binary, Yes) | 0.1 s | 0.8 s | 3.8 s | 0.6 s | 20/20 |
-| [UCI Adult](https://archive.ics.uci.edu/dataset/2/adult) | Census | 32,561 × 15 | income (binary, >50K) | 0.2 s | 0.8 s | 4.0 s | 0.5 s | 11/11 |
-| [Palmer Penguins](https://github.com/allisonhorst/palmerpenguins) | Biology | 344 × 8 | species (multiclass) | 0.0 s | 0.3 s | 1.5 s | 0.2 s | 7/7 |
-| [UCI Bike Sharing](https://archive.ics.uci.edu/dataset/275/bike+sharing+dataset) | Mobility | 17,379 × 17 | cnt (numeric), time axis dteday | 0.2 s | 0.8 s | 4.0 s | 0.3 s | 6/6 |
-| [UCI Covertype](https://archive.ics.uci.edu/dataset/31/covertype) | Forestry | 581,012 × 55 | Cover_Type (multiclass) | 5.2 s | 8.8 s | 18.1 s | 1.2 s | 10/10 |
-| [UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | Retail | 1,067,371 × 9 | none, time axis InvoiceDate | 43.2 s | 3.8 s | 13.1 s | 0.2 s | 6/6 |
+| Dataset | Domain | Rows × columns | Target | Import | Profile | Analysis | Checks |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d) | Telecom | 7,043 × 21 | Churn (binary, Yes) | 0.2 s | 0.8 s | 13.3 s | 53/53 |
+| [UCI Adult](https://archive.ics.uci.edu/dataset/2/adult) | Census | 32,561 × 15 | income (binary, >50K) | 0.2 s | 0.8 s | 17.5 s | 11/11 |
+| [Palmer Penguins](https://github.com/allisonhorst/palmerpenguins) | Biology | 344 × 8 | species (multiclass) | 0.0 s | 0.5 s | 3.4 s | 7/7 |
+| [UCI Bike Sharing](https://archive.ics.uci.edu/dataset/275/bike+sharing+dataset) | Mobility | 17,379 × 17 | cnt (numeric), time axis dteday | 0.2 s | 0.8 s | 18.8 s | 8/8 |
+| [UCI Covertype](https://archive.ics.uci.edu/dataset/31/covertype) | Forestry | 581,012 × 55 | Cover_Type (multiclass) | 5.4 s | 9.7 s | 138.7 s | 10/10 |
+| [UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | Retail | 1,067,371 × 9 | none, time axis InvoiceDate | 42.7 s | 3.8 s | 25.1 s | 6/6 |
 
 Together they cover binary, multiclass, numeric and no target; dates; real quality
 problems (`?` and `NA` markers, blank values, padded text); header-less files; 344 to

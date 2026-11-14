@@ -5,6 +5,7 @@ interpreted: the run records tables, charts, the queries behind them and what ea
 stage did. Field types come from the data; column names are only hints for target
 suggestions. No streamlit code lives here.
 """
+from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone
 import json
 import math
@@ -24,7 +25,7 @@ from . import auto_stats, visuals
 from .auto import findings as auto_findings
 from .auto import confounding as auto_confounding, leakage as auto_leakage, multivariate as auto_multivariate, segments as auto_segments
 from .auto import quality as auto_quality, structure as auto_structure, timeseries as auto_time, univariate as auto_univariate
-from .auto import textgeo as auto_textgeo, unsupervised as auto_unsupervised
+from .auto import ingest as auto_ingest, textgeo as auto_textgeo, unsupervised as auto_unsupervised
 from .auto.config import DEFAULT as DEFAULT_CONFIG
 from .auto import stats as auto_stats_ci
 from .auto.stats import bootstrap_interval
@@ -62,7 +63,9 @@ SETTINGS = {
     'variant_groups_per_column': 20,
     'duplicate_groups': 20,
 }
-NA_MARKERS = ('N/A', 'NA', 'NULL', '?', '-')
+# Compared upper-cased after trimming. 'None' is not a default marker: it is often a real level (for example a service
+# level 'none'), so it stays a category unless the analyst marks it.
+NA_MARKERS = ('N/A', 'NA', 'NULL', 'NAN', '?', '-', '--', '#N/A', 'MISSING')
 # Generic outcome-like name fragments. They raise a suggestion's rank but never decide it.
 TARGET_HINTS = ('target', 'label', 'outcome', 'result', 'status', 'class', 'flag', 'churn', 'default', 'converted',
                 'fraud', 'revenue', 'price', 'score')
@@ -72,6 +75,20 @@ STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'),
           ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'), ('confounding', 'Confounding and interactions'), ('segments', 'Segments'),
           ('unsupervised', 'Clusters and unusual rows'), ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('findings', 'Findings digest'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
+
+
+class Budget:
+    """Per-stage time budget. Long loops ask `over()` and stop; the stage is then reported as partial with the reason."""
+    def __init__(self, seconds):
+        self.seconds, self.started, self.reasons = seconds, time.perf_counter(), []
+
+    def start(self):
+        self.started, self.reasons = time.perf_counter(), []
+
+    def over(self, what=None):
+        if time.perf_counter() - self.started <= self.seconds: return False
+        if what and what not in self.reasons: self.reasons.append(what)
+        return True
 
 
 def _clean(value):
@@ -390,9 +407,40 @@ def correction_steps(facts, target=None, target_type=None):
     return steps
 
 
+def format_steps(analysis, facts, target, target_type, existing):
+    """Format detection for text columns the plain rules leave alone: formatted numbers (decimal comma, currency, percent,
+    accounting negatives), mixed yes/no spellings and dates in other formats. Returns (steps, decisions)."""
+    handled = {step.get('column') for step, _, _ in existing if step['kind'] in ('numeric', 'date')}
+    steps, decisions = [], []
+    for name, f in facts.items():
+        slash_only = f['slash_dates'] and f['slash_dates'] == f['clean']     # reported by the plain date rules already
+        if f['storage'] == 'VARCHAR' and name not in handled and not f['numeric_like'] and f['clean'] and not slash_only \
+                and f['type'] not in ('constant', 'empty', 'text'):
+            keep_labels = name == target and target_type in ('binary', 'multiclass')
+            result = analysis.run(f'''SELECT trim(CAST({quote(name)} AS VARCHAR)) AS v,count(*) AS n FROM selected WHERE NOT {absent_sql(name)}
+                GROUP BY 1 ORDER BY n DESC,v LIMIT 5000''', f'Values of {name} for format detection', limit=5000)
+            values = result['rows']
+            found = None
+            for detect in ((auto_ingest.detect_number, auto_ingest.detect_dates) if keep_labels else
+                           (auto_ingest.detect_number, auto_ingest.detect_boolean, auto_ingest.detect_dates)):
+                found = detect(values)
+                if found: break
+            if not found: continue
+            if 'decision' in found: decisions.append([name, found['decision'], found['rows'], 'not converted'])
+            else: steps.append(({**found['step'], 'column': name}, found['rows'], found['reason']))
+        elif f['type'] == 'numeric' and not f['fractional']:
+            x = numeric_expression(name)
+            low, high = analysis.run(f'SELECT min({x}),max({x}) FROM selected', f'Range of {name}')['rows'][0]
+            hint = auto_ingest.numeric_time_hint(name, low, high, True)
+            if hint: decisions.append([name, hint, f['numeric_present'], 'not converted'])
+    return steps, decisions
+
+
 def apply_corrections(analysis, facts, target, target_type):
     workspace, name = analysis.workspace, analysis.table
     steps = correction_steps(facts, target, target_type)
+    extra, decisions = format_steps(analysis, facts, target, target_type, steps)
+    steps += extra
     for step, _, _ in steps:
         if step['kind'] == 'nullify_many':
             column = step['columns'][0]
@@ -410,9 +458,10 @@ def apply_corrections(analysis, facts, target, target_type):
         for (step, affected, reason), failed in zip(steps, errors):
             column = step.get('column') or step['columns'][0]
             if step['kind'] == 'nullify_many': change = 'set to missing: ' + ', '.join(repr(m) for m in step['markers'])
-            else: change = {'trim': 'trimmed whitespace', 'numeric': 'converted to numbers', 'date': 'converted to dates'}[step['kind']]
+            else: change = {'trim': 'trimmed whitespace', 'numeric': 'converted to numbers', 'date': 'converted to dates',
+                            'number_format': 'converted to numbers', 'boolean': 'unified as true / false'}[step['kind']]
             rows.append([column, change, affected, failed, reason, version['table']])
-    return steps, version, rows
+    return steps, version, rows, decisions
 
 
 # ---------------- the run ----------------
@@ -443,7 +492,8 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
               'time_axis': time_axis, 'settings': SETTINGS, 'stages': [], 'sections': {}, 'skipped': [], 'field_failures': [],
               'sampling': [], 'small_sample_warnings': [], 'warnings': [], 'nonlinear': [], 'leakage': [],
               'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed, 'versions': software_versions()}
-    state = {'prepared': prepared, 'cfg': cfg, 'time_axis': time_axis,
+    budget = Budget(cfg.stage_budget_seconds)
+    state = {'prepared': prepared, 'cfg': cfg, 'time_axis': time_axis, 'budget': budget,
              'time_sql': auto_time.timestamp_expression(time_axis) if time_axis else None}
 
     def stage(key, action, *, skip_reason=None):
@@ -452,10 +502,17 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
             output['stages'].append({'key': key, 'title': title, 'status': 'skipped', 'detail': skip_reason, 'seconds': 0})
             progress(key, title, 'skipped', skip_reason); return
         progress(key, title, 'running', '')
-        started = time.perf_counter()
+        started = time.perf_counter(); budget.start()
         try:
-            detail = action() or ''
+            # Read-only stages reuse one database connection; corrections and evidence write new versions or blocks.
+            with (workspace.reading() if key not in ('corrections', 'evidence') else nullcontext()):
+                detail = action() or ''
             status = 'done with errors' if key == 'fields' and output['field_failures'] else 'done'
+            if budget.reasons:
+                status = 'partial'
+                reason = f'time budget of {cfg.stage_budget_seconds:,.0f} s reached; not computed: ' + '; '.join(budget.reasons)
+                detail = (detail + '; ' if detail else '') + reason
+                output['warnings'].append(f'{title} is partial: {reason}.')
             output['stages'].append({'key': key, 'title': title, 'status': status, 'detail': detail,
                                      'seconds': round(time.perf_counter() - started, 3)})
             progress(key, title, status, detail)
@@ -492,8 +549,9 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
 
     def corrections_stage():
         facts = state['prepared']['facts']; rows = []; version = None
+        decisions = []
         if apply_corrections_step:
-            _, version, rows = apply_corrections(analysis, facts, target, target_type)
+            _, version, rows, decisions = apply_corrections(analysis, facts, target, target_type)
         if version:
             output['analysis_version'] = version['table']
         items = [table('corrections-applied', 'Corrections applied', [('Column', 'text'), ('Change', 'text'), ('Rows affected', 'count'),
@@ -511,6 +569,7 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
                 not_changed.append([name, 'timestamps stored as text', f['recognized_dates'], 'not converted; analysed by calendar date'])
             if f['leading_zero'] and f['numeric_present'] >= SETTINGS['numeric_success'] * max(f['clean'], 1):
                 not_changed.append([name, 'leading zeros', f['leading_zero'], 'kept as text'])
+        not_changed += decisions
         if report['exact_duplicate_rows']:
             not_changed.append(['(all columns)', 'exact duplicate rows', report['exact_duplicate_rows'], 'not removed'])
         variants = next((i for i in output['sections'].get('quality', []) if i['id'] == 'quality-variants'), None)
@@ -662,6 +721,8 @@ def fields_stage(a, spec, facts, time_axis, output, state):
         if name == spec.column: continue
         if name == time_axis:
             output['skipped'].append([name, 'used as the time axis']); continue
+        if state['budget'].over(f'field sections after {len(sections)} fields'):
+            output['skipped'].append([name, 'not analysed: the stage time budget was reached']); continue
         if f['type'] == 'text':
             try:
                 sections.append({'field': name, 'type': 'text', 'items': text_field(a, spec, name, state['cfg'])})
@@ -1238,6 +1299,14 @@ def multivariate_stage(a, spec, facts, time_axis, output, state):
     ranked = [e for e in output.get('ranking', []) if e['field'] not in suspects]
     fields = [e['field'] for e in ranked]
     clusters = structure.clusters if structure else []
+    prescreen = None
+    if len(fields) > cfg.wide_columns:
+        representatives = {c.representative for c in clusters}
+        chosen = fields[:cfg.wide_model_fields] + [f for f in fields[cfg.wide_model_fields:] if f in representatives]
+        prescreen = (f'Wide data: {len(fields)} ranked fields. The model steps use the {cfg.wide_model_fields} with the highest single-field '
+                     f'power plus {len(chosen) - cfg.wide_model_fields} other redundancy-cluster representatives ({len(chosen)} fields).')
+        fields = chosen; ranked = [e for e in ranked if e['field'] in set(chosen)]
+        output['warnings'].append(prescreen)
     result, queries = auto_multivariate.analyse(a, spec, fields, facts, cfg, time_axis, absent_sql,
                                                 lambda c: f'trim(CAST({quote(c)} AS VARCHAR))', clusters, ranked,
                                                 {c.column: c.level for c in structure.conditional} if structure else None,
@@ -1245,7 +1314,7 @@ def multivariate_stage(a, spec, facts, time_axis, output, state):
     evidence = {'version': output['analysis_version'], 'computation': (
         f'HistGradientBoosting ({cfg.model_iterations} iterations, seed {cfg.seed}), {cfg.cv_folds}-fold cross-validation; permutation importance on at most '
         f'{cfg.permutation_rows:,} held-out rows per fold, {cfg.permutation_repeats} repeats'), 'queries': [{'sql': q['sql'], 'parameters': []} for q in queries]}
-    items = [text(note) for note in result.notes]
+    items = [text(note) for note in ([prescreen] if prescreen else []) + result.notes]
     items.append(table('multivariate-metrics', 'Model performance against the baseline (cross-validated)', [('Measure', 'text'), ('Model', 'effect'),
         ('Fold sd', 'effect'), ('Baseline', 'effect'), ('Per fold', 'text')], result.metrics, evidence=evidence,
         note='Baselines: AUC 0.5; accuracy of always predicting the majority class; class shares as predicted probabilities; '
@@ -1288,7 +1357,7 @@ def multivariate_stage(a, spec, facts, time_axis, output, state):
                               'sample_rows': result.sample_rows, 'total_rows': result.total_rows, 'fields': result.fields})
     if result.total_rows > result.sample_rows:
         output['sampling'].append(['multivariate model', result.sample_rows, result.total_rows, cfg.seed, 'rows ordered by hash(_row_id + seed)'])
-    return f'{len(fields)} fields; ' + ('little joint signal' if result.no_signal else f'model gain {result.signal:.3f}')
+    return f'{len(fields)} fields; ' + ('little joint signal' if result.no_signal or result.signal is None else f'model gain {result.signal:.3f}')
 
 
 # ---------------- confounding, interactions and segments ----------------
@@ -1467,6 +1536,7 @@ def relationships_stage(a, spec, facts, time_axis, output, state):
     pairs = []; queries = []
     for i, first in enumerate(fields):
         for second in fields[i + 1:]:
+            if state['budget'].over(f'pairs after {len(pairs)}'): break
             value, measure, n, results, (low, high) = association(a, first, second, kinds)
             # Rounded before sorting, so last-bit differences from parallel sums cannot reorder near-ties.
             pairs.append([first, second, measure, _clean(value), _clean(low), _clean(high), n]); queries += results
@@ -1736,6 +1806,7 @@ def unsupervised_stage(a, facts, time_axis, output, state):
     summary['anomalies'] = {'flagged': flagged, 'rows': rows[:cfg.anomalies_shown]}
     shapes = []
     for name in shape_fields:
+        if state['budget'].over(f'distribution shapes after {len(shapes)} fields'): break
         result = auto_unsupervised.shape(data[name].to_numpy(dtype=float), cfg)
         if result: shapes.append({'field': name, **result})
     items.append(table('distribution-shapes', 'Distribution shape of numeric fields', [('Field', 'text'), ('Values', 'count'), ('Skewness', 'number'),
@@ -1865,7 +1936,7 @@ def time_stage(a, spec, facts, time_axis, output, state):
         note=f'Binary segmentation into straight-line segments of at least {cfg.break_min_periods} periods; a break is kept when it improves the fit by more '
              f'than a BIC-type penalty ({cfg.break_penalty} × 3 ln n, raised for autocorrelation) and the level jump is at least {cfg.break_min_jump_sd} noise sd. '
              'Breaks are less reliable in series shorter than about 40 periods.'))
-    drift, drift_queries, drift_note = field_drift(a, spec, facts, time_axis, first, last, cfg)
+    drift, drift_queries, drift_note = field_drift(a, spec, facts, time_axis, first, last, cfg, state['budget'])
     items.append(table('time-drift', f'Distribution drift: first vs last {cfg.psi_window_share:.0%} of the time range',
         [('Field', 'text'), ('PSI', 'effect'), ('Shift', 'text'), ('Rows in first window', 'count'), ('Rows in last window', 'count'),
          ('Largest change', 'text')], [[r['field'], r['psi'], r['label'], r['first_rows'], r['last_rows'], r['largest']] for r in drift],
@@ -1899,7 +1970,7 @@ def series_chart(s, values, errors, labels, unit):
     return visuals.style(fig, s.name, None, s.name)
 
 
-def field_drift(a, spec, facts, time_axis, first, last, cfg):
+def field_drift(a, spec, facts, time_axis, first, last, cfg, budget=None):
     """PSI per field between the first and last share of the time range (bins from the first window)."""
     span = auto_time.as_datetime(last) - auto_time.as_datetime(first)
     if span.total_seconds() <= 0: return [], [], 'The time range is a single instant; drift is not computed.'
@@ -1914,6 +1985,7 @@ def field_drift(a, spec, facts, time_axis, first, last, cfg):
     drift = []; queries = [sizes]
     for name, f in facts.items():
         if name == time_axis or f['type'] not in ('numeric', 'categorical', 'binary'): continue
+        if budget is not None and budget.over(f'drift after {len(drift)} fields'): break
         if f['type'] == 'numeric':
             x = numeric_expression(name)
             edges_q = a.run(f"SELECT quantile_cont({x},[{','.join(repr(i / cfg.psi_bins) for i in range(1, cfg.psi_bins))}]) FROM {base} WHERE w=0",

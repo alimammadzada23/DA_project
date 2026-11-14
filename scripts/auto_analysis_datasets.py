@@ -263,17 +263,19 @@ def verify_retail(output, raw, checks, workspace=None):
         total, countries = con.execute(f'SELECT count(*),count(DISTINCT Country) FROM "{original}"').fetchone()
         uk = con.execute(f"SELECT count(*) FROM \"{original}\" WHERE Country='United Kingdom'").fetchone()[0]
         missing_customer = con.execute(f'SELECT count(*) FROM "{original}" WHERE "Customer ID" IS NULL').fetchone()[0]
-        # A 738-day range is grouped by quarter under the documented rule.
-        quarters = con.execute(f'SELECT count(*) FROM "{original}" GROUP BY date_trunc(\'quarter\',CAST(InvoiceDate AS TIMESTAMP)) ORDER BY 1 DESC LIMIT 1').fetchone()[0]
+        grain = output['time']['grain']
+        per_period = [r[0] for r in con.execute(f'SELECT count(*) FROM "{original}" GROUP BY date_trunc(\'{grain}\',CAST(InvoiceDate AS TIMESTAMP)) '
+                                                'ORDER BY date_trunc(\'' + grain + '\',CAST(InvoiceDate AS TIMESTAMP))').fetchall()]
     check(checks, 'Rows (both sheets)', output['rows'], total)
     country = table(output, aa.item_id('Country', 'counts')).set_index('Category')
     check(checks, 'Rows, Country = United Kingdom', country.loc['United Kingdom', 'Rows'], uk)
     check(checks, 'Country categories (30 shown + other)', len(country) - 1 + int(country.index[-1].split()[1]), countries)
     missing = table(output, 'quality-missing').set_index('Column')
     check(checks, 'Missing Customer ID', missing.loc['Customer ID', 'Rows'], missing_customer)
-    periods = table(output, 'invoicedate-periods-time')
-    check(checks, 'Largest quarter row count', int(periods.Rows.max()), quarters)
-    check(checks, 'Rows over all quarters', int(periods.Rows.sum()), total)
+    periods = table(output, 'time-periods')
+    # Invoice timestamps: the finest level with ≥ 20 periods and ≥ 30 rows per period on average.
+    check(checks, 'Rows per period (non-empty periods)', [int(v) for v in periods.Rows if v], per_period)
+    check(checks, 'Rows over all periods', int(periods.Rows.sum()), total)
 
 
 DATASETS = [('telco', telco, verify_telco), ('adult', adult, verify_adult), ('penguins', penguins, verify_penguins),

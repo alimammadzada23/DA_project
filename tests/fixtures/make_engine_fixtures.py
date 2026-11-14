@@ -116,13 +116,39 @@ def unlabelled(rng, n=1500):
                          'noise': np.round(rng.normal(size=n), 3)})
 
 
+def messy(rng, n=600):
+    """#9: Central European formats in cp1250 with a title row and semicolons: decimal comma with space thousands, euro amounts
+    with accounting negatives, percentages, mixed date formats (day-first), ambiguous slash dates, mixed yes/no spellings and
+    NA markers. Returns the file bytes; a UTF-8 copy with a byte-order mark is written next to it."""
+    cities = np.array(['Kraków', 'Łódź', 'Brno', 'Ústí nad Labem', 'Košice', 'Žilina'])
+    price = np.round(rng.uniform(5, 5000, n), 2)
+    amount = np.round(rng.normal(800, 900, n), 2)
+    discount = rng.choice([0, 5, 7.5, 10, 15], n)
+    days = pd.to_datetime('2021-01-01') + pd.to_timedelta(rng.integers(0, 365, n), unit='D')
+    style = rng.integers(0, 3, n)
+    def number(v): return f'{v:,.2f}'.replace(',', ' ').replace('.', ',')
+    def euro(v): text = f'{abs(v):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.') + ' €'; return f'({text})' if v < 0 else text
+    rows = []
+    for i in range(n):
+        date = [days[i].strftime('%Y-%m-%d'), days[i].strftime('%d.%m.%Y'), f'{days[i].day} {days[i].strftime("%b %Y")}'][style[i]]
+        flag = ['Y', 'N', 'yes', 'no'][rng.integers(0, 4)]
+        rows.append([cities[i % len(cities)], number(price[i]) if i % 50 else 'N/A', euro(amount[i]), f'{discount[i]:g}%'.replace('.', ','), date,
+                     f'{rng.integers(1, 13):02d}/{rng.integers(1, 13):02d}/2021', flag if i % 40 else '--', 'tak' if rng.random() < 0.3 + price[i] / 10000 else 'nie'])
+    header = ['miasto', 'cena', 'kwota', 'rabat', 'data', 'termin', 'aktywny', 'kupił']
+    body = 'Raport sprzedaży 2021 (wygenerowany)\n' + '\n'.join(';'.join(r) for r in [header] + rows) + '\n'
+    (HERE / 'ENGINE-09-messy-bom.csv').write_bytes(b'\xef\xbb\xbf' + ('\n'.join(';'.join(r) for r in [header] + rows) + '\n').encode('utf-8'))
+    return body.encode('cp1250')
+
+
 FIXTURES = {'ENGINE-01-conditional.csv': conditional, 'ENGINE-03-derived.csv': derived,
             'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness, 'ENGINE-02-leakage.csv': leakage,
             'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance, 'ENGINE-05-simpson.csv': simpson,
             'ENGINE-06-interaction.csv': interaction, 'ENGINE-08-null.csv': null, 'ENGINE-11-timeseries.csv': timeseries,
-            'ENGINE-12-unlabelled.csv': unlabelled}
+            'ENGINE-12-unlabelled.csv': unlabelled, 'ENGINE-09-messy.csv': messy}
 
 
 if __name__ == '__main__':
     for index, (name, make) in enumerate(FIXTURES.items()):
-        make(np.random.default_rng(1000 + index)).to_csv(HERE / name, index=False)
+        made = make(np.random.default_rng(1000 + index))
+        if isinstance(made, bytes): (HERE / name).write_bytes(made)
+        else: made.to_csv(HERE / name, index=False)

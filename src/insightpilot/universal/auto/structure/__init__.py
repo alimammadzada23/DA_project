@@ -250,7 +250,8 @@ OPERATIONS = [('×', lambda a, b: a * b), ('+', lambda a, b: a + b), ('/', lambd
 def derived_columns(a, facts, cfg, result):
     """C ≈ k·A or C ≈ k·(A op B) for op in ×, +, /, − (k fitted through the origin).
 
-    Screened with a trimmed R² (largest 1% of residuals dropped) on a seeded sample, then
+    Screened with a trimmed R² (largest 1% of residuals dropped) on 1,000 sampled rows (R² ≥ threshold − 0.15),
+    refitted on the whole seeded sample, then
     confirmed with the plain R² on every complete row. Of formulas linking the same three
     columns, the product or sum form is kept.
     """
@@ -275,10 +276,17 @@ def derived_columns(a, facts, cfg, result):
                     forms.append((f'{first} {symbol} {second}', [first, second], operation(data[first], data[second])))
                     if symbol in ('/', '−'):
                         forms.append((f'{second} {symbol} {first}', [second, first], operation(data[second], data[first])))
-            for formula, sources, values in forms:
-                fit = trimmed_fit(c, values)
-                if fit and fit[1] >= cfg.derived_r2:
-                    candidates.append((target, formula, sources, fit[0], fit[1]))
+            # Screen on the first 1,000 sampled rows with a looser bar (R² ≥ derived_r2 − 0.15), then fit the survivors on
+            # the whole sample with the usual rule; the sample is already in seeded random order.
+            screen = SCREEN_ROWS if len(c) > 2 * SCREEN_ROWS else len(c)
+            for start in range(0, len(forms), 400):
+                chunk = forms[start:start + 400]
+                rough = trimmed_fits(c[:screen], [values[:screen] for _, _, values in chunk]) if screen < len(c) else [True] * len(chunk)
+                survivors = [form for form, fit in zip(chunk, rough) if fit is True or (fit and fit[1] >= cfg.derived_r2 - 0.15)]
+                fits = trimmed_fits(c, [values for _, _, values in survivors])
+                for (formula, sources, _), fit in zip(survivors, fits):
+                    if fit and fit[1] >= cfg.derived_r2:
+                        candidates.append((target, formula, sources, fit[0], fit[1]))
     confirmed = {}
     n_sql = numeric_expression
     for target, formula, sources, factor, r2_sample in candidates:
@@ -332,6 +340,34 @@ def trimmed_fit(c, f):
     return k, 1 - residual[keep].sum() / total
 
 
+SCREEN_ROWS = 1000
+
+
+def trimmed_fits(c, columns):
+    """trimmed_fit for many candidate columns at once; identical rules, vectorised over the complete candidates."""
+    output = [None] * len(columns)
+    if not columns: return output
+    matrix = np.vstack(columns)
+    complete = np.isfinite(matrix).all(axis=1) & bool(np.isfinite(c).all())
+    for i in np.flatnonzero(~complete): output[i] = trimmed_fit(c, matrix[i])
+    rows = np.flatnonzero(complete)
+    if not len(rows) or len(c) < 20 or np.var(c) == 0: return output
+    f = matrix[rows]
+    denominator = (f * f).sum(axis=1)
+    variance = f.var(axis=1)
+    k = np.divide(f @ c, denominator, out=np.zeros(len(rows)), where=denominator != 0)
+    residual = (c[None, :] - k[:, None] * f) ** 2
+    keep = residual <= np.quantile(residual, 0.99, axis=1)[:, None]
+    count = keep.sum(axis=1)
+    s1 = keep @ c; s2 = keep @ (c * c)
+    total = s2 - s1 * s1 / count
+    sse = (residual * keep).sum(axis=1)
+    for j, i in enumerate(rows):
+        if not denominator[j] or variance[j] == 0 or not total[j] > 0: continue
+        output[i] = (float(k[j]), float(1 - sse[j] / total[j]))
+    return output
+
+
 # ---------------- associations and clusters ----------------
 def associations(a, facts, structure, cfg, absent_sql):
     """Pairwise association of fields, computed in memory from one seeded sample of at most cfg.association_sample_rows rows.
@@ -362,6 +398,8 @@ def associations(a, facts, structure, cfg, absent_sql):
     for c in structure.conditional:
         if c.column in fields:
             applicable[c.column] = (data[c.parent].to_numpy(dtype=object) != c.parent_value), f'rows where {c.parent} ≠ {c.parent_value}', c.parent
+    # Spearman ρ is the Pearson correlation of average ranks; columns without missing values are ranked once.
+    ranks = {n: stats.rankdata(values[n]) for n in numeric if not np.isnan(values[n]).any()}
     output = []
     for first, second in combinations(fields, 2):
         mask = np.ones(len(data), dtype=bool); notes = []
@@ -373,7 +411,11 @@ def associations(a, facts, structure, cfg, absent_sql):
                 mask &= rows; notes.append(note)
         if skip: continue
         kinds = (first in numeric, second in numeric)
-        if kinds == (True, True):
+        if kinds == (True, True) and not notes and first in ranks and second in ranks:
+            rx, ry = ranks[first], ranks[second]; n = len(rx)
+            value = float(np.corrcoef(rx, ry)[0, 1]) if n >= 3 and np.ptp(rx) and np.ptp(ry) else None
+            measure = 'Spearman ρ'
+        elif kinds == (True, True):
             x, y = values[first][mask], values[second][mask]
             keep = ~np.isnan(x) & ~np.isnan(y)
             n = int(keep.sum())

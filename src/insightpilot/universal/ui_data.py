@@ -98,6 +98,33 @@ def _available_name(workspace,stem):
     return name
 
 
+DETECT_LABEL='Detect encoding, separator and title rows above the table'
+DETECT_HELP=('For CSV files that are not plain UTF-8 or that start with a title or notes. The file is read as UTF-8, cp1250 or cp1252 '
+             '(reported), the separator is chosen by the most consistent field count unless you picked one, and rows above the table are left '
+             'out (listed). Your original file is not changed; values are imported as text and reviewed later.')
+
+
+def _import_detected(workspace,path,name,delimiter,names,provenance,label=None):
+    """Import a UTF-8 copy without leading non-table rows; the detection report is kept in the table's provenance."""
+    from .auto.ingest import prepare_file
+    folder=workspace.directory/'incoming'; folder.mkdir(exist_ok=True)
+    prepared,report=prepare_file(path,folder,delimiter)
+    try:
+        info=workspace.add_file(prepared,name,delimiter=report['delimiter'],column_names=names,
+                                provenance={**provenance,'filename':provenance.get('filename',label or Path(path).name),'format_detection':report})
+    finally:
+        prepared.unlink(missing_ok=True)
+    return info,report
+
+
+def _detection_message(report):
+    separator={'\t':'tab',',':'comma',';':'semicolon','|':'pipe'}.get(report['delimiter'],repr(report['delimiter']))
+    text=f'Read as {report["encoding"]} ({report["encoding_reason"]}); separator: {separator}.'
+    if report['skipped_rows']:
+        text+=f' {report["skipped_rows"]} row(s) above the table were left out: '+' | '.join(repr(r) for r in report['skipped_preview'])+'.'
+    return text
+
+
 def _import_from_path(workspace,message_key):
     key=message_key+'-path'
     st.caption('Import by path, with no browser upload or 512 MB limit. A folder with several files of the same structure becomes one table with a source_file column. Files are copied into the project, so your originals are not changed.')
@@ -126,6 +153,7 @@ def _import_from_path(workspace,message_key):
             _delimited_preview(stream.read(65536),found[0].name,delimiter or ('\t' if suffix=='.tsv' else ','),names)
     stem=found[0].stem if len(found)==1 else found[0].parent.name
     name=st.text_input('New table name',_available_name(workspace,stem),key=key+'-name')
+    detect=st.checkbox(DETECT_LABEL,key=key+'-detect',help=DETECT_HELP) if suffix in ('.csv','.tsv') and len(found)==1 else False
     synthetic=st.checkbox('This is synthetic test data',key=key+'-synthetic')
     if not st.button('Import from this Mac',key=key+'-import',type='primary'):return
     if names==[]:
@@ -134,13 +162,16 @@ def _import_from_path(workspace,message_key):
     provenance={'origin':'synthetic' if synthetic else 'local_files'}
     try:
         with st.spinner('Importing and checking all rows. Large files can take several minutes…'):
-            if len(found)==1:
+            if len(found)==1 and detect:
+                info,detected=_import_detected(workspace,found[0],name,delimiter,names,provenance)
+            elif len(found)==1:
                 info=workspace.add_file(found[0],name,sheet=sheet,delimiter=delimiter,column_names=names,provenance=provenance,progress=status.caption)
             else:
                 info=workspace.add_files(found,name,delimiter=delimiter,column_names=names,provenance=provenance,progress=status.caption)
     except Exception as exc:
         st.error(f'{exc}. No partial table was created.');return
     messages=[('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.')]
+    if len(found)==1 and detect: messages.append(('info',_detection_message(detected)))
     messages+=[('warning',warning) for warning in info.get('import_warnings',[])]
     st.session_state[message_key]=messages
     st.session_state['ux-last-import-'+str(workspace.directory)]=name
@@ -162,6 +193,7 @@ def _import_datasets(workspace,message_key):
                     _delimited_preview(upload.getbuffer(),upload.name,delimiter or ('\t' if upload.name.lower().endswith('.tsv') else ','),names)
         sheets={upload.name:_sheet_picker(upload,upload.name,message_key+'-sheet-'+upload.name) for upload in files or [] if upload.name.lower().endswith('.xlsx')}
         with st.form('universal-upload'):
+            detect=st.checkbox(DETECT_LABEL,help=DETECT_HELP)
             synthetic=st.checkbox('These files are synthetic test data')
             submitted=st.form_submit_button('Import tables')
         if submitted:
@@ -177,9 +209,14 @@ def _import_datasets(workspace,message_key):
                 columns=names if Path(file.name).suffix.lower() in ('.csv','.tsv') else None
                 try:
                     with st.spinner(f'Importing {file.name}; checking all rows…'):
-                        info=workspace.add_file(path,name,sheet=sheets.get(file.name,0),delimiter=delimiter,column_names=columns,provenance={
-                            'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'})
+                        provenance={'filename':file.name,'origin':'synthetic' if synthetic else 'user_upload'}
+                        detected=None
+                        if detect and Path(file.name).suffix.lower() in ('.csv','.tsv'):
+                            info,detected=_import_detected(workspace,path,name,delimiter,columns,provenance,label=file.name)
+                        else:
+                            info=workspace.add_file(path,name,sheet=sheets.get(file.name,0),delimiter=delimiter,column_names=columns,provenance=provenance)
                     messages.append(('success',f'{name}: {info["rows"]:,} rows imported. {len(info["columns"])} fields detected. Review meaning and quality before defining metrics.'))
+                    if detected: messages.append(('info',_detection_message(detected)))
                     st.session_state['ux-last-import-'+str(workspace.directory)]=name
                     st.session_state['ux-data-mode-pending-'+str(workspace.directory)]='Dataset library'
                     for warning in info.get('import_warnings',[]):messages.append(('warning',warning+' Source bytes were retained; re-import with the intended separator into a new table if needed.'))
@@ -187,7 +224,7 @@ def _import_datasets(workspace,message_key):
                 finally: path.unlink(missing_ok=True)
             st.session_state[message_key]=messages
             st.rerun()
-        st.caption('CSV/TSV, flat Parquet, JSON and Excel stream into DuckDB. Up to 100 million rows and 150 columns; browser uploads are limited to 512 MB per file; use File or folder on this Mac for anything larger. '
+        st.caption('CSV/TSV, flat Parquet, JSON and Excel stream into DuckDB. Up to 100 million rows and 1,000 columns; browser uploads are limited to 512 MB per file; use File or folder on this Mac for anything larger. '
                    'JSON must be a flat array; JSON Lines uses one object per line. '
                    'Malformed input is rejected atomically, with its original file and a rejection receipt retained.')
     with tabs[1]:_import_from_path(workspace,message_key)
