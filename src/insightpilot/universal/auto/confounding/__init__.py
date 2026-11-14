@@ -166,14 +166,15 @@ def bins(values, numeric, count):
     return text.where(text.isin(keep), '(other)')
 
 
-def interaction_screen(raw, y, kind, fields, numeric, cfg):
+def interaction_screen(raw, y, kind, fields, numeric, cfg, time_ordered=False):
     """Δ = mean over folds of (score with joint levels − score with separate levels) for each pair of fields."""
     from sklearn.linear_model import LogisticRegression, Ridge
     from sklearn.metrics import r2_score, roc_auc_score
-    from sklearn.model_selection import KFold, StratifiedKFold
+    from sklearn.model_selection import KFold, StratifiedKFold, TimeSeriesSplit
     if kind == 'multiclass': return [], 'Not computed for multiclass targets.'
     encoded = {name: bins(raw[name], name in numeric, cfg.interaction_levels) for name in fields}
-    folds = list((StratifiedKFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(raw, y) if kind == 'binary'
+    # Rows arrive in time order when a time axis exists: each fold then trains on earlier rows only.
+    folds = list(TimeSeriesSplit(n_splits=cfg.cv_folds).split(raw)) if time_ordered else list((StratifiedKFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(raw, y) if kind == 'binary'
                   else KFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(raw)))
     rows = []
     for first, second in combinations(fields, 2):

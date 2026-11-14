@@ -26,8 +26,9 @@ def name_hints(name):
     return [hint for hint in POST_OUTCOME_HINTS if hint in words]
 
 
-def screen(a, spec, powers, facts, cfg, absent_sql, text_value):
-    """Flag suspects by (1) single-field power, (2) exact dependency with the target, (3) date-name hints."""
+def screen(a, spec, powers, facts, cfg, absent_sql, text_value, time_axis=None):
+    """Flag suspects by (1) single-field power, (2) exact dependency with the target, (3) date-name hints and
+    (4) with a time axis, dates that fall after it on almost every row (values known only later)."""
     suspects = {}; queries = []
 
     def flag(name, reason):
@@ -58,6 +59,17 @@ def screen(a, spec, powers, facts, cfg, absent_sql, text_value):
             flag(name, 'takes a single value within each target class')
         if f['type'] == 'date' and name_hints(name):
             flag(name, 'date whose name suggests it is recorded after the outcome (' + ', '.join(repr(h) for h in name_hints(name)) + '; a name hint only)')
+    if time_axis:
+        from ...profile import date_expression
+        axis = date_expression(time_axis)
+        for name, f in facts.items():
+            if name in (spec.column, time_axis) or f['type'] != 'date': continue
+            query = a.run(f'''SELECT count(*) FILTER (WHERE d > t) AS later,count(*) AS n FROM (SELECT {date_expression(name)} AS d,{axis} AS t
+                FROM selected) WHERE d IS NOT NULL AND t IS NOT NULL''', f'Order of {name} and the time axis {time_axis}')
+            queries.append(query)
+            later, n = query['rows'][0]
+            if n >= 20 and later / n >= cfg.temporal_leakage_share:
+                flag(name, f'later than the time axis {time_axis} on {later / n:.1%} of {n:,} rows with both dates (known only after it)')
     for name, suspect in suspects.items():
         power = powers.get(name) or {}
         suspect.power_metric, suspect.power = power.get('metric', ''), power.get('value')

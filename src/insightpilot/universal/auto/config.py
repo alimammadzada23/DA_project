@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass, replace
 import hashlib
 import json
 
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -81,6 +81,39 @@ class AnalysisConfig:
     top_findings: int = 10
     # Shape
     monotone_share_minimum: float = 0.8     # below this share of between-bin variation explained by a monotone fit = non-linear
+    # Time analysis
+    time_min_periods: int = 20              # aggregation: finest level with at least this many periods …
+    time_min_rows_per_period: int = 30      # … and at least this many rows per period on average
+    time_min_periods_tests: int = 12        # complete periods needed for trend, seasonality and break tests
+    time_rate_min_rows: int = 5             # periods with fewer rows get no rate or mean in the tests
+    seasonal_permutations: int = 99
+    seasonal_strength_minimum: float = 0.4  # STL seasonal strength reported as a finding …
+    seasonal_p_maximum: float = 0.01        # … when its permutation p is at most this (99 permutations: none as strong)
+    trend_min_change: float = 0.10          # Theil–Sen change over the range, relative to the mean level, before a trend becomes a finding
+    break_min_periods: int = 4              # shortest segment on either side of a break
+    break_max: int = 3
+    break_penalty: float = 1.5              # multiplier of the BIC-type penalty 3·ln(n)
+    break_min_jump_sd: float = 2.0          # level jump in noise standard deviations before a break is reported
+    psi_window_share: float = 0.25          # PSI compares the first and last 25% of the time range
+    psi_moderate: float = 0.10
+    psi_major: float = 0.25
+    psi_min_rows: int = 100                 # rows needed in each window
+    psi_bins: int = 10
+    psi_levels: int = 20
+    temporal_leakage_share: float = 0.99    # a date later than the time axis on this share of rows is a leakage suspect
+    # No-target mode
+    cluster_k_min: int = 2
+    cluster_k_max: int = 8
+    cluster_silhouette_minimum: float = 0.25
+    cluster_ari_minimum: float = 0.6
+    cluster_bootstrap: int = 10
+    cluster_sample_rows: int = 1000         # seeded sample used to choose k (Gower distances are rows × rows)
+    cluster_fields: int = 20
+    unsupervised_rows: int = 200_000        # seeded sample for cluster sizes, profiles and unusual rows
+    anomaly_share: float = 0.01
+    anomalies_shown: int = 20
+    dip_sample_rows: int = 2000
+    dip_simulations: int = 200
 
     def to_dict(self):
         return {'config_version': CONFIG_VERSION, **asdict(self)}

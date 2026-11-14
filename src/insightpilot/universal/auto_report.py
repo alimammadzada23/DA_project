@@ -171,12 +171,13 @@ def method_items(output):
     return items
 
 
-# Report order: header, at a glance, warnings, top findings, associated fields, segments, structure, field details,
+# Report order: header, at a glance, warnings, top findings, associated fields, segments, clusters (no target), structure, field details,
 # relationships, time, data quality, method, (optional local-AI summary), analyst conclusions, evidence appendix.
 REPORT_SECTIONS = [
     ('drivers', 'Fields associated with the target', ['target_selection', 'target', 'leakage', 'ranking', 'multivariate'],
      'No target was selected, so fields are not compared with an outcome.'),
     ('segments', 'Segments', ['segments'], 'No validated segments: segments need a target and enough rows.'),
+    ('patterns', 'Clusters, unusual rows and shapes', ['unsupervised'], 'Computed only when no target is chosen.'),
     ('structure', 'Structure', ['structure'], 'No structure results.'),
     ('fields', 'Field details', ['fields'], 'No fields were analysed.'),
     ('relationships', 'Relationships, confounding and interactions', ['confounding', 'relationships'], 'No relationship results.'),

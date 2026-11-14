@@ -23,9 +23,12 @@ from ..datasets import quote
 from . import auto_stats, visuals
 from .auto import findings as auto_findings
 from .auto import confounding as auto_confounding, leakage as auto_leakage, multivariate as auto_multivariate, segments as auto_segments
-from .auto import quality as auto_quality, structure as auto_structure, univariate as auto_univariate
+from .auto import quality as auto_quality, structure as auto_structure, timeseries as auto_time, univariate as auto_univariate
+from .auto import textgeo as auto_textgeo, unsupervised as auto_unsupervised
 from .auto.config import DEFAULT as DEFAULT_CONFIG
+from .auto import stats as auto_stats_ci
 from .auto.stats import bootstrap_interval
+from scipy.stats import t as stats_t
 from .context import AnalysisContext
 from .engine import Engine, frame_of
 from .metrics import Metric
@@ -67,7 +70,7 @@ POSITIVE_HINTS = ('yes', 'true', '1', '1.0', 'y', 't', 'positive')
 MISSING_KEY, OTHER_KEY = '␞MISSING␞', '␞OTHER␞'
 STAGES = [('profile', 'Data profile'), ('target_selection', 'Target selection'), ('corrections', 'Safe data corrections'), ('structure', 'Structure discovery'),
           ('target_overview', 'Target overview'), ('fields', 'Fields versus the target'), ('leakage', 'Leakage screen'), ('ranking', 'Ranking'), ('multivariate', 'Multivariate model'), ('confounding', 'Confounding and interactions'), ('segments', 'Segments'),
-          ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('findings', 'Findings digest'), ('evidence', 'Saved evidence')]
+          ('unsupervised', 'Clusters and unusual rows'), ('relationships', 'Relationships between fields'), ('time', 'Time analysis'), ('findings', 'Findings digest'), ('evidence', 'Saved evidence')]
 RUN_FOLDER = 'automatic_analysis'
 
 
@@ -169,6 +172,7 @@ class Analysis:
                 count(DISTINCT CASE WHEN {usable} THEN {value} END) AS distinct_clean,
                 avg(length({value})) FILTER (WHERE {usable}) AS mean_length,
                 count(*) FILTER (WHERE {usable} AND regexp_matches({value},'^[+-]?0[0-9]')) AS leading_zero,
+                count(*) FILTER (WHERE {usable} AND regexp_matches({value},'\\s')) AS spaced,
                 count(*) FILTER (WHERE {usable} AND regexp_matches({value},'^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}$')) AS iso_dates,
                 count(*) FILTER (WHERE {usable} AND {slash}) AS slash_dates,
                 count(*) FILTER (WHERE {usable} AND {slash} AND try_cast(split_part({value},'/',1) AS INTEGER)>12) AS first_over_12,
@@ -200,6 +204,9 @@ def classify(f):
         return 'numeric'
     if f['recognized_dates'] >= clean: return 'date'
     if f['slash_dates'] == clean: return 'date' if slash_format(f) else 'ambiguous_date'
+    long_text = distinct > SETTINGS['category_limit'] and (f['mean_length'] or 0) >= SETTINGS['text_mean_length']
+    # Unique values with spaces and a long mean length are free text (comments), not identifiers.
+    if long_text and f.get('spaced', 0) >= 0.5 * clean: return 'text'
     if clean >= 20 and distinct >= SETTINGS['identifier_share'] * clean: return 'identifier'
     if distinct > SETTINGS['category_limit'] and (f['mean_length'] or 0) >= SETTINGS['text_mean_length']: return 'text'
     return 'categorical'
@@ -436,7 +443,8 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
               'time_axis': time_axis, 'settings': SETTINGS, 'stages': [], 'sections': {}, 'skipped': [], 'field_failures': [],
               'sampling': [], 'small_sample_warnings': [], 'warnings': [], 'nonlinear': [], 'leakage': [],
               'config': cfg.to_dict(), 'config_hash': cfg.hash, 'seed': cfg.seed, 'versions': software_versions()}
-    state = {'prepared': prepared, 'cfg': cfg}
+    state = {'prepared': prepared, 'cfg': cfg, 'time_axis': time_axis,
+             'time_sql': auto_time.timestamp_expression(time_axis) if time_axis else None}
 
     def stage(key, action, *, skip_reason=None):
         title = dict(STAGES)[key]
@@ -529,9 +537,10 @@ def run(workspace, table_name, *, target=None, target_type=None, positive=None, 
     stage('multivariate', lambda: multivariate_stage(worker, spec, facts, time_axis, output, state), skip_reason=None if target else 'no target chosen')
     stage('confounding', lambda: confounding_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
     stage('segments', lambda: segments_stage(worker, spec, facts, output, state), skip_reason=None if target else 'no target chosen')
+    stage('unsupervised', lambda: unsupervised_stage(worker, facts, time_axis, output, state), skip_reason='a target is chosen' if target else None)
     finish_structure(output, state, bool(target))
     stage('relationships', lambda: relationships_stage(worker, spec, facts, time_axis, output, state))
-    stage('time', lambda: time_stage(worker, spec, time_axis, output), skip_reason=None if time_axis else 'no time axis chosen')
+    stage('time', lambda: time_stage(worker, spec, facts, time_axis, output, state), skip_reason=None if time_axis else 'no time axis chosen')
     stage('findings', lambda: findings_stage(output, state))
     stage('evidence', lambda: save_blocks(worker, output) if save_evidence else 'not requested')
     return output
@@ -653,15 +662,27 @@ def fields_stage(a, spec, facts, time_axis, output, state):
         if name == spec.column: continue
         if name == time_axis:
             output['skipped'].append([name, 'used as the time axis']); continue
+        if f['type'] == 'text':
+            try:
+                sections.append({'field': name, 'type': 'text', 'items': text_field(a, spec, name, state['cfg'])})
+            except Exception as exc:
+                output['field_failures'].append([name, f'{type(exc).__name__}: {exc}'])
+            continue
         if f['type'] not in ANALYSED_TYPES:
             output['skipped'].append([name, SKIP_REASONS[f['type']].format(mean_length=f['mean_length'] or 0)]); continue
         try:
             items, effect = analyse_field(a, spec, name, f, output)
             items, effect = enrich_field(a, spec, name, f, items, effect, output, state)
+            if f['type'] == 'categorical': items += country_codes(a, spec, name, f)
         except Exception as exc:
             output['field_failures'].append([name, f'{type(exc).__name__}: {exc}']); continue
         sections.append({'field': name, 'type': f['type'], 'items': items})
         if effect: state['effects'].append(effect)
+    for lat, lon in auto_textgeo.coordinate_pairs({n: f for n, f in facts.items() if n != spec.column}):
+        try:
+            sections.append({'field': f'{lat}, {lon}', 'type': 'geo', 'items': geo_pair(a, spec, lat, lon, state['cfg'])})
+        except Exception as exc:
+            output['field_failures'].append([f'{lat}, {lon}', f'{type(exc).__name__}: {exc}'])
     output['sections']['fields'] = sections
     return f'{len(sections)} fields analysed, {len(output["skipped"])} skipped, {len(output["field_failures"])} failed'
 
@@ -705,7 +726,7 @@ def enrich_field(a, spec, name, f, items, effect, output, state):
         if effect and reference: effect['unconditional_effect'] = reference['effect']
     if not spec.column:
         return notes + items, effect
-    power = auto_univariate.field_power(a, target_spec, name, kind, cfg, absent_sql)
+    power = auto_univariate.field_power(a, target_spec, name, kind, cfg, absent_sql, state.get('time_sql'))
     state.setdefault('powers', {})[name] = power
     if effect is None or kind == 'date':
         return notes + items, effect
@@ -720,7 +741,9 @@ def enrich_field(a, spec, name, f, items, effect, output, state):
         ('Permutation p', 'p'), ('Grouping', 'text'), ('Rows', 'text')], power_rows,
         evidence=a.evidence(f'{cfg.cv_folds}-fold cross-validated target encoding (smoothing {cfg.encoding_smoothing:g}); '
                             f'NMI against {cfg.permutations} permutations, seed {cfg.seed}', *power['queries']),
-        note='ΔAUC is the out-of-fold AUC minus 0.5 for a model that uses only this field; R² is its out-of-fold R². Folds are stratified and seeded.'))
+        note='ΔAUC is the out-of-fold AUC minus 0.5 for a model that uses only this field; R² is its out-of-fold R². '
+             + (f'Folds are {cfg.cv_folds + 1} consecutive time blocks; each later block is scored from the earlier ones only.' if state.get('time_sql')
+                else 'Folds are stratified and seeded.')))
     return notes + items, effect
 
 
@@ -1195,7 +1218,7 @@ def leakage_stage(a, spec, facts, output, state):
     cfg = state['cfg']
     candidates = {n: f for n, f in facts.items() if n != spec.column}
     suspects, queries = auto_leakage.screen(a, spec, state.get('powers', {}), candidates, cfg, absent_sql,
-                                            lambda c: f'trim(CAST({quote(c)} AS VARCHAR))')
+                                            lambda c: f'trim(CAST({quote(c)} AS VARCHAR))', state.get('time_axis'))
     output['leakage'] = [s.to_dict() for s in suspects]
     for suspect in suspects:
         output['warnings'].append(f'Possible leakage: {suspect.field} ({"; ".join(suspect.reasons)}). It is excluded from the multivariate model.')
@@ -1203,7 +1226,8 @@ def leakage_stage(a, spec, facts, output, state):
         ('Predictive power alone', 'effect')], [[s.field, '; '.join(s.reasons), s.power_metric, s.power] for s in suspects],
         evidence=a.evidence('Single-field cross-validated power, exact dependency checks with the target and date-name hints', *queries),
         note=f'A field is a suspect when it alone reaches AUC ≥ {cfg.leakage_auc} (R² ≥ {cfg.leakage_r2} for numeric targets), when it determines '
-             'the target or takes one value per target class, or when a date name suggests it is recorded after the outcome (a weak hint). '
+             'the target or takes one value per target class, when a date name suggests it is recorded after the outcome (a weak hint), or, with a '
+             f'time axis, when a date falls after the time axis on at least {cfg.temporal_leakage_share:.0%} of rows. '
              'Suspects stay in the ranking with a flag and are excluded from the multivariate model.')]
     return f'{len(suspects)} suspects'
 
@@ -1304,7 +1328,8 @@ def confounding_stage(a, spec, facts, output, state):
     interactions = []; data = state.get('model_data')
     if data is not None:
         fields = [f for f in ranked if f in data.fields][:cfg.interaction_fields]
-        rows, note = auto_confounding.interaction_screen(data.raw, data.y, spec.kind, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg)
+        rows, note = auto_confounding.interaction_screen(data.raw, data.y, spec.kind, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg,
+                                                         data.time_ordered)
         state['interactions'] = [(r[0], r[1]) for r in rows if r[4]]
         if note: items.append(text(note))
         interactions = rows
@@ -1334,7 +1359,8 @@ def segments_stage(a, spec, facts, output, state):
     if data is None: return 'no model sample'
     fields = [f for f in model_fields(output, state, facts) if f in data.fields]
     joint = [(x, y) for x, y in state.get('interactions', []) if facts[x]['type'] != 'numeric' and facts[y]['type'] != 'numeric' and x in data.fields and y in data.fields]
-    segments, note = auto_segments.discover(a, spec, data.raw, data.y, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg, absent_sql, joint)
+    segments, note = auto_segments.discover(a, spec, data.raw, data.y, fields, {f for f in fields if facts[f]['type'] == 'numeric'}, cfg, absent_sql, joint,
+                                            data.time_ordered)
     kept = [s for s in segments if s.kept]
     overall, queries = auto_segments.full_data(a, spec, kept) if kept else (None, [])
     output['segment_overall'] = _clean(overall) if overall is not None else None
@@ -1441,12 +1467,12 @@ def relationships_stage(a, spec, facts, time_axis, output, state):
     pairs = []; queries = []
     for i, first in enumerate(fields):
         for second in fields[i + 1:]:
-            value, measure, n, results = association(a, first, second, kinds)
+            value, measure, n, results, (low, high) = association(a, first, second, kinds)
             # Rounded before sorting, so last-bit differences from parallel sums cannot reorder near-ties.
-            pairs.append([first, second, measure, _clean(value), n]); queries += results
+            pairs.append([first, second, measure, _clean(value), _clean(low), _clean(high), n]); queries += results
     evidence = a.evidence("Cramér's V for categorical pairs, Spearman ρ for numeric pairs, correlation ratio η for mixed pairs", *queries)
     matrix = pd.DataFrame(1.0, index=fields, columns=fields)
-    for first, second, _, value, _ in pairs:
+    for first, second, _, value, *_ in pairs:
         matrix.loc[first, second] = matrix.loc[second, first] = value
     rows = [[f, *[matrix.loc[f, g] for g in fields]] for f in fields]
     ordered = sorted([p for p in pairs if p[3] is not None], key=lambda p: (-abs(p[3]), p[0], p[1]))
@@ -1454,26 +1480,31 @@ def relationships_stage(a, spec, facts, time_axis, output, state):
              table('relationships-matrix', 'Associations between fields', [('Field', 'text'), *[(f, 'effect') for f in fields]], rows, evidence=evidence,
                    note="Categorical pairs: Cramér's V. Numeric pairs: Spearman ρ. Mixed pairs: correlation ratio η."),
              table('relationships-pairs', 'Field pairs by association', [('Field', 'text'), ('Field', 'text'), ('Measure', 'text'),
-                   ('Value', 'effect'), ('n', 'count')], ordered, evidence=evidence)]
+                   ('Value', 'effect'), ('95% CI low', 'effect'), ('95% CI high', 'effect'), ('n', 'count')], ordered, evidence=evidence,
+                   note="Intervals: Fisher z with the Bonett–Wright standard error for Spearman ρ; inversion of the noncentral χ² (Cramér's V, "
+                        'for the uncorrected V) and noncentral F (η). They describe sampling uncertainty only.')]
     fig = px.imshow(matrix.abs(), color_continuous_scale='Teal', zmin=0, zmax=1, text_auto='.2f', aspect='auto')
     items.append(figure('relationships-heatmap', 'Associations between fields', visuals.style(fig, 'Associations between fields (absolute values)'), evidence=evidence))
-    for first, second, measure, value, n in ordered[:SETTINGS['relationship_pairs_shown']]:
+    for first, second, measure, value, *_ in ordered[:SETTINGS['relationship_pairs_shown']]:
         items += pair_detail(a, first, second, kinds, output)
     output['sections']['relationships'] = items
     return f'{len(pairs)} pairs'
 
 
-def association(a, first, second, kinds):
+def association(a, first, second, kinds, confidence=0.95):
+    """(value, measure, n, queries, (low, high)) for one pair of fields."""
     kind = (kinds[first], kinds[second])
     if kind == ('numeric', 'numeric'):
         stats_, result = correlation(a, numeric_expression(first), numeric_expression(second), f'Correlation of {first} and {second}')
-        return stats_['spearman'], 'Spearman ρ', stats_['n'], [result]
+        return stats_['spearman'], 'Spearman ρ', stats_['n'], [result], auto_stats_ci.spearman_interval(stats_['spearman'], stats_['n'], confidence)
     if kind == ('categorical', 'categorical'):
         left, _, top_left = category_expression(a, first, 'true'); right, _, top_right = category_expression(a, second, 'true')
         result = a.run(f'SELECT {left} AS a,{right} AS b,count(*) AS n FROM selected GROUP BY 1,2', f'{first} × {second}')
         frame = pd.DataFrame(result['rows'], columns=['a', 'b', 'n']).pivot(index='a', columns='b', values='n').fillna(0)
         chi = auto_stats.chi_square(frame.to_numpy())
-        return (chi['cramers_v'] if chi else None), "Cramér's V", int(frame.to_numpy().sum()), [top_left, top_right, result]
+        n = int(frame.to_numpy().sum())
+        interval = auto_stats_ci.cramers_v_interval(chi['statistic'], chi['df'], n, min(frame.shape), confidence) if chi else (None, None)
+        return (chi['cramers_v'] if chi else None), "Cramér's V", n, [top_left, top_right, result], interval
     category, number = (first, second) if kind[0] == 'categorical' else (second, first)
     expression, _, top = category_expression(a, category, 'true'); x = numeric_expression(number)
     groups = a.run(f'SELECT {expression} AS g,count(v) AS n,avg(v) AS mean FROM (SELECT *,{x} AS v FROM selected) WHERE v IS NOT NULL GROUP BY 1',
@@ -1481,7 +1512,7 @@ def association(a, first, second, kinds):
     total = a.run(f'SELECT count({x}),avg({x}),var_pop({x}) FROM selected', f'{number} overall')
     n, mean, variance = total['rows'][0]
     eta = auto_stats.correlation_ratio([(g_n, g_mean) for _, g_n, g_mean in groups['rows']], n, mean, variance)
-    return eta, 'correlation ratio η', n, [top, groups, total]
+    return eta, 'correlation ratio η', n, [top, groups, total], auto_stats_ci.eta_interval(eta, len(groups['rows']), n, confidence)
 
 
 def pair_detail(a, first, second, kinds, output):
@@ -1517,13 +1548,402 @@ def pair_detail(a, first, second, kinds, output):
             figure(key, f'{number} by {category}', box(rows, f'{number} by {category}', category, number), evidence=evidence)]
 
 
-# ---------------- stage 8 ----------------
-def time_stage(a, spec, time_axis, output):
-    items = date_versus_target(a, TargetSpec(None, None, None), time_axis, title_prefix=f'Rows by {time_axis}', suffix='-time')
+# ---------------- text and geo fields ----------------
+def text_field(a, spec, name, cfg):
+    """Length, emptiness, frequent tokens and bigrams, detected language, and length or presence against the target."""
+    value = f'trim(CAST({quote(name)} AS VARCHAR))'
+    has_text = f"(NOT {absent_sql(name)} AND {value} <> '')"
+    summary = a.run(f'''SELECT count(*) AS rows,count(*) FILTER (WHERE {has_text}) AS with_text,
+        min(length({value})) FILTER (WHERE {has_text}) AS min_chars,quantile_cont(length({value}),.25) FILTER (WHERE {has_text}) AS q1_chars,
+        median(length({value})) FILTER (WHERE {has_text}) AS median_chars,quantile_cont(length({value}),.75) FILTER (WHERE {has_text}) AS q3_chars,
+        max(length({value})) FILTER (WHERE {has_text}) AS max_chars,
+        median(len(regexp_split_to_array(trim({value}), '\\s+'))) FILTER (WHERE {has_text}) AS median_words FROM selected''', f'Text lengths of {name}')
+    rows, with_text, *lengths, median_words = summary['rows'][0]
+    tokens = f"regexp_split_to_array(lower({value}), '{auto_textgeo.TOKEN_PATTERN}')"
+    keep = "length(tok) >= 2 AND NOT regexp_full_match(tok, '[0-9]+')"
+    sample = a.run(f'''SELECT tok,count(*) AS n FROM (SELECT unnest({tokens}) AS tok FROM selected WHERE {has_text}) WHERE {keep}
+        GROUP BY 1 ORDER BY n DESC,tok LIMIT 2000''', f'Frequent tokens of {name} (language detection)', limit=2000)
+    language, share = auto_textgeo.detect_language({t: n for t, n in sample['rows']})
+    stop = ','.join(literal(w) for w in sorted(auto_textgeo.stopwords_for(language)))
+    top_tokens = a.run(f'''SELECT tok,count(*) AS n,count(DISTINCT rid) AS docs FROM (SELECT _row_id AS rid,unnest({tokens}) AS tok FROM selected WHERE {has_text})
+        WHERE {keep} AND tok NOT IN ({stop}) GROUP BY 1 ORDER BY n DESC,tok LIMIT 20''', f'Top tokens of {name}')
+    bigrams = a.run(f'''SELECT t[i] || ' ' || t[i + 1] AS bigram,count(*) AS n FROM (SELECT t,unnest(range(1, len(t))) AS i FROM
+        (SELECT list_filter({tokens}, x -> x <> '') AS t FROM selected WHERE {has_text}))
+        WHERE length(t[i]) >= 2 AND length(t[i + 1]) >= 2 AND t[i] NOT IN ({stop}) AND t[i + 1] NOT IN ({stop})
+        AND NOT regexp_full_match(t[i], '[0-9]+') AND NOT regexp_full_match(t[i + 1], '[0-9]+') GROUP BY 1 ORDER BY n DESC,bigram LIMIT 15''',
+        f'Top bigrams of {name}')
+    evidence = a.evidence(f'Tokens: lower-cased runs of letters or digits; stop-words of the detected language ({language}) removed', summary, sample, top_tokens, bigrams)
+    labels = ['Rows', 'Rows with text', 'Empty or missing', 'Characters: minimum', 'Characters: lower quartile', 'Characters: median',
+              'Characters: upper quartile', 'Characters: maximum', 'Words: median', 'Detected language (stop-word share)']
+    values = [f'{rows:,}', f'{with_text:,}', f'{rows - with_text:,} ({(rows - with_text) / max(rows, 1):.1%})',
+              *[f'{v:,.0f}' if v is not None else '' for v in lengths], f'{median_words:,.0f}' if median_words is not None else '', f'{language} ({share:.1%})']
+    items = [text(f'{name} is free text: it is described by length and frequent words; each value is not compared as a category.'),
+             table(item_id(name, 'text-summary'), f'{name}: text summary', [('Measure', 'text'), ('Value', 'text')], [list(r) for r in zip(labels, values)],
+                   evidence=evidence),
+             table(item_id(name, 'text-tokens'), f'{name}: most frequent words', [('Word', 'text'), ('Occurrences', 'count'), ('Rows containing it', 'count'),
+                   ('Share of rows with text', 'percent')], [[t, n, d, d / max(with_text, 1)] for t, n, d in top_tokens['rows']], evidence=evidence),
+             table(item_id(name, 'text-bigrams'), f'{name}: most frequent word pairs', [('Word pair', 'text'), ('Occurrences', 'count')],
+                   [list(r) for r in bigrams['rows']], evidence=evidence)]
+    if not spec.column or spec.kind == 'multiclass' or not with_text: return items
+    edges_q = a.run(f'SELECT quantile_cont(length({value}),[0.2,0.4,0.6,0.8]) FROM selected WHERE {has_text} AND {spec.ok}', f'Length quintiles of {name}')
+    edges = sorted({int(round(e)) for e in (edges_q['rows'][0][0] or []) if e is not None})
+    position = ' + '.join(f'CASE WHEN length({value}) > {e} THEN 1 ELSE 0 END' for e in edges) or '0'
+    group = f'CASE WHEN NOT {has_text} THEN -1 ELSE {position} END'
+    bounds = [0] + edges
+
+    def label(g):
+        if g == -1: return '(empty or missing)'
+        low = bounds[g] + 1 if g else 1
+        return f'{low:,}+ characters' if g == len(edges) else f'{low:,}–{edges[g]:,} characters'
+    if spec.kind == 'binary':
+        result = a.run(f'SELECT {group} AS g,count(*) AS n,sum({spec.positive_flag}) AS pos FROM selected WHERE {spec.ok} GROUP BY 1 ORDER BY 1',
+                       f'{spec.column} by length of {name}')
+        overall = sum(r[2] for r in result['rows']) / max(1, sum(r[1] for r in result['rows']))
+        table_rows = [[label(g), n, p, *auto_univariate.rate_columns(p, n, overall, cfg.confidence)] for g, n, p in result['rows']]
+        chi = auto_stats.chi_square([[p, n - p] for _, n, p in result['rows']])
+        test = f"chi-square p {chi['p_value']:.2g}, Cramér's V {chi['cramers_v']:.3f}" if chi else 'no test (one group)'
+        items.append(table(item_id(name, 'text-length'), f'{name}: {spec.column} rate by text length', [('Text length', 'text'), ('Rows', 'count'),
+            ('Positives', 'count'), *RATE_COLUMNS], table_rows, evidence=a.evidence('Length quintiles among rows with text, plus empty or missing', edges_q, result),
+            note=f'{rate_note(overall)} Test of independence: {test}.'))
+    else:
+        result = a.run(f'SELECT {group} AS g,count(y) AS n,avg(y) AS mean,stddev_samp(y) AS sd FROM (SELECT *,{spec.value} AS y FROM selected) '
+                       f'WHERE y IS NOT NULL GROUP BY 1 ORDER BY 1', f'{spec.column} by length of {name}')
+        corr, corr_q = correlation(a, f'length({value})', spec.value, f'Correlation of the length of {name} with {spec.column}')
+        low, high = auto_stats_ci.spearman_interval(corr['spearman'], corr['n'], cfg.confidence)
+        table_rows = [[label(g), n, m, *((m - 1.96 * sd / math.sqrt(n), m + 1.96 * sd / math.sqrt(n)) if sd and n > 1 else (None, None))]
+                      for g, n, m, sd in result['rows']]
+        items.append(table(item_id(name, 'text-length'), f'{name}: mean {spec.column} by text length', [('Text length', 'text'), ('Rows', 'count'),
+            (f'Mean {spec.column}', 'number'), ('95% CI low', 'number'), ('95% CI high', 'number')], table_rows,
+            evidence=a.evidence('Length quintiles among rows with text, plus empty or missing', edges_q, result, corr_q),
+            note=f'Spearman ρ between text length and {spec.column}: {corr["spearman"]:.3f} [{low:.3f}–{high:.3f}], n {corr["n"]:,}.'
+                 if corr['spearman'] is not None and low is not None else None))
+    return items
+
+
+def country_codes(a, spec, name, f):
+    """A note and a validity table when a categorical field holds ISO 3166 country codes."""
+    if f['distinct_clean'] > 400: return []
+    result = a.run(f'SELECT trim(CAST({quote(name)} AS VARCHAR)) AS v,count(*) AS n FROM selected WHERE NOT {absent_sql(name)} GROUP BY 1',
+                   f'Values of {name} (country-code check)')
+    kind = auto_textgeo.country_code_kind(result['rows'])
+    if not kind: return []
+    codes = auto_textgeo.ALPHA2 if 'alpha-2' in kind else auto_textgeo.ALPHA3
+    invalid = sorted([[v, n] for v, n in result['rows'] if v not in codes], key=lambda r: (-r[1], r[0]))
+    return [text(f'{name} holds {kind} country codes; counts and target comparisons per country are in the tables above. '
+                 f'{sum(n for _, n in invalid):,} rows have values that are not valid codes.'),
+            table(item_id(name, 'geo-invalid'), f'{name}: values that are not {kind} codes', [('Value', 'text'), ('Rows', 'count')], invalid,
+                  evidence=a.evidence(f'Every value compared with the {kind} list', result))]
+
+
+def geo_pair(a, spec, lat, lon, cfg):
+    """Range checks for a latitude/longitude pair and rows (and the target) per grid cell."""
+    y, x = numeric_expression(lat), numeric_expression(lon)
+    checks = a.run(f'''SELECT count(*) AS rows,count(*) FILTER (WHERE y IS NOT NULL AND x IS NOT NULL) AS both_present,
+        count(*) FILTER (WHERE (y IS NULL) <> (x IS NULL)) AS one_missing,count(*) FILTER (WHERE y < -90 OR y > 90) AS lat_out,
+        count(*) FILTER (WHERE x < -180 OR x > 180) AS lon_out,count(*) FILTER (WHERE y = 0 AND x = 0) AS null_island,
+        min(y),max(y),min(x),max(x) FROM (SELECT {y} AS y,{x} AS x FROM selected)''', f'Coordinate checks for {lat}, {lon}')
+    rows, both, one_missing, lat_out, lon_out, zero, *_ = checks['rows'][0]
+    valid = f'{y} BETWEEN -90 AND 90 AND {x} BETWEEN -180 AND 180 AND NOT ({y} = 0 AND {x} = 0)'
+
+    def occupied(size):
+        return a.run(f'SELECT count(*) FROM (SELECT DISTINCT floor({y} / {size}),floor({x} / {size}) FROM selected WHERE {valid})',
+                     f'Occupied {size}° cells')['rows'][0][0]
+    size = auto_textgeo.cell_size(None, None, occupied)
+    cell = f"printf('%.4g, %.4g', floor({y} / {size}) * {size}, floor({x} / {size}) * {size})"
+    target = (f',sum({spec.positive_flag}) AS pos' if spec.kind == 'binary' else f',avg({spec.value}) AS mean' if spec.kind == 'numeric' else '')
+    where = f'{valid} AND {spec.ok}' if spec.kind in ('binary', 'numeric') else valid
+    cells = a.run(f'SELECT {cell} AS cell,count(*) AS n{target} FROM selected WHERE {where} GROUP BY 1 ORDER BY n DESC,cell LIMIT 30', f'Rows per {size}° cell')
+    totals = a.run(f'SELECT count(*) AS n{target} FROM selected WHERE {where}', 'Rows with valid coordinates')
+    evidence = a.evidence(f'Range checks; grid of {size}° cells (south-west corner shown), the 30 with most rows', checks, cells, totals)
+    check_rows = [['Rows with both coordinates', both], ['One coordinate missing', one_missing], [f'{lat} outside −90 to 90', lat_out],
+                  [f'{lon} outside −180 to 180', lon_out], ['Both exactly 0 (often a placeholder)', zero]]
+    items = [text(f'{lat} and {lon} are read as latitude and longitude (name hints plus valid ranges).'),
+             table(item_id(f'{lat}-{lon}', 'geo-checks'), f'{lat}, {lon}: coordinate checks', [('Check', 'text'), ('Rows', 'count')], check_rows, evidence=evidence)]
+    if spec.kind == 'binary':
+        overall = (totals['rows'][0][1] or 0) / max(1, totals['rows'][0][0])
+        items.append(table(item_id(f'{lat}-{lon}', 'geo-cells'), f'Rows and {spec.column} rate per {size}° cell', [('Cell (lat, lon)', 'text'), ('Rows', 'count'),
+            ('Positives', 'count'), *RATE_COLUMNS], [[c, n, p, *auto_univariate.rate_columns(p, n, overall, cfg.confidence)] for c, n, p in cells['rows']],
+            evidence=evidence, note=rate_note(overall) + ' Cells with fewer than 30 rows give wide intervals.'))
+    else:
+        columns = [('Cell (lat, lon)', 'text'), ('Rows', 'count')] + ([(f'Mean {spec.column}', 'number')] if spec.kind == 'numeric' else [])
+        items.append(table(item_id(f'{lat}-{lon}', 'geo-cells'), f'Rows per {size}° cell', columns, [list(r) for r in cells['rows']], evidence=evidence))
+    return items
+
+
+# ---------------- stage 11: no-target mode ----------------
+def unsupervised_stage(a, facts, time_axis, output, state):
+    """Clusters, unusual rows and distribution shapes on a seeded sample (no target chosen)."""
+    cfg = state['cfg']; structure = state.get('structure')
+    others = {m for c in (structure.clusters if structure else []) for m in c.members if m != c.representative}
+    candidates = [n for n, f in facts.items() if f['type'] in ('numeric', 'categorical', 'binary') and n != time_axis]
+    wide_categories = [n for n in candidates if facts[n]['type'] != 'numeric' and facts[n]['distinct_clean'] > SETTINGS['category_limit']]
+    usable = [n for n in candidates if n not in others and n not in wide_categories]
+    fields = usable[:cfg.cluster_fields]
+    shape_fields = [n for n in candidates if facts[n]['type'] == 'numeric'][:100]
+    loaded = list(dict.fromkeys(fields + shape_fields))
+    parts = ['_row_id'] + [f'{numeric_expression(n)} AS {quote(n)}' if facts[n]['type'] == 'numeric' else
+                           f'CASE WHEN {absent_sql(n)} THEN NULL ELSE trim(CAST({quote(n)} AS VARCHAR)) END AS {quote(n)}' for n in loaded]
+    data, query = a.frame(f'SELECT {",".join(parts)} FROM selected ORDER BY hash(_row_id + {cfg.seed}),_row_id LIMIT {cfg.unsupervised_rows}',
+                          'Seeded sample for clusters, unusual rows and shapes')
+    total = output['rows']; sampled = len(data)
+    evidence = {'version': output['analysis_version'], 'computation': f'Seeded sample of {sampled:,} of {total:,} rows (rows ordered by hash(_row_id + {cfg.seed}))',
+                'queries': [{'sql': query['sql'], 'parameters': []}]}
+    if sampled < total:
+        output['sampling'].append(['clusters, unusual rows and shapes', sampled, total, cfg.seed, 'rows ordered by hash(_row_id + seed)'])
+    numeric = [n for n in fields if facts[n]['type'] == 'numeric']; categorical = [n for n in fields if n not in numeric]
+    notes = [f'Fields used for clusters and unusual rows: {", ".join(fields) or "none"}.']
+    if others: notes.append('Redundant fields are represented once (their cluster representative): left out ' + ', '.join(sorted(others & set(candidates))) + '.')
+    if wide_categories: notes.append(f'Categories with more than {SETTINGS["category_limit"]} levels are left out: {", ".join(wide_categories)}.')
+    if len(usable) > len(fields): notes.append(f'Only the first {cfg.cluster_fields} usable fields in column order are used.')
+    items = [text(' '.join(notes))]
+    summary = {'fields': fields, 'sample_rows': sampled, 'total_rows': total}
+    if len(fields) >= 2 and sampled >= 3 * cfg.cluster_k_max:
+        fit_frame = data.iloc[:cfg.cluster_sample_rows].reset_index(drop=True)
+        result, assign = auto_unsupervised.cluster(fit_frame, numeric, categorical, cfg)
+        result.total_rows = total
+        items.append(table('clusters-candidates', 'Number of clusters: silhouette and stability', [('Clusters (k)', 'count'), ('Mean silhouette', 'effect'),
+            ('Bootstrap ARI', 'effect'), ('Chosen', 'text')], [[k, sil, ari, 'yes' if k == result.k else ''] for k, sil, ari in result.candidates],
+            evidence=evidence, note=f'{result.method}, fitted on {len(fit_frame):,} sampled rows (seed {cfg.seed}). Stability = mean adjusted Rand index over '
+            f'{cfg.cluster_bootstrap} bootstrap refits, computed when silhouette ≥ {cfg.cluster_silhouette_minimum}. A structure is reported only with '
+            f'silhouette ≥ {cfg.cluster_silhouette_minimum} and ARI ≥ {cfg.cluster_ari_minimum}.'))
+        if assign is not None:
+            labels = assign(data[fields])
+            result.sizes, result.profiles, _ = auto_unsupervised.profile(data[fields], labels, numeric, categorical)
+            result.assigned_rows = sampled
+            chosen = next(c for c in result.candidates if c[0] == result.k)
+            items.append(table('clusters-sizes', f'{result.k} clusters: sizes', [('Cluster', 'text'), ('Rows', 'count'), ('Share', 'percent')],
+                               [[f'Cluster {c}', n, share] for c, n, share in result.sizes], evidence=evidence,
+                               note=f'Every sampled row is assigned to the nearest medoid or centre. Silhouette {chosen[1]:.2f}, bootstrap ARI {chosen[2]:.2f}.'))
+            items.append(table('clusters-profiles', 'What distinguishes each cluster', [('Cluster', 'text'), ('Field', 'text'), ('Description', 'text'),
+                ('Standardised difference', 'number')], [[f'Cluster {c}', f, d, v] for c, f, d, v in result.profiles], evidence=evidence,
+                note='The three fields with the largest standardised differences from the other rows; numbers: difference in means over the overall sd; '
+                     'categories: difference in the share of the most different level over √(p(1 − p)).'))
+            fig = go.Figure(go.Bar(y=[f'Cluster {c}' for c, *_ in result.sizes], x=[n for _, n, _ in result.sizes], orientation='h', marker_color=visuals.TEAL))
+            fig.update_yaxes(autorange='reversed')
+            items.append(figure('clusters-chart', 'Rows per cluster', visuals.style(fig, 'Rows per cluster', 'Rows', None), evidence=evidence))
+        else:
+            result.note = (f'No stable cluster structure: no k from {cfg.cluster_k_min} to {cfg.cluster_k_max} reached silhouette ≥ '
+                           f'{cfg.cluster_silhouette_minimum} with bootstrap ARI ≥ {cfg.cluster_ari_minimum}.')
+            items.append(text(result.note))
+        summary['clusters'] = result.to_dict()
+    else:
+        items.append(text('Clusters need at least two usable fields and enough rows; not computed.'))
+    rows, flagged = auto_unsupervised.anomalies(data[fields], numeric, categorical, cfg, data['_row_id'].to_numpy()) if fields else ([], 0)
+    items.append(table('unusual-rows', f'Unusual rows: the {cfg.anomaly_share:.0%} with the highest isolation scores', [('Row id', 'count'),
+        ('Isolation score', 'number'), ('What is unusual', 'text')], rows[:cfg.anomalies_shown], evidence=evidence,
+        note=f'{flagged:,} of {sampled:,} sampled rows flagged; the {min(flagged, cfg.anomalies_shown)} highest are listed. Isolation Forest '
+             f'(200 trees, seed {cfg.seed}). Reasons: numbers at least 3 robust sd from the median, levels held by under 1% of rows. Reported only; no rows are removed.'))
+    summary['anomalies'] = {'flagged': flagged, 'rows': rows[:cfg.anomalies_shown]}
+    shapes = []
+    for name in shape_fields:
+        result = auto_unsupervised.shape(data[name].to_numpy(dtype=float), cfg)
+        if result: shapes.append({'field': name, **result})
+    items.append(table('distribution-shapes', 'Distribution shape of numeric fields', [('Field', 'text'), ('Values', 'count'), ('Skewness', 'number'),
+        ('Excess kurtosis', 'number'), ('Beyond the outer fences', 'percent'), ('Dip', 'effect'), ('Dip test p', 'p'), ('Shape', 'text')],
+        [[r['field'], r['n'], r['skewness'], r['kurtosis'], r['far_share'], r['dip'], r['dip_p'], ', '.join(r['labels'])] for r in shapes], evidence=evidence,
+        note=f'Outer fences: Q1 − 3·IQR and Q3 + 3·IQR. Hartigan\'s dip test on at most {cfg.dip_sample_rows:,} sampled values, p from {cfg.dip_simulations} '
+             'uniform samples of the same size; fields with fewer than 20 distinct values get no dip. Labels: |skewness| ≥ 1; excess kurtosis ≥ 3 or '
+             '≥ 1% beyond the fences; dip p < 0.05.'))
+    summary['shapes'] = shapes
+    output['sections']['unsupervised'] = items
+    output['unsupervised'] = deep_clean(summary)
+    clusters = summary.get('clusters') or {}
+    return (f'{clusters.get("k")} clusters' if clusters.get('stable') else 'no stable clusters') + f'; {flagged} unusual rows'
+
+
+# ---------------- stage 12: time analysis ----------------
+def time_stage(a, spec, facts, time_axis, output, state):
+    """Coverage and granularity, an automatically chosen aggregation level, trend, seasonality and breaks of the
+    row count and the target per period, and distribution drift (PSI) between the first and last part of the range."""
+    cfg = state['cfg']; t = state['time_sql']
+    cover = a.run(f'''SELECT count(*) AS rows,count(t) AS dated,min(t) AS first,max(t) AS last,count(DISTINCT t) AS distinct_times,
+        (SELECT median(gap) FROM (SELECT (epoch(t) - lag(epoch(t)) OVER (ORDER BY t)) / 86400.0 AS gap
+            FROM (SELECT DISTINCT {t} AS t FROM selected) WHERE t IS NOT NULL)) AS median_gap_days
+        FROM (SELECT {t} AS t FROM selected)''', f'Coverage of {time_axis}')
+    rows, dated, first, last, distinct_times, gap = cover['rows'][0]
+    if not dated: raise ValueError(f'{time_axis} has no usable ISO dates or timestamps.')
+    native = auto_time.native_grain(gap) or 'daily'
+    finest = auto_time.GRAINS.index(auto_time.FINEST[native])
+    grains = auto_time.GRAINS[finest:]
+    spans = a.run('SELECT ' + ','.join(f"date_trunc('{g}',min(t)),date_trunc('{g}',max(t))" for g in grains)
+                  + f' FROM (SELECT {t} AS t FROM selected) WHERE t IS NOT NULL', 'Period boundaries per level')
+    bounds = spans['rows'][0]
+    candidates = {g: (auto_time.spanned(bounds[2 * i], bounds[2 * i + 1], g), dated) for i, g in enumerate(grains)}
+    grain, reason = auto_time.choose_grain(native, candidates, cfg.time_min_periods, cfg.time_min_rows_per_period)
+    d = f"date_trunc('{grain}',t)"
+    base = f'(SELECT *,{t} AS t FROM selected)'
+    volume = a.run(f'SELECT {d} AS period,count(*) AS n FROM {base} WHERE t IS NOT NULL GROUP BY 1 ORDER BY 1', f'Rows per {grain} of {time_axis}')
+    start = auto_time.period_start(bounds[2 * grains.index(grain)], grain)
+    end = auto_time.period_start(bounds[2 * grains.index(grain) + 1], grain)
+    periods = auto_time.all_periods(start, end, grain)
+    labels = [auto_time.label(p, grain) for p in periods]
+    counts = {auto_time.period_start(p, grain): n for p, n in volume['rows']}
+    step = timedelta(days=gap or 1)
+    complete = [True] * len(periods)
+    if periods:
+        complete[0] = auto_time.as_datetime(first) < auto_time.as_datetime(periods[0]) + step
+        complete[-1] = complete[-1] and auto_time.as_datetime(last) + step >= auto_time.as_datetime(auto_time.next_period(periods[-1], grain))
+    gaps = sum(1 for p in periods if not counts.get(p))
+    queries = [cover, spans, volume]
+    volume_values = [counts.get(p) or None for p in periods]
+    series = [auto_time.analyse_series(f'Rows per {grain}', 'rows', labels, volume_values, complete, grain, cfg)]
+    period_columns = [('Period', 'text'), ('Rows', 'count')]
+    period_rows = [[label, counts.get(p, 0)] for label, p in zip(labels, periods)]
+    target_values = None; errors = None
+    if spec.kind == 'binary':
+        result = a.run(f'SELECT {d} AS period,count(*) AS n,sum({spec.positive_flag}) AS pos FROM {base} WHERE t IS NOT NULL AND {spec.ok} GROUP BY 1 ORDER BY 1',
+                       f'Positive rate per {grain} of {time_axis}')
+        queries.append(result)
+        by = {auto_time.period_start(p, grain): (n, pos) for p, n, pos in result['rows']}
+        period_columns += [('Rows with a target', 'count'), ('Positives', 'count'), ('Positive rate', 'percent'), ('95% CI low', 'percent'), ('95% CI high', 'percent')]
+        target_values, errors = [], []
+        for row, p in zip(period_rows, periods):
+            n, pos = by.get(p, (0, 0)); rate = pos / n if n else None
+            low, high = auto_stats_ci.wilson_interval(pos, n, cfg.confidence) if n else (None, None)
+            row += [n, pos, rate, low, high]
+            target_values.append(rate if n >= cfg.time_rate_min_rows else None)
+            errors.append((rate - low, high - rate) if rate is not None else (0, 0))
+        target_name, unit = f'{spec.column} positive rate', 'rate'
+    elif spec.kind == 'numeric':
+        result = a.run(f'SELECT {d} AS period,count(y) AS n,avg(y) AS mean,stddev_samp(y) AS sd FROM (SELECT t,{spec.value} AS y FROM {base}) '
+                       f'WHERE t IS NOT NULL AND y IS NOT NULL GROUP BY 1 ORDER BY 1', f'Mean {spec.column} per {grain} of {time_axis}')
+        queries.append(result)
+        by = {auto_time.period_start(p, grain): (n, m, sd) for p, n, m, sd in result['rows']}
+        period_columns += [('Rows with a target', 'count'), (f'Mean {spec.column}', 'number'), ('95% CI low', 'number'), ('95% CI high', 'number')]
+        target_values, errors = [], []
+        for row, p in zip(period_rows, periods):
+            n, mean, sd = by.get(p, (0, None, None))
+            half = float(stats_t.ppf(0.5 + cfg.confidence / 2, n - 1) * sd / math.sqrt(n)) if n and n > 1 and sd is not None else None
+            row += [n, mean, mean - half if half is not None else None, mean + half if half is not None else None]
+            target_values.append(mean if n >= cfg.time_rate_min_rows else None)
+            errors.append((half or 0, half or 0) if mean is not None else (0, 0))
+        target_name, unit = f'Mean {spec.column}', 'mean'
+    if target_values is not None:
+        series.append(auto_time.analyse_series(target_name, unit, labels, target_values, complete, grain, cfg))
+    for row, ok, p in zip(period_rows, complete, periods):
+        row.append(', '.join(f for f in ['incomplete period' if not ok else '', 'no rows' if not counts.get(p) else ''] if f))
+    period_columns.append(('Flags', 'text'))
+    for s in series:
+        lo = s.used[0] if s.used else 0
+        for fit in s.seasonality:
+            fit['peak_label'] = auto_time.phase_label(periods[lo + fit['peak']], fit['meaning'])
+            fit['trough_label'] = auto_time.phase_label(periods[lo + fit['trough']], fit['meaning'])
+    evidence = a.evidence(f'Aggregated per {grain} ({reason}); Mann–Kendall with Theil–Sen slope, STL seasonal strength with {cfg.seasonal_permutations} '
+                          f'permutations (seed {cfg.seed}), binary segmentation for breaks', *queries)
+    coverage_rows = [['Time axis', time_axis], ['Rows with a usable timestamp', f'{dated:,} of {rows:,}'], ['First', str(first)], ['Last', str(last)],
+                     ['Distinct timestamps', f'{distinct_times:,}'], ['Rows sharing a timestamp with another row', f'{dated - distinct_times:,}'],
+                     ['Median gap between distinct timestamps', f'{gap:,.3g} days' if gap is not None else 'one timestamp'], ['Granularity', native],
+                     ['Aggregation level', f'{grain} ({reason})'], ['Periods spanned', f'{len(periods):,}'], ['Periods without rows', f'{gaps:,}'],
+                     ['Incomplete edge periods (left out of tests)', ', '.join(l for l, ok in zip(labels, complete) if not ok) or 'none']]
+    items = [table('time-coverage', f'{time_axis}: coverage and aggregation', [('Setting', 'text'), ('Value', 'text')], coverage_rows,
+                   evidence=a.evidence('Distinct timestamps and their gaps; candidate levels hour, day, week, month, quarter, year', cover, spans)),
+             table('time-periods', f'Rows{" and " + spec.column if target_values is not None else ""} per {grain}', period_columns, period_rows, evidence=evidence,
+                   note='Intervals: Wilson for rates, t-based for means. Periods with fewer than '
+                        f'{cfg.time_rate_min_rows} rows get no rate or mean in the tests.')]
+    for s, values in ([(series[1], target_values)] if target_values is not None else []) + [(series[0], volume_values)]:
+        items.append(figure(item_id(s.name, 'time-chart'), f'{s.name}', series_chart(s, values, errors if s is not series[0] else None, labels, unit=s.unit),
+                            evidence=evidence))
+        a.results[item_id(s.name, 'time-chart')] = queries[-1] if s is not series[0] else volume
+    items.append(table('time-trend', 'Trend tests', [('Series', 'text'), ('Periods tested', 'count'), ("Kendall's τ", 'effect'), ('Mann–Kendall z', 'number'),
+        ('p-value', 'p'), ('Autocorrelation factor', 'number'), ('Theil–Sen slope per period', 'number'), ('95% CI low', 'number'), ('95% CI high', 'number'),
+        ('Change over the range', 'number'), ('Change relative to the mean level', 'percent'), ('Seasonality removed first', 'text')],
+        [[s.name, s.trend['periods'], s.trend['tau'], s.trend['z'], s.trend['p'], s.trend['variance_factor'], s.trend['slope'], s.trend['low'], s.trend['high'],
+          s.trend['change'], s.trend['relative_change'], 'yes' if s.trend['deseasonalised'] else 'no'] for s in series if s.trend],
+        evidence=evidence, note='Mann–Kendall assumes independent periods; its variance is inflated for positive lag-1 autocorrelation (factor shown). '
+        'Change over the range = Theil–Sen slope × (periods − 1).' + ''.join(' ' + s.note for s in series if s.note)))
+    items.append(table('time-seasonality', 'Seasonality (STL)', [('Series', 'text'), ('Cycle', 'text'), ('Periods per cycle', 'count'),
+        ('Seasonal strength', 'effect'), ('Permutation p', 'p'), ('Highest at', 'text'), ('Lowest at', 'text'), ('Peak-to-trough difference', 'number')],
+        [[s.name, f['meaning'], f['period'], f['strength'], f['p'], f['peak_label'], f['trough_label'], f['amplitude']] for s in series for f in s.seasonality],
+        evidence=evidence, note=f'Computed when at least two full cycles of complete periods exist and at most 10% of them are empty. Strength '
+        f'= max(0, 1 − Var(remainder)/Var(seasonal + remainder)); reported as a finding at {cfg.seasonal_strength_minimum} or more with permutation '
+        f'p ≤ {cfg.seasonal_p_maximum}, and then removed before the trend and break tests.'))
+    items.append(table('time-breaks', 'Structural breaks', [('Series', 'text'), ('Break at', 'text'), ('Level just before', 'number'),
+        ('Level just after', 'number'), ('Jump', 'number'), ('Jump in noise sd', 'number'), ('Mean before', 'number'), ('Mean after', 'number'),
+        ('Slope before', 'number'), ('Slope after', 'number')],
+        [[s.name, b['label'], b['level_before'], b['level_after'], b['jump'], b['jump_sd'], b['mean_before'], b['mean_after'], b['slope_before'], b['slope_after']]
+         for s in series for b in s.breaks], evidence=evidence,
+        note=f'Binary segmentation into straight-line segments of at least {cfg.break_min_periods} periods; a break is kept when it improves the fit by more '
+             f'than a BIC-type penalty ({cfg.break_penalty} × 3 ln n, raised for autocorrelation) and the level jump is at least {cfg.break_min_jump_sd} noise sd. '
+             'Breaks are less reliable in series shorter than about 40 periods.'))
+    drift, drift_queries, drift_note = field_drift(a, spec, facts, time_axis, first, last, cfg)
+    items.append(table('time-drift', f'Distribution drift: first vs last {cfg.psi_window_share:.0%} of the time range',
+        [('Field', 'text'), ('PSI', 'effect'), ('Shift', 'text'), ('Rows in first window', 'count'), ('Rows in last window', 'count'),
+         ('Largest change', 'text')], [[r['field'], r['psi'], r['label'], r['first_rows'], r['last_rows'], r['largest']] for r in drift],
+        evidence=a.evidence('Bins from the first window (deciles for numbers, most frequent levels for categories, plus missing); '
+                            'PSI = Σ (last − first) · ln(last / first) with shares floored at 0.0001', *drift_queries),
+        note=drift_note or f'PSI below {cfg.psi_moderate} is conventionally read as stable, {cfg.psi_moderate}–{cfg.psi_major} as a moderate shift and '
+             f'above {cfg.psi_major} as a major shift. A shift means older rows may describe the present less well.'))
     if spec.column:
-        items += date_versus_target(a, spec, time_axis, title_prefix=f'{spec.column} by {time_axis}', suffix='-time-target')
+        items.append(text(f'Cross-validation in the predictive-power, model, interaction and segment steps uses time order on {time_axis}: '
+                          'each fold is scored by a model trained on earlier rows only.'))
     output['sections']['time'] = items
-    return ''
+    output['time'] = deep_clean({'axis': time_axis, 'grain': grain, 'reason': reason, 'native': native, 'periods': len(periods), 'gaps': gaps,
+                                 'series': [s.to_dict() for s in series], 'drift': drift})
+    return f'{grain}; {len(periods)} periods; {sum(len(s.breaks) for s in series)} breaks; {sum(r["label"] == "major shift" for r in drift)} major drifts'
+
+
+def series_chart(s, values, errors, labels, unit):
+    color = visuals.TEAL
+    trace = go.Scatter(x=labels, y=values, mode='lines+markers', name=s.name, line={'color': color})
+    if errors:
+        trace.error_y = {'type': 'data', 'symmetric': False, 'array': [e[1] for e in errors], 'arrayminus': [e[0] for e in errors]}
+    fig = go.Figure(trace)
+    if s.trend and s.used:
+        lo = s.used[0]; hi = s.used[-1]
+        xs = labels[lo:hi + 1]
+        fig.add_trace(go.Scatter(x=xs, y=[s.trend['intercept'] + s.trend['slope'] * i for i in range(len(xs))], mode='lines', name='Theil–Sen trend',
+                                 line={'dash': 'dash', 'color': visuals.AMBER}))
+    for b in s.breaks:
+        fig.add_shape(type='line', x0=b['label'], x1=b['label'], y0=0, y1=1, yref='paper', line={'dash': 'dot', 'color': visuals.AMBER})
+    if unit == 'rate': fig.update_yaxes(tickformat='.0%')
+    return visuals.style(fig, s.name, None, s.name)
+
+
+def field_drift(a, spec, facts, time_axis, first, last, cfg):
+    """PSI per field between the first and last share of the time range (bins from the first window)."""
+    span = auto_time.as_datetime(last) - auto_time.as_datetime(first)
+    if span.total_seconds() <= 0: return [], [], 'The time range is a single instant; drift is not computed.'
+    early = auto_time.as_datetime(first) + span * cfg.psi_window_share
+    late = auto_time.as_datetime(last) - span * cfg.psi_window_share
+    window = f"CASE WHEN t <= TIMESTAMP '{early.isoformat(sep=' ')}' THEN 0 WHEN t >= TIMESTAMP '{late.isoformat(sep=' ')}' THEN 1 END"
+    base = f'(SELECT *,{window} AS w FROM (SELECT *,{auto_time.timestamp_expression(time_axis)} AS t FROM selected))'
+    sizes = a.run(f'SELECT count(*) FILTER (WHERE w=0),count(*) FILTER (WHERE w=1) FROM {base}', 'Rows in the first and last windows')
+    first_rows, last_rows = sizes['rows'][0]
+    if min(first_rows, last_rows) < cfg.psi_min_rows:
+        return [], [sizes], f'Fewer than {cfg.psi_min_rows} rows in the first or last window ({first_rows:,} and {last_rows:,}); drift is not computed.'
+    drift = []; queries = [sizes]
+    for name, f in facts.items():
+        if name == time_axis or f['type'] not in ('numeric', 'categorical', 'binary'): continue
+        if f['type'] == 'numeric':
+            x = numeric_expression(name)
+            edges_q = a.run(f"SELECT quantile_cont({x},[{','.join(repr(i / cfg.psi_bins) for i in range(1, cfg.psi_bins))}]) FROM {base} WHERE w=0",
+                            f'Bin edges of {name} in the first window')
+            edges = sorted({float(e) for e in (edges_q['rows'][0][0] or []) if e is not None})
+            position = ' + '.join(f'CASE WHEN {x} > {e!r} THEN 1 ELSE 0 END' for e in edges) or '0'
+            bin_sql = f'CASE WHEN {x} IS NULL THEN -1 ELSE {position} END'
+            names = auto_time.numeric_bin_labels(edges); setup = [edges_q]
+            label_of = lambda b, names=names: '(missing)' if b == -1 else names[b]
+        else:
+            value = f'trim(CAST({quote(name)} AS VARCHAR))'
+            levels_q = a.run(f'SELECT {value} AS v,count(*) AS n FROM {base} WHERE w IS NOT NULL AND NOT {absent_sql(name)} GROUP BY 1 '
+                             f'ORDER BY n DESC,v LIMIT {cfg.psi_levels}', f'Levels of {name} in the two windows', limit=cfg.psi_levels)
+            listed = ','.join(literal(v) for v, _ in levels_q['rows']) or 'NULL'
+            bin_sql = f"CASE WHEN {absent_sql(name)} THEN '(missing)' WHEN {value} IN ({listed}) THEN {value} ELSE '(other)' END"
+            setup = [levels_q]; label_of = str
+        counts_q = a.run(f'SELECT w,{bin_sql} AS b,count(*) FROM {base} WHERE w IS NOT NULL GROUP BY 1,2', f'Counts of {name} in the two windows')
+        queries += setup + [counts_q]
+        keys = sorted({b for _, b, _ in counts_q['rows']}, key=str)
+        e = [sum(n for w, b, n in counts_q['rows'] if w == 0 and b == k) for k in keys]
+        l = [sum(n for w, b, n in counts_q['rows'] if w == 1 and b == k) for k in keys]
+        value_psi = auto_time.psi(e, l)
+        if value_psi is None: continue
+        shares_e = [v / sum(e) for v in e]; shares_l = [v / sum(l) for v in l]
+        k = max(range(len(keys)), key=lambda i: (abs(shares_l[i] - shares_e[i]), str(keys[i])))
+        drift.append({'field': name + (' (target)' if name == spec.column else ''), 'column': name, 'psi': value_psi,
+                      'label': auto_time.psi_label(value_psi, cfg.psi_moderate, cfg.psi_major), 'first_rows': first_rows, 'last_rows': last_rows,
+                      'largest': f'{label_of(keys[k])}: {shares_e[k]:.1%} → {shares_l[k]:.1%}', 'is_target': name == spec.column})
+    drift.sort(key=lambda r: (-r['psi'], r['field']))
+    return drift, queries, ''
 
 
 # ---------------- stage 9: evidence blocks and persistence ----------------

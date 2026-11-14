@@ -223,18 +223,23 @@ def test_numeric_target_comparisons_match_scipy(numeric):
 
 def test_time_axis_periods_and_completeness(numeric):
     data = raw('numeric').assign(day=lambda d: pd.to_datetime(d.day), y=lambda d: d.y.astype(float))
-    counts = rows(numeric, 'day-periods-time')
-    expected = data.groupby(data.day.dt.to_period('M')).size()  # a 718-day range is grouped by month
-    assert counts.Rows.tolist() == expected.tolist()
-    assert counts.Flags.iloc[0].startswith('incomplete: starts 2022-01-15') and counts.Flags.iloc[-1].startswith('incomplete: ends')
-    medians = rows(numeric, 'day-periods-time-target')
-    assert medians['Median y'].tolist() == pytest.approx(data.groupby(data.day.dt.to_period('M')).y.median().tolist())
+    grain = numeric['time']['grain']
+    freq = {'day': 'D', 'week': 'W-SUN', 'month': 'M', 'quarter': 'Q', 'year': 'Y'}[grain]
+    periods = rows(numeric, 'time-periods')
+    expected = data.groupby(data.day.dt.to_period(freq)).size()
+    assert periods.loc[periods.Rows > 0, 'Rows'].tolist() == expected.tolist() and periods.Rows.sum() == len(data)
+    assert periods.Flags.iloc[0].startswith('incomplete period') or data.day.min() == expected.index[0].start_time
+    means = data.groupby(data.day.dt.to_period(freq)).y.mean()
+    assert periods.loc[periods.Rows > 0, 'Mean y'].tolist() == pytest.approx(means.tolist())
 
 
 def test_skipped_fields_and_reasons(binary):
     reasons = dict(binary['skipped'])
-    assert set(reasons) == {'id', 'notes', 'constant', 'ambiguous_date', 'signup'}
+    assert set(reasons) == {'id', 'constant', 'ambiguous_date', 'signup'}
     assert reasons['signup'] == 'used as the time axis' and reasons['id'].startswith('identifier-like')
+    # Free text is described (length, words), not skipped.
+    notes = next(s for s in binary['sections']['fields'] if s['field'] == 'notes')
+    assert notes['type'] == 'text' and {'notes-text-summary', 'notes-text-tokens', 'notes-text-bigrams', 'notes-text-length'} <= {i.get('id') for i in notes['items']}
 
 
 def test_high_cardinality_categories_are_grouped_as_other(workspace, tmp_path):
@@ -280,7 +285,7 @@ def test_descriptive_report_without_target(descriptive):
 def test_every_stage_records_its_status_and_time(binary):
     assert statuses(binary) == {'profile': 'done', 'target_selection': 'done', 'corrections': 'done', 'structure': 'done', 'target_overview': 'done',
                                 'fields': 'done', 'leakage': 'done', 'ranking': 'done', 'multivariate': 'done', 'confounding': 'done', 'segments': 'done',
-                                'relationships': 'done', 'time': 'done', 'findings': 'done', 'evidence': 'done'}
+                                'unsupervised': 'skipped', 'relationships': 'done', 'time': 'done', 'findings': 'done', 'evidence': 'done'}
     assert all(s['seconds'] >= 0 for s in binary['stages'])
 
 
@@ -358,6 +363,6 @@ def test_name_hints_ignore_capitalization():
 def test_field_sections_follow_the_ranking(binary):
     ranked = rows(binary, 'ranking').Field.tolist()
     order = [f['field'] for f in binary['sections']['fields']]
-    # balance = 12.5 × tenure in the fixture, so it is derived and listed after the ranked fields with the untested date.
-    assert order[:len(ranked)] == ranked and order[len(ranked):] == ['balance', 'local_date']
+    # balance = 12.5 × tenure in the fixture, so it is derived and listed after the ranked fields with the untested date and the free text.
+    assert order[:len(ranked)] == ranked and order[len(ranked):] == ['balance', 'local_date', 'notes']
     assert rows(binary, 'ranking-derived').Field.tolist() == ['balance']

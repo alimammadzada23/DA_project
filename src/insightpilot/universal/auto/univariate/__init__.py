@@ -37,13 +37,19 @@ def numeric_bins(a, column, where, bins):
     return f'CASE WHEN {x} IS NULL THEN -1 ELSE {position} END', query, len(edges) + 1
 
 
-def fold_sql(cfg, stratify_sql=None):
-    """Deterministic folds: rows ordered by hash(_row_id + seed) within each class, dealt round-robin."""
+def fold_sql(cfg, stratify_sql=None, time_sql=None):
+    """Deterministic folds: rows ordered by hash(_row_id + seed) within each class, dealt round-robin.
+
+    With a time axis: cv_folds + 1 consecutive blocks in time order (rows without a time last); each block
+    after the first is validated on a model trained on the earlier blocks only.
+    """
+    if time_sql:
+        return f'(ntile({cfg.cv_folds + 1}) OVER (ORDER BY {time_sql} NULLS LAST,_row_id) - 1)'
     partition = f'PARTITION BY {stratify_sql} ' if stratify_sql else ''
     return f'((row_number() OVER ({partition}ORDER BY hash(_row_id + {cfg.seed}),_row_id) - 1) % {cfg.cv_folds})'
 
 
-def field_power(a, spec, column, kind, cfg, absent_sql):
+def field_power(a, spec, column, kind, cfg, absent_sql, time_sql=None):
     """Cross-validated single-feature power and permutation-adjusted NMI of `column` for target `spec`."""
     where = spec.ok
     if kind == 'numeric':
@@ -57,9 +63,9 @@ def field_power(a, spec, column, kind, cfg, absent_sql):
         grouping = f'top {cfg.ranking_level_cap} levels plus one group' if grouped else 'every level'
     if spec.kind == 'numeric':
         query = a.run(f'''SELECT fold,bin,count(*) AS n,sum(y) AS s,sum(y*y) AS ss FROM (SELECT {bin_sql} AS bin,{spec.value} AS y,
-            {fold_sql(cfg)} AS fold FROM selected WHERE {where}) GROUP BY 1,2''', f'Fold × bin sums of {spec.column} for {column}')
+            {fold_sql(cfg, None, time_sql)} AS fold FROM selected WHERE {where}) GROUP BY 1,2''', f'Fold × bin sums of {spec.column} for {column}')
         cells = {(f, b): (float(n), float(s), float(ss)) for f, b, n, s, ss in query['rows']}
-        per_fold = stats.cv_regression_power(cells, cfg.cv_folds, cfg.encoding_smoothing)
+        per_fold = stats.cv_regression_power(cells, cfg.cv_folds, cfg.encoding_smoothing, bool(time_sql))
         target_bins, target_edges, _ = numeric_bins(a, spec.column, where, cfg.numeric_bins)
         table_query = a.run(f'SELECT {bin_sql} AS bin,{target_bins} AS ybin,count(*) FROM selected WHERE {where} GROUP BY 1,2',
                             f'{column} × binned {spec.column}')
@@ -67,11 +73,11 @@ def field_power(a, spec, column, kind, cfg, absent_sql):
         value = float(np.mean(per_fold)) if per_fold else None; metric = 'R²'; auc = None
     else:
         y = spec.positive_flag if spec.kind == 'binary' else spec.label
-        query = a.run(f'''SELECT fold,bin,y,count(*) AS n FROM (SELECT {bin_sql} AS bin,{y} AS y,{fold_sql(cfg, y)} AS fold
+        query = a.run(f'''SELECT fold,bin,y,count(*) AS n FROM (SELECT {bin_sql} AS bin,{y} AS y,{fold_sql(cfg, y, time_sql)} AS fold
             FROM selected WHERE {where}) GROUP BY 1,2,3''', f'Fold × bin × class counts for {column}')
         cells = {(f, b, c): float(n) for f, b, c, n in query['rows']}
         classes = [0, 1] if spec.kind == 'binary' else sorted({c for _, _, c in cells}, key=str)
-        per_fold = stats.cv_classification_power(cells, classes, cfg.cv_folds, cfg.encoding_smoothing)
+        per_fold = stats.cv_classification_power(cells, classes, cfg.cv_folds, cfg.encoding_smoothing, bool(time_sql))
         auc = float(np.mean(per_fold)) if per_fold else None
         value = auc - 0.5 if auc is not None else None; metric = 'ΔAUC'
         merged = {}

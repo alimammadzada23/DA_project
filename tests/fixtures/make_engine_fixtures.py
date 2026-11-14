@@ -88,10 +88,39 @@ def null(rng, n=3000):
                          's': rng.choice(['k', 'l'], size=n), 't': rng.integers(0, 50, n), 'outcome': np.where(rng.random(n) < 0.3, 'yes', 'no')})
 
 
+def timeseries(rng, n=8000):
+    """#11: daily rows over five years. sales = 100 + 0.1 per week (trend) + 15·sin(yearly) + 20 from 2021-07-05 (one break)
+    + noise; 'channel' drifts from 20% to 70% online; 'region' and 'price' are stable; 'shipped_on' is always after 'order_date'."""
+    days = pd.date_range('2019-01-01', '2023-12-31', freq='D')
+    day = np.sort(rng.integers(0, len(days), n)); dates = days[day]
+    week = (dates - days[0]).days / 7
+    yearly = 15 * np.sin(2 * np.pi * dates.day_of_year.to_numpy() / 365.25)
+    level = np.where(dates >= pd.Timestamp('2021-07-05'), 20.0, 0.0)
+    sales = 100 + 0.1 * week + yearly + level + rng.normal(0, 20, n)
+    online = rng.random(n) < 0.2 + 0.5 * day / (len(days) - 1)
+    return pd.DataFrame({'order_date': dates.strftime('%Y-%m-%d'), 'shipped_on': (dates + pd.to_timedelta(rng.integers(1, 6, n), unit='D')).strftime('%Y-%m-%d'),
+                         'channel': np.where(online, 'online', 'store'), 'region': rng.choice(['north', 'south', 'east', 'west'], size=n),
+                         'price': np.round(rng.lognormal(3, 0.3, n), 2), 'sales': np.round(sales, 2)})
+
+
+def unlabelled(rng, n=1500):
+    """#12: three well-separated groups in two numbers and one category (90% of each group shares its colour), plus 1% extreme rows."""
+    group = rng.integers(0, 3, n)
+    centres = np.array([[0, 0], [8, 0], [4, 8]])
+    xy = centres[group] + rng.normal(0, 1, (n, 2))
+    colours = np.array(['red', 'blue', 'green'])
+    colour = np.where(rng.random(n) < 0.9, colours[group], colours[rng.integers(0, 3, n)])
+    odd = rng.choice(n, n // 100, replace=False)
+    xy[odd] = rng.choice([-1, 1], (len(odd), 2)) * rng.uniform(25, 40, (len(odd), 2))
+    return pd.DataFrame({'row_key': np.arange(1, n + 1), 'x': np.round(xy[:, 0], 3), 'y': np.round(xy[:, 1], 3), 'colour': colour,
+                         'noise': np.round(rng.normal(size=n), 3)})
+
+
 FIXTURES = {'ENGINE-01-conditional.csv': conditional, 'ENGINE-03-derived.csv': derived,
             'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness, 'ENGINE-02-leakage.csv': leakage,
             'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance, 'ENGINE-05-simpson.csv': simpson,
-            'ENGINE-06-interaction.csv': interaction, 'ENGINE-08-null.csv': null}
+            'ENGINE-06-interaction.csv': interaction, 'ENGINE-08-null.csv': null, 'ENGINE-11-timeseries.csv': timeseries,
+            'ENGINE-12-unlabelled.csv': unlabelled}
 
 
 if __name__ == '__main__':

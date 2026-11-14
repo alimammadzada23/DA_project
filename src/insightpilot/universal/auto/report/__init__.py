@@ -204,6 +204,24 @@ def lines(fig, title, caption):
             if p or m: body.append(f'<line x1="{sx(x):.1f}" y1="{sy(y - m):.1f}" x2="{sx(x):.1f}" y2="{sy(y + p):.1f}" stroke="{INK}"/>')
     for r in references:
         body.append(f'<line x1="{left}" y1="{sy(r):.1f}" x2="{right}" y2="{sy(r):.1f}" stroke="{REFERENCE}" stroke-dasharray="4 3" stroke-width="1.5"/>')
+    # Further line traces (for example a fitted trend) as dashed lines, and vertical markers (for example breaks).
+    position = {str(v): i for i, v in enumerate(xs_raw)} if categorical else None
+    extra_names = []
+    for k, other in enumerate(traces[1:4], 1):
+        ox = list(decode(other.x)) if other.x is not None else []; oy = _values(other.y)
+        pts = [((position.get(str(x)) if categorical else _values([x])[0]), y) for x, y in zip(ox, oy)]
+        pts = [(x, y) for x, y in pts if x is not None and y is not None and ticks_y[0] <= y <= ticks_y[-1]]
+        if len(pts) < 2: continue
+        body.append(f'<polyline fill="none" stroke="{PALETTE[k]}" stroke-width="2" stroke-dasharray="6 4" points="'
+                    + ' '.join(f'{sx(x):.1f},{sy(y):.1f}' for x, y in pts) + '"/>')
+        extra_names.append(other.name or f'series {k + 1}')
+    for shape in fig.layout.shapes or []:
+        if shape.x0 is None or shape.x0 != shape.x1: continue
+        x = position.get(str(shape.x0)) if categorical else _values([shape.x0])[0]
+        if x is None: continue
+        body.append(f'<line x1="{sx(x):.1f}" y1="{top_y}" x2="{sx(x):.1f}" y2="{bottom}" stroke="{REFERENCE}" stroke-dasharray="2 3" stroke-width="1.5"/>')
+    if extra_names:
+        body += legend([trace.name or 'value'] + extra_names)
     if categorical:
         step = max(1, len(xs_raw) // 8)
         for i in range(0, len(xs_raw), step): body.append(_text(sx(i), bottom + 16, str(xs_raw[i])[:16], 10, 'middle', MUTED))

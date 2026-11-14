@@ -219,10 +219,13 @@ def verify_bike(output, raw, checks):
     check(checks, 'Spearman ρ temp × cnt', test.loc['Spearman rank correlation', 'Statistic'], expected.statistic, 1e-9)
     hours = table(output, aa.item_id('hr', 'test')).set_index('Test')
     check(checks, 'Spearman ρ hr × cnt', hours.loc['Spearman rank correlation', 'Statistic'], stats.spearmanr(raw.hr, raw.cnt).statistic, 1e-9)
-    periods = table(output, 'dteday-periods-time-target')
-    # A 730-day range is grouped by month under the documented rule.
-    expected = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('M')).cnt.median()
-    check(checks, 'Median cnt per month (all 24 months)', [float(v) for v in periods['Median cnt']], [float(v) for v in expected])
+    periods = table(output, 'time-periods')
+    # Daily dates with 24 rows per day: the finest level with ≥ 20 periods and ≥ 30 rows per period is the week (Monday start).
+    check(checks, 'Aggregation level', output['time']['grain'], 'week')
+    expected = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('W-SUN')).cnt.mean()
+    check(checks, 'Mean cnt per week (all weeks)', [round(float(v), 9) for v in periods['Mean cnt']], [round(float(v), 9) for v in expected])
+    weekly = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('W-SUN')).size()
+    check(checks, 'Rows per week', [int(v) for v in periods['Rows']], [int(v) for v in weekly])
     check(checks, 'instant skipped as identifier', dict(output['skipped']).get('instant', '').startswith('identifier'), True)
 
 

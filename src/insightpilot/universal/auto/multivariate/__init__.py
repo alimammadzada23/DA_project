@@ -353,7 +353,8 @@ def analyse(a, spec, fields, facts, cfg, time_axis, absent_sql, text_value, clus
         result.metrics.append([measure, float(np.mean(model_values)), float(np.std(model_values, ddof=1)) if len(pairs) > 1 else None,
                                float(np.mean(baseline)), ', '.join(f'{v:.3f}' for v in model_values)])
     headline = next((m for m in result.metrics if m[0].startswith('AUC') or m[0] == 'R²'), None)
-    result.signal = (headline[1] - 0.5) if headline and headline[0].startswith('AUC') else headline[1] if headline else None
+    # Gain over the baseline: AUC − 0.5, or R² − baseline R² (the baseline's R² is below 0 when later folds drift from the training mean).
+    result.signal = (headline[1] - headline[3]) if headline and headline[3] is not None else None
     result.no_signal = result.signal is None or result.signal < cfg.signal_minimum
     if result.no_signal:
         result.notes.append(f'The fields have little joint predictive signal: the model improves on the baseline by less than {cfg.signal_minimum} '

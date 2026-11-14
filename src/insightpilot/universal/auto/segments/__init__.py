@@ -188,7 +188,7 @@ def prune(tree, y_train, X_train, kind, alpha=0.001):
     return pruned, node_rows
 
 
-def discover(a, spec, raw, y, fields, numeric, cfg, absent_sql, joint=()):
+def discover(a, spec, raw, y, fields, numeric, cfg, absent_sql, joint=(), time_ordered=False):
     from sklearn.model_selection import KFold, StratifiedKFold
     from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
     if spec.kind == 'multiclass': return [], 'Not computed for multiclass targets.'
@@ -198,6 +198,8 @@ def discover(a, spec, raw, y, fields, numeric, cfg, absent_sql, joint=()):
     splitter = (StratifiedKFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(X, y) if spec.kind == 'binary'
                 else KFold(cfg.cv_folds, shuffle=True, random_state=cfg.seed).split(X))
     train, held_out = next(iter(splitter))
+    if time_ordered:   # rows arrive in time order: grow on the earlier 80%, check on the later 20%
+        cut = int(round(n * (1 - 1 / cfg.cv_folds))); train, held_out = np.arange(cut), np.arange(cut, n)
     min_leaf = max(cfg.segment_min_rows, int(cfg.segment_min_share * len(train)))
     if len(train) < 2 * min_leaf: return [], f'Too few rows for segments (at least {2 * min_leaf:,} needed for training).'
     options = dict(max_depth=cfg.segment_depth, min_samples_leaf=min_leaf, random_state=cfg.seed)
@@ -227,7 +229,8 @@ def discover(a, spec, raw, y, fields, numeric, cfg, absent_sql, joint=()):
         s.kept = (high_risk or low_risk) and excludes and enough
         s.reason = ('kept' if s.kept else f'fewer than {cfg.small_group_rows} held-out rows' if not enough else
                     'held-out lift too close to 1' if not (high_risk or low_risk) else 'held-out interval includes the overall rate')
-    return segments, f'Tree grown on {len(train):,} rows; checked on {len(held_out):,} held-out rows (seed {cfg.seed}).'
+    order = ' (earlier rows; checked on the later rows in time order)' if time_ordered else ''
+    return segments, f'Tree grown on {len(train):,} rows{order}; checked on {len(held_out):,} held-out rows (seed {cfg.seed}).'
 
 
 def full_data(a, spec, segments):

@@ -58,18 +58,19 @@ def auc_from_counts(scores, positives, negatives):
     return wins / (total_p * total_n)
 
 
-def cv_classification_power(cells, classes, folds, smoothing):
+def cv_classification_power(cells, classes, folds, smoothing, past_only=False):
     """Out-of-fold AUC of a single-feature model that predicts each bin's smoothed target rate.
 
     cells: {(fold, bin, class): rows}. For held-out fold f the score of bin b is
     (positives_b + m·prior) / (rows_b + m) using only the other folds (m = smoothing,
     prior = training-fold positive share), i.e. cross-validated target encoding
     (Micci-Barreca 2001). Multiclass targets use the macro one-vs-rest AUC.
+    past_only: folds are consecutive time blocks 0..folds; block f is scored from blocks before it only.
     Returns the AUC per fold.
     """
     bins = sorted({b for _, b, _ in cells}, key=str)
     per_fold = []
-    for fold in range(folds):
+    for fold in (range(1, folds + 1) if past_only else range(folds)):
         aucs = []
         targets = classes if len(classes) > 2 else classes[-1:]
         for positive in targets:
@@ -79,7 +80,7 @@ def cv_classification_power(cells, classes, folds, smoothing):
                 if f == fold:
                     if c == positive: test_pos[b] += n
                     else: test_neg[b] += n
-                else:
+                elif not past_only or f < fold:
                     train_rows[b] += n
                     if c == positive: train_pos[b] += n
             total_rows = sum(train_rows.values())
@@ -92,7 +93,7 @@ def cv_classification_power(cells, classes, folds, smoothing):
     return per_fold
 
 
-def cv_regression_power(cells, folds, smoothing):
+def cv_regression_power(cells, folds, smoothing, past_only=False):
     """Out-of-fold R² of a single-feature model predicting each bin's smoothed training mean.
 
     cells: {(fold, bin): (rows, Σy, Σy²)}. Prediction for bin b is
@@ -101,10 +102,10 @@ def cv_regression_power(cells, folds, smoothing):
     """
     bins = sorted({b for _, b in cells}, key=str)
     per_fold = []
-    for fold in range(folds):
+    for fold in (range(1, folds + 1) if past_only else range(folds)):
         train = {b: [0.0, 0.0] for b in bins}
         for (f, b), (n, s, _) in cells.items():
-            if f != fold: train[b][0] += n; train[b][1] += s
+            if f != fold and (not past_only or f < fold): train[b][0] += n; train[b][1] += s
         rows = sum(n for n, _ in train.values())
         if not rows: continue
         mean = sum(s for _, s in train.values()) / rows
@@ -168,3 +169,58 @@ def bootstrap_interval(values, statistic, resamples, confidence, seed):
     estimates = statistic(values[draws], axis=1)
     alpha = (1 - confidence) / 2
     return (float(np.quantile(estimates, alpha)), float(np.quantile(estimates, 1 - alpha)))
+
+
+def spearman_interval(rho, n, confidence=0.95):
+    """Fisher-z interval for Spearman's ρ with the Bonett & Wright (2000) standard error √((1 + ρ²/2)/(n − 3))."""
+    if rho is None or n is None or n < 4 or not math.isfinite(rho): return (None, None)
+    if abs(rho) >= 1: return (rho, rho)
+    z = math.atanh(rho); se = math.sqrt((1 + rho * rho / 2) / (n - 3)); q = stats.norm.ppf(0.5 + confidence / 2)
+    return (math.tanh(z - q * se), math.tanh(z + q * se))
+
+
+def _noncentrality(cdf, observed, confidence, estimate, df):
+    """Bounds on the noncentrality λ with cdf(observed, λ) = 1 − α/2 (lower) and α/2 (upper), by root finding.
+
+    When the distribution functions cannot be evaluated (very large statistics), the large-sample normal
+    approximation λ̂ ± z·√(2(df + 2λ̂)) is used instead (λ̂ = χ² − df, or df₁·(F − 1), floored at 0).
+    """
+    from scipy.optimize import brentq
+    alpha = 1 - confidence
+    try:
+        return _noncentrality_exact(cdf, observed, alpha, brentq)
+    except (ValueError, ArithmeticError, RuntimeError):
+        estimate = max(0.0, estimate); z = stats.norm.ppf(1 - alpha / 2)
+        half = z * math.sqrt(2 * (df + 2 * estimate))
+        return max(0.0, estimate - half), estimate + half
+
+
+def _noncentrality_exact(cdf, observed, alpha, brentq):
+
+    def solve(target):
+        if cdf(observed, 0.0) <= target: return 0.0
+        high = max(10.0, observed * 2)
+        while cdf(observed, high) > target and high < 1e9: high *= 2
+        value = brentq(lambda lam: cdf(observed, lam) - target, 0.0, high, xtol=1e-8)
+        if not math.isfinite(value): raise ArithmeticError('no finite bound')
+        return value
+    return solve(1 - alpha / 2), solve(alpha / 2)
+
+
+def cramers_v_interval(chi2, df, n, k, confidence=0.95):
+    """Interval for Cramér's V by inverting the noncentral χ² (Smithson 2003): V = √(λ / (n (k − 1))), k = min(rows, columns)."""
+    if chi2 is None or not n or k < 2 or df < 1: return (None, None)
+    low, high = _noncentrality(lambda x, lam: stats.ncx2.cdf(x, df, lam) if lam > 0 else stats.chi2.cdf(x, df), chi2, confidence,
+                               chi2 - df, df)
+    return (min(1.0, math.sqrt(low / (n * (k - 1)))), min(1.0, math.sqrt(high / (n * (k - 1)))))
+
+
+def eta_interval(eta, groups, n, confidence=0.95):
+    """Interval for the correlation ratio η by inverting the noncentral F (Steiger 2004): η² = λ / (λ + n)."""
+    if eta is None or groups < 2 or n <= groups: return (None, None)
+    df1, df2 = groups - 1, n - groups
+    e2 = min(eta * eta, 1 - 1e-12)
+    f = (e2 / df1) / ((1 - e2) / df2)
+    low, high = _noncentrality(lambda x, lam: stats.ncf.cdf(x, df1, df2, lam) if lam > 0 else stats.f.cdf(x, df1, df2), f, confidence,
+                               df1 * (f - 1), df1)
+    return (math.sqrt(low / (low + n)), math.sqrt(high / (high + n)))

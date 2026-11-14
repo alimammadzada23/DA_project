@@ -14,7 +14,9 @@ TYPE_LABELS = {
     'deterministic_missingness': 'Explained missing values', 'conditional_category': 'Conditional category',
     'derived_column': 'Derived column', 'redundancy_cluster': 'Redundant fields', 'strong_association': 'Association',
     'adjusted_effect_change': 'Change after adjustment', 'confounding_or_simpson': 'Confounding check', 'interaction': 'Interaction',
-    'high_impact_segment': 'Segment', 'nonlinear_shape': 'Non-linear shape', 'null_result': 'No association'}
+    'high_impact_segment': 'Segment', 'nonlinear_shape': 'Non-linear shape', 'null_result': 'No association',
+    'trend': 'Trend', 'seasonality': 'Seasonality', 'break': 'Structural break', 'drift': 'Drift',
+    'cluster_structure': 'Clusters', 'unusual_rows': 'Unusual rows', 'distribution_shape': 'Distribution shape'}
 
 
 @dataclass
@@ -155,6 +157,8 @@ def build(output, cfg):
         add('nonlinear_shape', 'informative', f'{n["field"]} has a non-linear relationship with {target}: a monotone curve explains '
             f'{pct(n["monotone_share"])} of the variation between bins ({n["detail"]}).', f'{slug(n["field"])}-bins' if kind == 'binary' else f'{slug(n["field"])}-medians',
             [n['field']], [], 1 - n['monotone_share'])
+    time_findings(output, cfg, add)
+    unsupervised_findings(output, add)
     found = interleave(found)
     for index, finding in enumerate(found, 1): finding.id = f'F{index:02d}'
     return found
@@ -163,7 +167,7 @@ def build(output, cfg):
 # Within each severity, types take turns in this order, so the first screen covers what predicts the target,
 # which segments matter and what to be careful about, instead of many findings of one type.
 TYPE_PRIORITY = ['leakage_suspect', 'no_signal', 'strong_association', 'high_impact_segment', 'confounding_or_simpson', 'interaction',
-                 'deterministic_missingness', 'data_quality_issue', 'adjusted_effect_change', 'nonlinear_shape', 'null_result',
+                 'cluster_structure', 'drift', 'trend', 'break', 'seasonality', 'unusual_rows', 'distribution_shape', 'deterministic_missingness', 'data_quality_issue', 'adjusted_effect_change', 'nonlinear_shape', 'null_result',
                  'derived_column', 'redundancy_cluster', 'conditional_category']
 
 
@@ -212,3 +216,70 @@ def association_statement(items, e, target, positive, kind):
 
 def top(findings, count):
     return findings[:count]
+
+
+def in_unit(value, unit):
+    """Rates in percentage points, everything else as a number."""
+    return f'{value * 100:.2f} pp' if unit == 'rate' else num(value)
+
+
+def time_findings(output, cfg, add):
+    """Trend, seasonality, break and drift findings from the time analysis."""
+    time = output.get('time') or {}
+    target = output.get('target')
+    for s in time.get('series', []):
+        is_target = s['unit'] != 'rows'; severity = 'important' if is_target else 'informative'
+        grain = s.get('grain') or time.get('grain', 'period'); fields = [target] if is_target and target else []
+        t = s.get('trend')
+        if t and t['p'] < 0.05 and (t['low'] > 0 or t['high'] < 0) and t.get('relative_change') is not None \
+                and abs(t['relative_change']) >= cfg.trend_min_change:
+            change = f'{t["change"] * 100:+.1f} pp' if s['unit'] == 'rate' else f'{t["change"]:+,.3g}'
+            add('trend', severity, f'{s["name"]} {"rises" if t["slope"] > 0 else "falls"} by {in_unit(abs(t["slope"]), s["unit"])} per {grain} '
+                f'(Theil–Sen, 95% CI {in_unit(t["low"], s["unit"])} to {in_unit(t["high"], s["unit"])}): {change} over {t["periods"]} {grain}s from '
+                f'{t["first"]} to {t["last"]}, {t["relative_change"] * 100:+.0f}% of the mean level; Mann–Kendall p {t["p"]:.2g}.', 'time-trend', fields,
+                ['Describes the analysed range only.'] + (['Tested after removing the seasonal pattern.'] if t.get('deseasonalised') else [])
+                + ([f'The series also has a structural break ({", ".join(b["label"] for b in s["breaks"])}); part of the change is that shift.']
+                   if s.get('breaks') else []),
+                abs(t['relative_change']))
+        for f in s.get('seasonality', []):
+            if f['p'] > cfg.seasonal_p_maximum or f['strength'] < cfg.seasonal_strength_minimum: continue
+            add('seasonality', severity, f'{s["name"]} varies with the {f["meaning"]}: seasonal strength {f["strength"]:.2f} (STL, permutation p {f["p"]:.2f}); '
+                f'highest around {f["peak_label"]}, lowest around {f["trough_label"]}, a peak-to-trough difference of {in_unit(f["amplitude"], s["unit"])}.',
+                'time-seasonality', fields, [f'Estimated from {len(s["used"])} complete {grain}s.'], f['strength'])
+        for b in s.get('breaks', []):
+            add('break', severity, f'{s["name"]} shifts at {b["label"]}: {in_unit(b["level_before"], s["unit"])} just before vs '
+                f'{in_unit(b["level_after"], s["unit"])} just after (jump {b["jump_sd"]:+.1f} noise sd); mean {in_unit(b["mean_before"], s["unit"])} before vs '
+                f'{in_unit(b["mean_after"], s["unit"])} after.', 'time-breaks', fields, ['The break date is accurate to about one period.'],
+                min(1.0, abs(b['jump_sd']) / 10))
+    for d in time.get('drift', []):
+        if d['label'] != 'major shift': continue
+        add('drift', 'important', f'The distribution of {d["column"]} differs between the first and last {cfg.psi_window_share:.0%} of the time range: '
+            f'PSI {d["psi"]:.2f} (above {cfg.psi_major}); largest change {d["largest"]}.', 'time-drift', [d['column']],
+            ['Older rows may describe the present less well.'] + (['This is the target.'] if d.get('is_target') else []), min(1.0, d['psi']))
+
+
+def unsupervised_findings(output, add):
+    """Cluster structure (or its absence), unusual rows and multimodal fields from the no-target mode."""
+    u = output.get('unsupervised') or {}
+    c = u.get('clusters')
+    if c and c.get('stable'):
+        chosen = next(row for row in c['candidates'] if row[0] == c['k'])
+        sizes = ', '.join(f'{n:,}' for _, n, _ in c['sizes'])
+        top = max(c['profiles'], key=lambda r: abs(r[3])) if c['profiles'] else None
+        add('cluster_structure', 'important', f'The sampled rows form {c["k"]} clusters ({c["method"]}; silhouette {chosen[1]:.2f}, bootstrap ARI '
+            f'{chosen[2]:.2f}) of {sizes} rows' + (f'; the largest difference: cluster {top[0]}, {top[2]}.' if top else '.'), 'clusters-sizes',
+            c['fields'], [f'Clusters describe similarity in the {len(c["fields"])} fields used; they are not labels found in the data.'], chosen[1])
+    elif c:
+        best = max((row[1] for row in c['candidates']), default=None)
+        add('cluster_structure', 'informative', 'No stable cluster structure: ' + (f'the best mean silhouette is {best:.2f}' if best is not None else 'no k could be fitted')
+            + f' for k from {min(r[0] for r in c["candidates"]) if c["candidates"] else 2} to {max(r[0] for r in c["candidates"]) if c["candidates"] else 8}.',
+            'clusters-candidates', c['fields'], [], 0.3)
+    a = u.get('anomalies') or {}
+    if a.get('flagged') and a.get('rows'):
+        first = a['rows'][0]
+        add('unusual_rows', 'informative', f'{a["flagged"]:,} of {u["sample_rows"]:,} sampled rows have the highest isolation scores; the most unusual, row '
+            f'{first[0]}, has {first[2]}.', 'unusual-rows', [], ['Reported only; no rows were removed.'], 0.2)
+    for s in u.get('shapes', []):
+        if 'more than one mode' in s['labels']:
+            add('distribution_shape', 'informative', f'{s["field"]} has more than one mode: dip {s["dip"]:.3f}, dip test p {s["dip_p"]:.3f} on {s["dip_rows"]:,} values.',
+                'distribution-shapes', [s['field']], ['Averages of this field describe a mixture of groups.'], s['dip'])
