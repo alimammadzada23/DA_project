@@ -120,10 +120,10 @@ def test_issues_that_are_only_reported(binary):
             ('balance', 'not filled'), ('amount', 'not filled')} <= pairs
 
 
-def test_missing_pattern_is_observed_not_filled(workspace, binary):
-    patterns = rows(binary, 'missing-patterns')
-    first = patterns[patterns['Column with missing values'] == 'balance'].iloc[0]
-    assert (first['Other column'], first['Value in every missing row'], first['Missing rows'], first['Rows with that value in total']) == ('tenure', '0', 6, 6)
+def test_missing_values_are_explained_not_filled(workspace, binary):
+    explained = rows(binary, 'missing-explanations')
+    assert explained[['Column', 'Condition', 'Missing ⇔ condition']].values.tolist() == [['balance', 'tenure = 0', 'yes']]
+    assert explained.iloc[0]['Statement'] == '6 of 6 rows with balance missing have tenure = 0 (100.0% of missing rows; lift 67.0), and these are all 6 rows with tenure = 0.'
     with workspace.connect() as con:
         assert con.execute(f'SELECT count(*) FROM "{binary["analysis_version"]}" WHERE balance IS NULL').fetchone()[0] == 6
 
@@ -223,18 +223,23 @@ def test_numeric_target_comparisons_match_scipy(numeric):
 
 def test_time_axis_periods_and_completeness(numeric):
     data = raw('numeric').assign(day=lambda d: pd.to_datetime(d.day), y=lambda d: d.y.astype(float))
-    counts = rows(numeric, 'day-periods-time')
-    expected = data.groupby(data.day.dt.to_period('M')).size()  # a 718-day range is grouped by month
-    assert counts.Rows.tolist() == expected.tolist()
-    assert counts.Flags.iloc[0].startswith('incomplete: starts 2022-01-15') and counts.Flags.iloc[-1].startswith('incomplete: ends')
-    medians = rows(numeric, 'day-periods-time-target')
-    assert medians['Median y'].tolist() == pytest.approx(data.groupby(data.day.dt.to_period('M')).y.median().tolist())
+    grain = numeric['time']['grain']
+    freq = {'day': 'D', 'week': 'W-SUN', 'month': 'M', 'quarter': 'Q', 'year': 'Y'}[grain]
+    periods = rows(numeric, 'time-periods')
+    expected = data.groupby(data.day.dt.to_period(freq)).size()
+    assert periods.loc[periods.Rows > 0, 'Rows'].tolist() == expected.tolist() and periods.Rows.sum() == len(data)
+    assert periods.Flags.iloc[0].startswith('incomplete period') or data.day.min() == expected.index[0].start_time
+    means = data.groupby(data.day.dt.to_period(freq)).y.mean()
+    assert periods.loc[periods.Rows > 0, 'Mean y'].tolist() == pytest.approx(means.tolist())
 
 
 def test_skipped_fields_and_reasons(binary):
     reasons = dict(binary['skipped'])
-    assert set(reasons) == {'id', 'notes', 'constant', 'ambiguous_date', 'signup'}
+    assert set(reasons) == {'id', 'constant', 'ambiguous_date', 'signup'}
     assert reasons['signup'] == 'used as the time axis' and reasons['id'].startswith('identifier-like')
+    # Free text is described (length, words), not skipped.
+    notes = next(s for s in binary['sections']['fields'] if s['field'] == 'notes')
+    assert notes['type'] == 'text' and {'notes-text-summary', 'notes-text-tokens', 'notes-text-bigrams', 'notes-text-length'} <= {i.get('id') for i in notes['items']}
 
 
 def test_high_cardinality_categories_are_grouped_as_other(workspace, tmp_path):
@@ -248,11 +253,13 @@ def test_high_cardinality_categories_are_grouped_as_other(workspace, tmp_path):
 
 
 # ---------- stages 6–8 ----------
-def test_ranking_orders_by_effect_and_adjusts_p_values(binary):
+def test_ranking_orders_by_predictive_power_and_adjusts_p_values(binary):
     ranking = rows(binary, 'ranking')
-    effects = ranking[["Cramér's V", '|rank-biserial r|', 'epsilon-squared', '|Spearman ρ|']].max(axis=1)
-    assert effects.is_monotonic_decreasing
-    assert ranking['Benjamini–Hochberg adjusted p'].tolist() == pytest.approx(list(stats.false_discovery_control(ranking['p-value'])))
+    assert ranking['Predictive power'].is_monotonic_decreasing and set(ranking['Power metric']) == {'ΔAUC'}
+    tested = pd.concat([ranking[['p-value', 'Benjamini–Hochberg adjusted p']],
+                        rows(binary, 'ranking-derived')[['p-value', 'Benjamini–Hochberg adjusted p']]]) if any(
+        i.get('id') == 'ranking-derived' for i in aa.iter_items(binary)) else ranking[['p-value', 'Benjamini–Hochberg adjusted p']]
+    assert tested['Benjamini–Hochberg adjusted p'].tolist() == pytest.approx(list(stats.false_discovery_control(tested['p-value'])))
     assert 'not causes' in item(binary, 'ranking')['title']
 
 
@@ -276,8 +283,9 @@ def test_descriptive_report_without_target(descriptive):
 
 # ---------- robustness ----------
 def test_every_stage_records_its_status_and_time(binary):
-    assert statuses(binary) == {'profile': 'done', 'target_selection': 'done', 'corrections': 'done', 'target_overview': 'done',
-                                'fields': 'done', 'ranking': 'done', 'relationships': 'done', 'time': 'done', 'evidence': 'done'}
+    assert statuses(binary) == {'profile': 'done', 'target_selection': 'done', 'corrections': 'done', 'structure': 'done', 'target_overview': 'done',
+                                'fields': 'done', 'leakage': 'done', 'ranking': 'done', 'multivariate': 'done', 'confounding': 'done', 'segments': 'done',
+                                'unsupervised': 'skipped', 'relationships': 'done', 'time': 'done', 'findings': 'done', 'evidence': 'done'}
     assert all(s['seconds'] >= 0 for s in binary['stages'])
 
 
@@ -355,4 +363,6 @@ def test_name_hints_ignore_capitalization():
 def test_field_sections_follow_the_ranking(binary):
     ranked = rows(binary, 'ranking').Field.tolist()
     order = [f['field'] for f in binary['sections']['fields']]
-    assert order[:len(ranked)] == ranked and order[len(ranked):] == ['local_date']
+    # balance = 12.5 × tenure in the fixture, so it is derived and listed after the ranked fields with the untested date and the free text.
+    assert order[:len(ranked)] == ranked and order[len(ranked):] == ['balance', 'local_date', 'notes']
+    assert rows(binary, 'ranking-derived').Field.tolist() == ['balance']

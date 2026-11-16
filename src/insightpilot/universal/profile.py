@@ -59,10 +59,63 @@ def identifier_name(name):
                           re.sub(r'\W+', '_', name.lower())))
 
 
-def date_expression(column, format=None):
+# Explicit date formats that may be applied after review or by format detection (never two-digit years).
+DATE_FORMATS = ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y', '%d.%m.%Y', '%d-%m-%Y', '%m-%d-%Y', '%Y/%m/%d', '%Y.%m.%d',
+                '%d %b %Y', '%d %B %Y', '%b %d, %Y', '%B %d, %Y', '%d-%b-%Y',
+                '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M', '%m/%d/%Y %H:%M', '%d.%m.%Y %H:%M',
+                '%d/%m/%Y %H:%M:%S', '%m/%d/%Y %H:%M:%S', '%d.%m.%Y %H:%M:%S')
+CURRENCY_SYMBOLS = ('$', '€', '£', '¥', '₹', '₽', '₩', '₺', '₴', '₪', 'zł', 'Kč', 'kr', 'Fr.', 'R$', 'CHF')
+BOOLEAN_TRUE = ('yes', 'y', 'true', 't', '1', 'ja', 'j', 'oui', 'si', 'sí', 'tak', 'ano', 'da')
+BOOLEAN_FALSE = ('no', 'n', 'false', 'f', '0', 'nein', 'non', 'nie', 'ne')
+
+
+def number_expression(column, decimal='.', thousands=None, currency=None, percent=False, accounting=False):
+    """Formatted numbers from a fixed template: an optional currency symbol or ISO code, a percent sign (divided by 100),
+    accounting negatives in parentheses, and the given decimal and thousands separators. Anything else becomes NULL."""
+    if decimal not in ('.', ',') or thousands not in (None, ',', '.', ' ', "'") or thousands == decimal:
+        raise ValueError('Unsupported numeric separators.')
+    if currency is not None and currency not in CURRENCY_SYMBOLS and not re.fullmatch(r'[A-Z]{3}', str(currency or '')):
+        raise ValueError('Unsupported currency marker.')
+    value = f"trim(CAST({quote(column)} AS VARCHAR))"
+    core = value
+    if accounting: core = f"regexp_replace({core}, '^\\((.*)\\)$', '\\1')"
+    if currency: core = f"trim(replace({core}, '{currency}', ''))"
+    if percent: core = f"trim(regexp_replace({core}, '%$', ''))"
+    core = f"regexp_replace({core}, '^([-+])\\s+', '\\1')"
+    sep = {None: None, ',': ',', '.': '\\.', ' ': '[ \u00a0\u202f]', "'": "''"}[thousands]
+    dec = '\\.' if decimal == '.' else ','
+    whole = f'(\\d+|\\d{{1,3}}({sep}\\d{{3}})+)' if sep else '\\d+'
+    pattern = f"^[-+]?{whole}({dec}\\d+)?([eE][-+]?\\d+)?$"
+    digits = core
+    if thousands == ' ': digits = f"regexp_replace({digits}, '[ \u00a0\u202f]', '', 'g')"
+    elif thousands: digits = f"replace({digits}, '{thousands * (2 if thousands == chr(39) else 1)}', '')"
+    if decimal == ',': digits = f"replace({digits}, ',', '.')"
+    number = f'try_cast({digits} AS DOUBLE)'
+    signed = f"CASE WHEN regexp_full_match({value}, '^\\(.*\\)$') THEN -({number}) ELSE {number} END" if accounting else number
+    scaled = f'({signed}) / 100.0' if percent else signed
+    present = f" AND regexp_full_match({value}, '.*%\\)?$')" if percent else ''
+    return f"CASE WHEN regexp_full_match({core}, '{pattern}') AND isfinite({number}){present} THEN {scaled} END"
+
+
+def boolean_expression(column, true_values, false_values):
+    """'true' / 'false' from a reviewed map of spellings (compared case-insensitively); other values become NULL."""
+    if not true_values or not false_values or set(true_values) & set(false_values):
+        raise ValueError('Give separate true and false spellings.')
+    if not set(true_values) <= set(BOOLEAN_TRUE) or not set(false_values) <= set(BOOLEAN_FALSE):
+        raise ValueError('Spellings must come from the configured boolean map.')
+    value = f"lower(trim(CAST({quote(column)} AS VARCHAR)))"
+    listed = lambda values: ','.join("'" + v.replace("'", "''") + "'" for v in values)
+    return f"CASE WHEN {value} IN ({listed(true_values)}) THEN 'true' WHEN {value} IN ({listed(false_values)}) THEN 'false' END"
+
+
+def date_expression(column, format=None, formats=None):
     text = f'NULLIF(trim(CAST({quote(column)} AS VARCHAR)),\'\')'
+    if formats:
+        if any(f not in DATE_FORMATS for f in formats) or len(formats) > 6:
+            raise ValueError('Choose supported explicit date formats.')
+        return 'coalesce(' + ','.join(f"try_strptime({text}, '{f}')" for f in formats) + ')::DATE'
     if format:
-        if format not in ('%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d', '%Y'):
+        if format not in DATE_FORMATS:
             raise ValueError('Choose a supported explicit date format.')
         return f"try_strptime({text}, '{format}')::DATE"
     # Never guess ambiguous slash-date conventions or parse numbers as dates.

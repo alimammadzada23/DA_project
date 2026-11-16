@@ -22,14 +22,15 @@ from ..engine_settings import connection_config, restrict
 from .disk_space import ensure_free_space
 from .excel_stream import load_table as load_workbook_table
 from .file_readers import combined_columns, delimited_columns, file_reader, normalize_delimiter
-from .profile import date_expression, numeric_expression, profile
+from .profile import boolean_expression, date_expression, number_expression, numeric_expression, profile
 
 MAX_ROWS = 100_000_000
-BATCH_KINDS = ('numeric','date','trim','nullify','nullify_many')
+BATCH_KINDS = ('numeric','date','trim','nullify','nullify_many','number_format','boolean')
 FILL_STRATEGIES = ('constant','median','mean','mode')
 INTEGER_TYPES = {'TINYINT','SMALLINT','INTEGER','BIGINT','HUGEINT','UTINYINT','USMALLINT','UINTEGER','UBIGINT','UHUGEINT'}
 _LOCKS = {}
 _LOCKS_GUARD = threading.Lock()
+_SHARED = threading.local()      # per-thread shared read connections (Workspace.reading)
 
 
 def literal(value):
@@ -63,10 +64,38 @@ class Workspace:
         return store
 
     @contextmanager
+    def reading(self):
+        """Reuse one restricted read-only connection for every read in this thread until the block ends.
+
+        Opening a database file costs milliseconds; long read-only computations issue thousands of queries.
+        The workspace lock is held for the whole block, so other sessions wait instead of colliding, and
+        a write connection requested inside the block is refused."""
+        with _LOCKS_GUARD:
+            lock=_LOCKS.setdefault(str(self.database),threading.RLock())
+        with lock:
+            if getattr(_SHARED, 'connections', {}).get(str(self.database)) is not None:
+                yield; return
+            config = connection_config(self.database) | {'allow_unsigned_extensions':'false'}
+            con = duckdb.connect(str(self.database), read_only=True, config=config)
+            try:
+                restrict(con); con.execute("SET TimeZone='UTC'")
+                _SHARED.__dict__.setdefault('connections', {})[str(self.database)] = con
+                yield
+            finally:
+                _SHARED.connections[str(self.database)] = None
+                con.close()
+
+    @contextmanager
     def connect(self, *, write=False, external=False):
         config = connection_config(self.database) | ({} if external else {'allow_unsigned_extensions':'false'})
         with _LOCKS_GUARD:
             lock=_LOCKS.setdefault(str(self.database),threading.RLock())
+        shared = getattr(_SHARED, 'connections', {}).get(str(self.database))
+        if shared is not None:
+            if write or external: raise RuntimeError('A shared read-only connection is open; writes must happen outside Workspace.reading().')
+            with lock:
+                yield shared
+            return
         # Streamlit sessions share a process. Serialize connections to avoid
         # read/write configuration collisions; immutable versions remain readable.
         with lock:
@@ -110,8 +139,8 @@ class Workspace:
         # Reserved source names may otherwise be auto-renamed by DuckDB.
         if any(c.casefold().startswith('_row_id') for c in cols):
             raise ValueError('_row_id is reserved for stable source-row references.')
-        if len(cols) > 150 or any(not c.strip() for c in cols):
-            raise ValueError('Use 1–150 nonempty column names.')
+        if len(cols) > 1000 or any(not c.strip() for c in cols):
+            raise ValueError('Use 1–1,000 nonempty column names.')
         if any(any(s in r[1] for s in ('STRUCT','MAP','[]')) for r in schema):
             raise ValueError('Flatten nested fields explicitly before import.')
         count = con.execute(f'SELECT count(*) FROM {quote(table)}').fetchone()[0]
@@ -306,13 +335,18 @@ class Workspace:
         kind = operation.get('kind'); column = operation.get('column')
         if column is not None and column not in cols: raise ValueError('Unknown transformation column.')
         expr = '*'; error_expr = None; error_original = None; suffix = ''
-        if kind in ('numeric','date','trim','nullify'):
+        if kind in ('numeric','date','trim','nullify','number_format','boolean'):
             if column is None: raise ValueError('Choose a transformation column.')
             col = quote(column)
             if kind == 'numeric':
                 converted = numeric_expression(column, operation.get('decimal','.'),operation.get('thousands'))
+            elif kind == 'number_format':
+                converted = number_expression(column, operation.get('decimal','.'), operation.get('thousands'), operation.get('currency'),
+                                              bool(operation.get('percent')), bool(operation.get('accounting')))
+            elif kind == 'boolean':
+                converted = boolean_expression(column, operation.get('true_values') or [], operation.get('false_values') or [])
             elif kind == 'date':
-                converted = date_expression(column, operation.get('format'))
+                converted = date_expression(column, operation.get('format'), operation.get('formats'))
             elif kind == 'trim': converted = f'trim(CAST({col} AS VARCHAR))'
             else:
                 if not isinstance(operation.get('value'), str): raise ValueError('Specify the literal missing-value marker.')
@@ -320,7 +354,7 @@ class Workspace:
                 marker = operation['value'].replace("'", "''")
                 converted = f"nullif(CAST({col} AS VARCHAR),'{marker}')"
             expr = f'* REPLACE ({converted} AS {col})'
-            if kind in ('numeric','date'):
+            if kind in ('numeric','date','number_format','boolean'):
                 error_expr = f"{col} IS NOT NULL AND trim(CAST({col} AS VARCHAR))<>'' AND ({converted}) IS NULL"
                 error_original = f'CAST({col} AS VARCHAR)'
         elif kind == 'nullify_many':
@@ -403,7 +437,7 @@ class Workspace:
         if not isinstance(steps, list) or not 1 <= len(steps) <= 500:
             raise ValueError('A batch needs 1–500 preparation steps.')
         if any(not isinstance(step, dict) or step.get('kind') not in BATCH_KINDS for step in steps):
-            raise ValueError('A batch can combine only numeric, date, trim and missing-marker operations.')
+            raise ValueError('A batch can combine only numeric, formatted-number, boolean, date, trim and missing-marker operations.')
         target = 't_' + uuid.uuid4().hex
         ctes = [f'"__s0" AS (SELECT * FROM {quote(parent)})']; ledgers = []
         for index, step in enumerate(steps, 1):

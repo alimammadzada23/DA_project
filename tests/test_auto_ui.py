@@ -71,8 +71,10 @@ def test_run_shows_stages_report_and_downloads(session):
     ok(app.radio(key='reports-view').set_value('Automatic analysis').run())
     ok(by_label(app.selectbox, 'Time axis (optional)').set_value('signup').run())
     ok(by_label(app.button, 'Run automatic analysis').click().run())
-    assert stage_table(app).Status.tolist() == ['done'] * 9
-    assert {b.label for b in app.get('download_button')} >= {'Download HTML', 'Download Excel'}
+    assert stage_table(app).Status.tolist() == ['done'] * 11 + ['skipped'] + ['done'] * 4   # clusters run only without a target
+    assert {b.label for b in app.get('download_button')} >= {'Download HTML', 'Download Excel', 'results.json', 'findings.csv', 'evidence.json'}
+    assert any('Statement' in frame.value.columns for frame in app.dataframe)   # the findings digest
+    assert any(b.label == 'Write local AI summary' for b in app.button)          # offered, never run automatically
     assert len(app.get('plotly_chart')) > 10
     runs = aa.list_runs(session.workspace)
     assert len(runs) == 1 and runs[0]['target'] == 'churn'

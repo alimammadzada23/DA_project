@@ -80,12 +80,70 @@ def verify_telco(output, raw, checks):
         for label, value in raw.assign(v=raw[field].astype(float)).groupby('Churn').v.median().items():
             check(checks, f'Median {field}, Churn = {label}', medians[label], value)
     blank = raw.TotalCharges.str.strip() == ''
-    patterns = table(output, 'missing-patterns')
-    tenure = patterns[(patterns['Column with missing values'] == 'TotalCharges') & (patterns['Other column'] == 'tenure')].iloc[0]
-    check(checks, 'TotalCharges missing rows', int(tenure['Missing rows']), int(blank.sum()))
-    check(checks, 'All missing TotalCharges have tenure = 0', tenure['Value in every missing row'], '0')
-    check(checks, 'tenure = 0 rows in total', int(tenure['Rows with that value in total']), int((raw.tenure == '0').sum()))
+    explanation = next(e for e in output['missing_explanations'] if e['column'] == 'TotalCharges')
+    check(checks, 'TotalCharges missing rows', explanation['missing_rows'], int(blank.sum()))
+    check(checks, 'All missing TotalCharges have tenure = 0', (explanation['condition_column'], explanation['condition_value'], explanation['coverage']), ('tenure', '0', 1.0))
+    check(checks, 'tenure = 0 rows in total', explanation['condition_rows'], int((raw.tenure == '0').sum()))
     check(checks, 'customerID skipped as identifier', dict(output['skipped']).get('customerID', '').startswith('identifier'), True)
+    # Phase 1 analyst checks (spec §9.3)
+    explained = [(e['column'], e['condition_column'], e['condition_value'], e['equivalent']) for e in output['missing_explanations']]
+    check(checks, 'Only explanation of missing values: TotalCharges ⇔ tenure = 0', explained, [('TotalCharges', 'tenure', '0', True)])
+    addons = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
+    conditional = {c['column']: (c['parent'], c['parent_value']) for c in output['structure']['conditional']}
+    check(checks, 'Six add-ons conditional on InternetService = No', [conditional.get(c) for c in addons], [('InternetService', 'No')] * 6)
+    check(checks, 'MultipleLines conditional on PhoneService = No', conditional.get('MultipleLines'), ('PhoneService', 'No'))
+    applicable = raw[raw.InternetService != 'No']
+    for field in addons:
+        reported = table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size']
+        expected = stats.contingency.association(pd.crosstab(applicable[field], applicable.Churn), method='cramer')
+        check(checks, f"Conditional Cramér's V, {field}", reported, expected, 1e-9)
+    ranking = table(output, 'ranking').set_index('Field')
+    for field in ('StreamingTV', 'StreamingMovies'):
+        check(checks, f'{field}: conditional V < 0.1 and ranked below 10', bool(table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size'] < 0.1
+              and ranking.loc[field, 'Rank'] > 10), True)
+    for field in ('OnlineSecurity', 'TechSupport'):
+        check(checks, f'{field}: conditional V > 0.2', bool(table(output, aa.item_id(field, 'test') + '-applicable').iloc[0]['Effect size'] > 0.2), True)
+    derived = {d['column']: d for d in output['structure']['derived']}
+    check(checks, 'TotalCharges derived from tenure × MonthlyCharges', derived.get('TotalCharges', {}).get('formula'), 'tenure × MonthlyCharges')
+    total = pd.to_numeric(raw.TotalCharges, errors='coerce'); product = raw.tenure.astype(float) * raw.MonthlyCharges.astype(float)
+    keep = total.notna(); k = (total[keep] * product[keep]).sum() / (product[keep] ** 2).sum()
+    r2 = 1 - ((total[keep] - k * product[keep]) ** 2).sum() / ((total[keep] - total[keep].mean()) ** 2).sum()
+    check(checks, 'Derived R² on all rows', derived['TotalCharges']['r2_full'], r2, 1e-6)
+    clusters = [set(c['members']) for c in output['structure']['clusters']]
+    check(checks, 'tenure and TotalCharges in one redundancy cluster', any({'tenure', 'TotalCharges'} <= c for c in clusters), True)
+    pairs = {frozenset((p['first'], p['second'])): p['value'] for p in output['structure']['associations']}
+    check(checks, 'tenure–Contract association reported', pairs.get(frozenset(('tenure', 'Contract'))) is not None, True)
+    for field in ('gender', 'PhoneService'):
+        check(checks, f'{field}: predictive power below 0.01', bool(abs(ranking.loc[field, 'Predictive power']) < 0.01), True)
+    check(checks, 'Analyst conclusions section empty', '<div class="conclusions"></div>' in html_report(output), True)
+    # Phase 2 analyst checks
+    metrics = {row[0]: row for row in output['multivariate']['metrics']}
+    check(checks, 'Model AUC beats 0.5 by more than 0.25, with fold spread', bool(metrics['AUC'][1] > 0.75 and metrics['AUC'][2] is not None), True)
+    check(checks, 'Model accuracy beats the majority baseline', bool(metrics['Accuracy'][1] > metrics['Accuracy'][3]), True)
+    check(checks, 'Majority baseline accuracy', metrics['Accuracy'][3], 1 - (raw.Churn == 'Yes').mean(), 0.02)
+    verdicts = {v[0]: v[8] for v in output['multivariate']['verdicts']}
+    check(checks, 'Univariate vs adjusted table covers Contract and tenure', {'Contract', 'tenure'} <= set(verdicts), True)
+    check(checks, 'No leakage suspects in Telco', output['leakage'], [])
+    # Phase 3 analyst checks
+    high = [s for s in output['segments'] if s['direction'] == 'higher']
+    check(checks, 'At least one validated high-risk segment with held-out lift ≥ 1.5', bool(high and max(s['held_out_lift'] for s in high) >= 1.5), True)
+    best = max(high, key=lambda s: s['held_out_lift'])
+    mask = (raw.Contract == 'Month-to-month') & (raw.InternetService == 'Fiber optic') & (raw.tenure.astype(float) <= 17.5)
+    if best['rule'] == 'Contract = Month-to-month AND InternetService = Fiber optic AND tenure ≤ 17.5':
+        check(checks, 'Top segment size on all rows', best['rows'], int(mask.sum()))
+        check(checks, 'Top segment churn rate on all rows', best['rate'], (raw.Churn[mask] == 'Yes').mean())
+    # Phase 4 analyst checks
+    nulls = {f['fields'][0] for f in output['findings'] if f['type'] == 'null_result'}
+    check(checks, 'gender and PhoneService reported as null results', {'gender', 'PhoneService'} <= nulls, True)
+    html = html_report(output)
+    check(checks, 'HTML report under 2 MB', len(html.encode()) < 2_000_000, True)
+    check(checks, 'Analyst conclusions still empty in the new layout', '<div class="conclusions"></div>' in html, True)
+    top = output['findings'][:10]
+    check(checks, 'Top findings include an association and a validated segment',
+          {'strong_association', 'high_impact_segment'} <= {f['type'] for f in top}, True)
+    contract = next(f for f in output['findings'] if f['type'] == 'strong_association' and f['fields'] == ['Contract'])
+    month = (raw[raw.Contract == 'Month-to-month'].Churn == 'Yes').mean()
+    check(checks, 'Contract finding states the month-to-month rate', f'{month * 100:.1f}%' in contract['statement'], True)
 
 
 def adult(workspace, source):
@@ -161,10 +219,13 @@ def verify_bike(output, raw, checks):
     check(checks, 'Spearman ρ temp × cnt', test.loc['Spearman rank correlation', 'Statistic'], expected.statistic, 1e-9)
     hours = table(output, aa.item_id('hr', 'test')).set_index('Test')
     check(checks, 'Spearman ρ hr × cnt', hours.loc['Spearman rank correlation', 'Statistic'], stats.spearmanr(raw.hr, raw.cnt).statistic, 1e-9)
-    periods = table(output, 'dteday-periods-time-target')
-    # A 730-day range is grouped by month under the documented rule.
-    expected = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('M')).cnt.median()
-    check(checks, 'Median cnt per month (all 24 months)', [float(v) for v in periods['Median cnt']], [float(v) for v in expected])
+    periods = table(output, 'time-periods')
+    # Daily dates with 24 rows per day: the finest level with ≥ 20 periods and ≥ 30 rows per period is the week (Monday start).
+    check(checks, 'Aggregation level', output['time']['grain'], 'week')
+    expected = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('W-SUN')).cnt.mean()
+    check(checks, 'Mean cnt per week (all weeks)', [round(float(v), 9) for v in periods['Mean cnt']], [round(float(v), 9) for v in expected])
+    weekly = raw.groupby(pd.to_datetime(raw.dteday).dt.to_period('W-SUN')).size()
+    check(checks, 'Rows per week', [int(v) for v in periods['Rows']], [int(v) for v in weekly])
     check(checks, 'instant skipped as identifier', dict(output['skipped']).get('instant', '').startswith('identifier'), True)
 
 
@@ -202,17 +263,19 @@ def verify_retail(output, raw, checks, workspace=None):
         total, countries = con.execute(f'SELECT count(*),count(DISTINCT Country) FROM "{original}"').fetchone()
         uk = con.execute(f"SELECT count(*) FROM \"{original}\" WHERE Country='United Kingdom'").fetchone()[0]
         missing_customer = con.execute(f'SELECT count(*) FROM "{original}" WHERE "Customer ID" IS NULL').fetchone()[0]
-        # A 738-day range is grouped by quarter under the documented rule.
-        quarters = con.execute(f'SELECT count(*) FROM "{original}" GROUP BY date_trunc(\'quarter\',CAST(InvoiceDate AS TIMESTAMP)) ORDER BY 1 DESC LIMIT 1').fetchone()[0]
+        grain = output['time']['grain']
+        per_period = [r[0] for r in con.execute(f'SELECT count(*) FROM "{original}" GROUP BY date_trunc(\'{grain}\',CAST(InvoiceDate AS TIMESTAMP)) '
+                                                'ORDER BY date_trunc(\'' + grain + '\',CAST(InvoiceDate AS TIMESTAMP))').fetchall()]
     check(checks, 'Rows (both sheets)', output['rows'], total)
     country = table(output, aa.item_id('Country', 'counts')).set_index('Category')
     check(checks, 'Rows, Country = United Kingdom', country.loc['United Kingdom', 'Rows'], uk)
     check(checks, 'Country categories (30 shown + other)', len(country) - 1 + int(country.index[-1].split()[1]), countries)
     missing = table(output, 'quality-missing').set_index('Column')
     check(checks, 'Missing Customer ID', missing.loc['Customer ID', 'Rows'], missing_customer)
-    periods = table(output, 'invoicedate-periods-time')
-    check(checks, 'Largest quarter row count', int(periods.Rows.max()), quarters)
-    check(checks, 'Rows over all quarters', int(periods.Rows.sum()), total)
+    periods = table(output, 'time-periods')
+    # Invoice timestamps: the finest level with ≥ 20 periods and ≥ 30 rows per period on average.
+    check(checks, 'Rows per period (non-empty periods)', [int(v) for v in periods.Rows if v], per_period)
+    check(checks, 'Rows over all periods', int(periods.Rows.sum()), total)
 
 
 DATASETS = [('telco', telco, verify_telco), ('adult', adult, verify_adult), ('penguins', penguins, verify_penguins),
