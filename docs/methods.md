@@ -73,9 +73,10 @@ single-field power (or the lowest missing share without a target).
 - **χ²** (Pearson, no continuity correction): χ² = Σ (O − E)² / E, df = (r−1)(c−1).
   Cramér's V = √(χ² / (n (min(r,c) − 1))).
 - **Exact tests for sparse tables.** When any expected count is below 5: Fisher's exact
-  test for 2×2 tables (Fisher 1922), otherwise the Fisher–Freeman–Halton test (Freeman &
-  Halton 1951) with a Monte Carlo p-value from 9,999 seeded tables with the same margins.
-  The χ² p-value is shown for reference.
+  test for 2×2 tables (Fisher 1922), otherwise, for tables of at most 10,000 rows, the
+  Fisher–Freeman–Halton test (Freeman & Halton 1951) with a Monte Carlo p-value from 9,999
+  seeded tables with the same margins. The χ² p-value is shown for reference. Larger
+  sparse tables keep the χ² p-value with the expected-count flag.
 - **Mann–Whitney U** with average ranks for ties, normal approximation with tie and
   continuity correction (Mann & Whitney 1947). Rank-biserial r = 2U / (n₁n₂) − 1 (Kerby 2014).
 - **Kruskal–Wallis H** with the tie correction (Kruskal & Wallis 1952); ε² = H / (n − 1)

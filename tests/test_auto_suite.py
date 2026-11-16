@@ -194,3 +194,18 @@ def test_renaming_every_column_changes_only_labels(tmp_path):
         # The only name-dependent step is the disclosed name hint that raises a target suggestion's score.
         data['tables'] = [t for t in data['tables'] if t['id'] != 'target-suggestions']
     assert left == right
+
+
+def test_exact_tests_are_used_only_where_they_are_cheap_and_needed():
+    from scipy import stats
+    from insightpilot.universal import auto_stats
+    small = auto_stats.independence_test([[3, 1], [1, 3]])
+    assert small['test'] == "Fisher's exact test" and small['p_value'] == pytest.approx(stats.fisher_exact([[3, 1], [1, 3]]).pvalue)
+    sparse = auto_stats.independence_test([[50, 3, 20], [40, 1, 9], [3, 0, 7]])
+    assert sparse['test'].startswith('Fisher–Freeman–Halton') and sparse['chi_square_p'] != sparse['p_value']
+    # A large sparse table keeps the chi-square p-value: simulating 9,999 tables of half a million rows is not attempted.
+    started = time.perf_counter()
+    large = auto_stats.independence_test([[250_000, 3, 20_000], [200_000, 1, 9_000], [3_000, 0, 70]])
+    assert large['test'] == 'Chi-square test of independence' and time.perf_counter() - started < 1
+    plain = auto_stats.independence_test([[30, 20], [25, 35]])
+    assert plain['test'] == 'Chi-square test of independence' and 'chi_square_p' not in plain
