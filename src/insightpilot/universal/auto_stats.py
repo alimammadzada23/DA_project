@@ -81,6 +81,28 @@ def chi_square(table):
             'minimum_expected': float(expected.min())}
 
 
+def independence_test(table, seed=42, resamples=9_999, expected_minimum=5):
+    """Chi-square test, replaced by an exact test when any expected count is below `expected_minimum`.
+
+    2×2 tables: Fisher's exact test (two-sided). Larger tables: the Fisher–Freeman–Halton test with a Monte Carlo
+    p-value from `resamples` seeded random tables with the same margins (SciPy PermutationMethod). Cramér's V and the
+    chi-square statistic are reported either way; 'test' names the test whose p-value is used.
+    """
+    chi = chi_square(table)
+    if not chi: return chi
+    chi['test'] = 'Chi-square test of independence'
+    if chi['minimum_expected'] >= expected_minimum: return chi
+    values = np.asarray(table, dtype=float)
+    values = values[values.sum(axis=1) > 0][:, values.sum(axis=0) > 0].astype(int)
+    if values.shape == (2, 2):
+        p = float(stats.fisher_exact(values).pvalue); chi['test'] = "Fisher's exact test"
+    else:
+        p = float(stats.fisher_exact(values, method=stats.PermutationMethod(n_resamples=resamples, rng=seed)).pvalue)
+        chi['test'] = f'Fisher–Freeman–Halton exact test (Monte Carlo, {resamples:,} tables)'
+    chi['chi_square_p'] = chi['p_value']; chi['p_value'] = p
+    return chi
+
+
 def correlation_ratio(groups, total_n, total_mean, total_variance_population):
     """η = sqrt(between-group sum of squares / total sum of squares) from (n, mean) per group."""
     total_ss = total_variance_population * total_n if total_variance_population is not None else None

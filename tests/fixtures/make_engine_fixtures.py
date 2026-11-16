@@ -140,11 +140,40 @@ def messy(rng, n=600):
     return body.encode('cp1250')
 
 
+def high_cardinality(rng, n=20000):
+    """#10: 'code' has 5,000 levels. Three frequent levels (K0001–K0003, about 600 rows each) have a 60% positive rate;
+    every other level, most with a handful of rows, has 20%."""
+    special = np.array(['K0001', 'K0002', 'K0003'])
+    is_special = rng.random(n) < 0.09
+    code = np.where(is_special, special[rng.integers(0, 3, n)], np.char.add('K', np.char.zfill(rng.integers(4, 5001, n).astype(str), 4)))
+    rate = np.where(is_special, 0.6, 0.2)
+    return pd.DataFrame({'code': code, 'noise': np.round(rng.normal(size=n), 3), 'outcome': np.where(rng.random(n) < rate, 'yes', 'no')})
+
+
+def tiny(rng, n=40):
+    """#13: 40 rows; 'group' a has a 70% positive rate and b 30%; 'size' and 'colour' are unrelated."""
+    group = np.array(['a', 'b'] * (n // 2))
+    return pd.DataFrame({'group': group, 'size': np.round(rng.normal(10, 2, n), 2), 'colour': rng.choice(['red', 'green', 'blue'], n),
+                         'outcome': np.where(rng.random(n) < np.where(group == 'a', 0.7, 0.3), 'yes', 'no')})
+
+
+def targets(rng, n=3000):
+    """#18: 'grade' (A/B/C) rises with x1 and depends on c1; 'score' (numeric) = 2·x2 + 3 for c2 = hi + noise; x3, c3 are unrelated."""
+    x1, x2, x3 = rng.normal(size=(3, n))
+    c1 = rng.choice(['p', 'q', 'r'], n); c2 = rng.choice(['hi', 'lo'], n); c3 = rng.choice(['u', 'v', 'w'], n)
+    latent = 1.5 * x1 + np.where(c1 == 'p', 1.0, 0.0) + rng.logistic(size=n) * 0.6
+    grade = np.where(latent > 0.8, 'A', np.where(latent > -0.5, 'B', 'C'))
+    score = 2 * x2 + np.where(c2 == 'hi', 3.0, 0.0) + rng.normal(0, 1, n)
+    return pd.DataFrame({'x1': np.round(x1, 4), 'x2': np.round(x2, 4), 'x3': np.round(x3, 4), 'c1': c1, 'c2': c2, 'c3': c3,
+                         'grade': grade, 'score': np.round(score, 3)})
+
+
 FIXTURES = {'ENGINE-01-conditional.csv': conditional, 'ENGINE-03-derived.csv': derived,
             'ENGINE-04-redundancy.csv': redundancy, 'ENGINE-16-missingness.csv': missingness, 'ENGINE-02-leakage.csv': leakage,
             'ENGINE-07-nonlinear.csv': nonlinear, 'ENGINE-17-imbalance.csv': imbalance, 'ENGINE-05-simpson.csv': simpson,
             'ENGINE-06-interaction.csv': interaction, 'ENGINE-08-null.csv': null, 'ENGINE-11-timeseries.csv': timeseries,
-            'ENGINE-12-unlabelled.csv': unlabelled, 'ENGINE-09-messy.csv': messy}
+            'ENGINE-12-unlabelled.csv': unlabelled, 'ENGINE-09-messy.csv': messy, 'ENGINE-10-high-cardinality.csv': high_cardinality,
+            'ENGINE-13-tiny.csv': tiny, 'ENGINE-18-targets.csv': targets}
 
 
 if __name__ == '__main__':

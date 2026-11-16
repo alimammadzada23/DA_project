@@ -840,7 +840,9 @@ def heatmap(pivot, title, x, y):
 def chi_rows(chi):
     if not chi: return [['Chi-square test of independence', None, None, None, None, None, 'undefined: fewer than two represented groups']]
     flag = f'{chi["cells_expected_below_5"]:,} of {chi["cells"]:,} cells have an expected count below {SETTINGS["expected_count_minimum"]}' if chi['cells_expected_below_5'] else ''
-    return [['Chi-square test of independence', chi['statistic'], chi['df'], chi['p_value'], chi['cramers_v'], chi['n'], flag]]
+    if chi.get('test', '').startswith(('Fisher', 'Fisher–')):
+        flag = (flag + '; ' if flag else '') + f'exact test used; chi-square p {chi["chi_square_p"]:.3g} for reference'
+    return [[chi.get('test', 'Chi-square test of independence'), chi['statistic'], chi['df'], chi['p_value'], chi['cramers_v'], chi['n'], flag]]
 
 
 TEST_COLUMNS = [('Test', 'text'), ('Statistic', 'number'), ('df', 'count'), ('p-value', 'p'), ('Effect size', 'effect'), ('n', 'count'), ('Flags', 'text')]
@@ -855,7 +857,7 @@ def categorical_binary(a, spec, name, output):
     confidence = DEFAULT_CONFIG.confidence
     table_rows = [[category_label(c, other), t, p, t - p, *auto_univariate.rate_columns(p, t, overall, confidence), p / all_positive, flag_small(t)]
                   for c, t, p in rows]
-    chi = auto_stats.chi_square([[p, t - p] for _, t, p in rows])
+    chi = auto_stats.independence_test([[p, t - p] for _, t, p in rows], DEFAULT_CONFIG.seed)
     evidence = a.evidence('Counts per category; chi-square on the category × target table (SciPy)', top, result)
     items = [table(item_id(name, 'rates'), f'{name}: rows and positive rate ({spec.column} = {spec.positive})', [('Category', 'text'),
         ('Rows', 'count'), ('Positives', 'count'), ('Negatives', 'count'), *RATE_COLUMNS, ('Share of all positives', 'percent'),
@@ -913,7 +915,7 @@ def categorical_multiclass(a, spec, name, output):
     pivot = pivot.iloc[sorted(range(len(pivot)), key=lambda i: category_order(pivot.category.iloc[i], pivot.total_rows.iloc[i]))]
     rows = [[r['label'], r['total_rows'], *[r[c] for c in classes], *[r[c] / r['total_rows'] for c in classes], flag_small(r['total_rows'])]
             for _, r in pivot.iterrows()]
-    chi = auto_stats.chi_square(pivot[classes].to_numpy())
+    chi = auto_stats.independence_test(pivot[classes].to_numpy(), DEFAULT_CONFIG.seed)
     evidence = a.evidence('Category × class counts; chi-square (SciPy)', top, result)
     columns = [('Category', 'text'), ('Rows', 'count'), *[(f'{c} rows', 'count') for c in classes], *[(f'{c} share', 'percent') for c in classes], ('Flags', 'text')]
     items = [table(item_id(name, 'classes'), f'{name}: rows and row shares by {spec.column}', columns, rows, evidence=evidence, note=note_other(other)),
@@ -1670,7 +1672,7 @@ def text_field(a, spec, name, cfg):
                        f'{spec.column} by length of {name}')
         overall = sum(r[2] for r in result['rows']) / max(1, sum(r[1] for r in result['rows']))
         table_rows = [[label(g), n, p, *auto_univariate.rate_columns(p, n, overall, cfg.confidence)] for g, n, p in result['rows']]
-        chi = auto_stats.chi_square([[p, n - p] for _, n, p in result['rows']])
+        chi = auto_stats.independence_test([[p, n - p] for _, n, p in result['rows']], cfg.seed)
         test = f"chi-square p {chi['p_value']:.2g}, Cramér's V {chi['cramers_v']:.3f}" if chi else 'no test (one group)'
         items.append(table(item_id(name, 'text-length'), f'{name}: {spec.column} rate by text length', [('Text length', 'text'), ('Rows', 'count'),
             ('Positives', 'count'), *RATE_COLUMNS], table_rows, evidence=a.evidence('Length quintiles among rows with text, plus empty or missing', edges_q, result),

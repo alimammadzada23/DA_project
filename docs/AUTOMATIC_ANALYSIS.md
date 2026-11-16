@@ -128,6 +128,9 @@ listed for you and left unchanged.
 
 ## Methods
 
+Every method, with its formula, reference, setting and test, is in [methods.md](methods.md).
+The table below summarises the tests used per field and target type.
+
 | Field \ target | Binary | Multiclass | Numeric |
 | --- | --- | --- | --- |
 | Categorical | Rows, positives, positive rate and share of positives per category; count heatmap; positive-rate chart; chi-square and Cramér's V | Counts and row shares; stacked share chart; chi-square and Cramér's V | Count, median, mean and quartiles per category; box plot; Kruskal–Wallis and epsilon-squared |
